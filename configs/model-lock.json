@@ -6,7 +6,8 @@
   "parameter_count": 2274100000,
   "download_size_bytes_approx": 4600000000,
   "license": "apache-2.0",
-  "transformers_revision": "4b57c08db2cbf2576974351242f3f9834eef4e63",
+  "transformers_version": "5.14.1",
+  "transformers_source": "pypi",
+  "reference_main_revision": "4b57c08db2cbf2576974351242f3f9834eef4e63",
   "verified_at": "2026-07-24"
 }
-

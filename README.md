@@ -5,6 +5,7 @@
 ## 当前状态
 
 - 已导入 `dndx_participant-v1.1` 的公开评测入口和初始 wrapper。
+- 本地开发环境锁定为 Python 3.12、PyTorch 2.13.0+cu130、Transformers 5.14.1。
 - 尚未提交模型权重、评测数据、真实 baseline 或 PPU 优化结果。
 - `dummy` 后端只用于接口冒烟；不得将其结果视为真实模型部署或比赛成绩。
 

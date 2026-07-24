@@ -20,7 +20,10 @@ if (-not (Test-Path -LiteralPath $pythonPath)) {
     }
 }
 
-uv pip install --python $pythonPath torch torchvision --index-url $TorchIndexUrl
+uv pip install --python $pythonPath `
+    "torch==2.13.0+cu130" `
+    "torchvision==0.28.0+cu130" `
+    --index-url $TorchIndexUrl
 if ($LASTEXITCODE -ne 0) {
     throw "Failed to install the CUDA PyTorch stack."
 }
@@ -34,4 +37,3 @@ if ($LASTEXITCODE -ne 0) {
 if ($LASTEXITCODE -ne 0) {
     throw "Environment validation failed."
 }
-
