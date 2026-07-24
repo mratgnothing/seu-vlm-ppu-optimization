@@ -33,13 +33,15 @@
 - 中文公开集前 20 条基线：Accuracy 85%，平均 TTFT 327.451 ms，吞吐 21.813 tokens/s，公开校验通过。
 - 英文公开集前 20 条基线：Accuracy 80%，平均 TTFT 409.660 ms，吞吐 28.685 tokens/s，公开校验通过。
 - O1 `torch.inference_mode()` 三次中文复测均保持 Accuracy 85%、答案和 token 数不变。
-- O1 中文三次旧文本块计时中位数：TTFT 290.946 ms，提升 11.15%；吞吐 23.150 tokens/s，提升 6.13%。
-- O1 英文旧口径交叉验证保持 Accuracy 80%、答案和 token 数不变；TTFT 提升 14.10%，吞吐提升 16.65%。
-- 已将 TTFT 计时点修正为首个生成 token；O0/O1 新口径复测正在进行。
+- M1 首 token 口径中文 O0 三次中位数：TTFT 313.562 ms，吞吐 21.328 tokens/s。
+- M1 首 token 口径中文 O1 三次中位数：TTFT 287.706 ms，吞吐 23.209 tokens/s。
+- O1 中文正式提升：TTFT 8.25%，吞吐 8.82%，Accuracy 仍为 85%。
+- O1 英文交叉验证：TTFT 9.77%，吞吐 10.57%，Accuracy 仍为 80%。
+- 中英文跨 profile 的 question ID、答案和 token 数均完全一致，公开接口校验通过。
 - 中文比例分层 200 条 Accuracy 84.5%（169/200），20 个类别覆盖，接口校验通过。
 - O2 单样本 CUDA profiler 已完成：GEMV/GEMM 占 self CUDA time 86.18%，elementwise/copy 调用数高。
 - Profiler 口径 peak allocated/reserved 为 4.19/4.21 GiB。
-- 当前性能数据只覆盖固定前 20 条；Accuracy 已扩展到分层 200 条，仍不代表完整公开集或私有评测成绩。
+- 当前正式性能数据使用首个生成 token 计时，只覆盖固定前 20 条；Accuracy 已扩展到分层 200 条，仍不代表完整公开集或私有评测成绩。
 
 ## PPU 状态
 

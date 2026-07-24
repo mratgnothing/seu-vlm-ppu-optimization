@@ -46,5 +46,35 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass `
   -Languages cn,en `
   -NumSamples 20 `
   -Repeats 3 `
-  -RunLabel m1
+ -RunLabel m1
 ```
+
+## M1 复测结果
+
+中文固定前 20 条，O0/O1 各运行 3 次：
+
+| Profile | Accuracy | Median TTFT | Median Throughput | 校验 |
+|---|---:|---:|---:|---|
+| O0 `no_grad` | 85% | 313.562 ms | 21.328 tokens/s | 三次通过 |
+| O1 `inference_mode` | 85% | 287.706 ms | 23.209 tokens/s | 三次通过 |
+
+O1 相对 O0：
+
+- TTFT 提升：8.25%
+- Throughput 提升：8.82%
+- Accuracy 变化：0
+- 跨 profile 答案变化：0
+- 跨 profile token 数变化：0
+
+英文固定前 20 条单次交叉验证：
+
+| Profile | Accuracy | Avg TTFT | Throughput | 校验 |
+|---|---:|---:|---:|---|
+| O0 `no_grad` | 80% | 298.585 ms | 21.883 tokens/s | 通过 |
+| O1 `inference_mode` | 80% | 269.424 ms | 24.195 tokens/s | 通过 |
+
+英文 TTFT/Throughput 提升为 9.77%/10.57%，答案和 token 数同样无变化。
+
+## 结论
+
+M1 修正后的中英文结果均支持 O1 有效。中文三次中位数作为当前正式本地性能数字；英文只有一次交叉验证，用于确认方向，不作为稳定性区间。
