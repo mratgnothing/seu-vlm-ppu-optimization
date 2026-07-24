@@ -25,6 +25,9 @@
 - vLLM 自带 BF16 causal-conv1d forward/update kernel。
 - 当前模型注册包括 Qwen3 和 Qwen2.5-VL，不包括 `Qwen3_5ForConditionalGeneration`。
 - 未发现 Qwen3.5 所需 Gated Delta Network 模型实现。
+- Qwen3.5-2B 的 `N=6144,K=2048` 与 `N=2048,K=6144` 核心矩阵未发现 PPU-ZW810E 预调优量化配置。
+
+具体层数、矩阵尺寸与 kernel 优先级见 [qwen35-kernel-targets.md](qwen35-kernel-targets.md)。
 
 ## 可选部署路线
 
