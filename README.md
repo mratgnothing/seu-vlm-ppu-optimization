@@ -106,3 +106,15 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass `
 - 含私有测试答案或反作弊敏感内容的产物。
 
 详细规则见 [docs/rules-and-boundaries.md](docs/rules-and-boundaries.md)。
+
+## 提交候选包
+
+在主办方最终提交格式公布前，可以生成经过白名单和 SHA-256 复核的源码候选包：
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass `
+  -File .\scripts\build_submission.ps1
+```
+
+候选包默认写入 Git 忽略的 `artifacts/submission-source.zip`，不会包含模型、数据、
+原始结果、密钥或本地配置。详细边界见 [submission/README.md](submission/README.md)。
