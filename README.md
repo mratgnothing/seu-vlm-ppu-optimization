@@ -30,20 +30,23 @@
 1. 建立本地 CUDA 环境：
 
    ```powershell
-   .\scripts\bootstrap_local.ps1
+   powershell.exe -NoProfile -ExecutionPolicy Bypass `
+     -File .\scripts\bootstrap_local.ps1
    ```
 
 2. 下载并校验已锁定 revision 的官方模型：
 
    ```powershell
-   .\scripts\download_model.ps1
+   powershell.exe -NoProfile -ExecutionPolicy Bypass `
+     -File .\scripts\download_model.ps1
    ```
 
 3. 把公开数据放在仓库外，或放入已被忽略的 `data/`。
 4. 先做 dummy 冒烟：
 
    ```powershell
-   .\scripts\run_benchmark.ps1 `
+   powershell.exe -NoProfile -ExecutionPolicy Bypass `
+     -File .\scripts\run_benchmark.ps1 `
      -DatasetPath "D:\path\to\mmbench_dev_cn.tsv" `
      -Backend dummy `
      -NumSamples 2
@@ -52,7 +55,8 @@
 5. 再做真实模型小样本基线：
 
    ```powershell
-   .\scripts\run_benchmark.ps1 `
+   powershell.exe -NoProfile -ExecutionPolicy Bypass `
+     -File .\scripts\run_benchmark.ps1 `
      -DatasetPath "D:\path\to\mmbench_dev_cn.tsv" `
      -ModelPath "E:\models\Qwen3.5-2B" `
      -Backend transformers `

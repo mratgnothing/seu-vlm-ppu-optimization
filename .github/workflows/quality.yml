@@ -13,6 +13,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+      - name: Install lightweight test dependency
+        run: python -m pip install Pillow
       - name: Compile Python sources
         run: python -m compileall benchmark_public.py evaluation_wrapper.py tests
       - name: Run wrapper contract tests
