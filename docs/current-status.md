@@ -36,7 +36,7 @@
 - M1 首 token 口径中文 O0 三次中位数：TTFT 313.562 ms，吞吐 21.328 tokens/s。
 - M1 首 token 口径中文 O1 三次中位数：TTFT 287.706 ms，吞吐 23.209 tokens/s。
 - O1 中文正式提升：TTFT 8.25%，吞吐 8.82%，Accuracy 仍为 85%。
-- O1 英文交叉验证：TTFT 9.77%，吞吐 10.57%，Accuracy 仍为 80%。
+- O1 英文三次复测：TTFT 中位提升 10.22%，吞吐中位提升 6.37%，Accuracy 仍为 80%。
 - 中英文跨 profile 的 question ID、答案和 token 数均完全一致，公开接口校验通过。
 - 中文比例分层 200 条 Accuracy 84.5%（169/200），20 个类别覆盖，接口校验通过。
 - O2 单样本 CUDA profiler 已完成：GEMV/GEMM 占 self CUDA time 86.18%，elementwise/copy 调用数高。

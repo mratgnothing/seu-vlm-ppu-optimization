@@ -66,15 +66,17 @@ O1 相对 O0：
 - 跨 profile 答案变化：0
 - 跨 profile token 数变化：0
 
-英文固定前 20 条单次交叉验证：
+英文固定前 20 条三次复测：
 
-| Profile | Accuracy | Avg TTFT | Throughput | 校验 |
-|---|---:|---:|---:|---|
-| O0 `no_grad` | 80% | 298.585 ms | 21.883 tokens/s | 通过 |
-| O1 `inference_mode` | 80% | 269.424 ms | 24.195 tokens/s | 通过 |
+| Profile | Accuracy | TTFT 中位数 | TTFT 范围 | Throughput 中位数 | Throughput 范围 |
+|---|---:|---:|---:|---:|---:|
+| O0 `no_grad` | 80% | 300.105 ms | 298.585–300.332 ms | 22.678 tokens/s | 21.883–22.909 |
+| O1 `inference_mode` | 80% | 269.424 ms | 268.829–272.349 ms | 24.123 tokens/s | 23.570–24.195 |
 
-英文 TTFT/Throughput 提升为 9.77%/10.57%，答案和 token 数同样无变化。
+英文 TTFT/Throughput 三次中位提升为 10.22%/6.37%，6 次运行的答案和
+token 数同样无变化。完整复测记录见
+[英文 M1 三次性能复测](2026-07-24-en-m1-three-runs.md)。
 
 ## 结论
 
-M1 修正后的中英文结果均支持 O1 有效。中文三次中位数作为当前正式本地性能数字；英文只有一次交叉验证，用于确认方向，不作为稳定性区间。
+M1 修正后的中英文三次结果均支持 O1 有效，当前正式本地性能数字统一采用三次中位数。

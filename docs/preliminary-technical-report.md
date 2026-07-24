@@ -11,8 +11,8 @@
 Accuracy、首 Token 时间（TTFT）和生成吞吐的可复现测量链路。在本地
 RTX 4050 Laptop GPU 上，`torch.inference_mode()` 相对 `torch.no_grad()`
 在中英文各 20 条固定样本上保持答案、Token 数和 Accuracy 不变；中文三次复测的
-TTFT 中位数降低 8.25%，吞吐中位数提高 8.82%，英文交叉验证分别提高
-9.77% 和 10.57%。
+TTFT 中位数降低 8.25%，吞吐中位数提高 8.82%；英文三次复测分别提高
+10.22% 和 6.37%。
 
 CUDA profile 显示 GEMV/GEMM 占 self CUDA time 的 86.18%，其中 decode
 阶段 BF16 GEMV 是第一热点。项目已据此解析 Qwen3.5-2B 的 Gated Delta
@@ -118,17 +118,18 @@ SHA-256 已写入锁定文件。当前路径使用 BF16 权重、单样本、确
 - TTFT 提升率：8.2459%。
 - Throughput 提升率：8.8194%。
 
-### 5.2 英文固定 20 条交叉验证
+### 5.2 英文固定 20 条，三次复测中位数
 
-| Profile | Accuracy | TTFT | Throughput |
-|---|---:|---:|---:|
-| O0 `no_grad` | 80% | 298.585 ms | 21.883 tokens/s |
-| O1 `inference_mode` | 80% | 269.424 ms | 24.195 tokens/s |
+| Profile | Accuracy | TTFT 中位数 | TTFT 范围 | Throughput 中位数 | Throughput 范围 |
+|---|---:|---:|---:|---:|---:|
+| O0 `no_grad` | 80% | 300.105 ms | 298.585–300.332 ms | 22.678 tokens/s | 21.883–22.909 |
+| O1 `inference_mode` | 80% | 269.424 ms | 268.829–272.349 ms | 24.123 tokens/s | 23.570–24.195 |
 
-- TTFT 提升率：9.766%。
-- Throughput 提升率：10.565%。
+- TTFT 提升率：10.2234%。
+- Throughput 提升率：6.3718%。
 
-英文结果当前各运行 1 次，用于确认收益方向；最终报告前需要扩展为至少三次复测。
+英文 6 个结果文件的 question ID、答案和 Token 数完全一致，全部通过公开接口校验。
+最初单次吞吐提升 10.57% 偏乐观，因此正式报告改用三次中位数。
 
 ### 5.3 中文比例分层 200 条
 
@@ -225,6 +226,7 @@ GDN 和 causal conv，而非在缺少证据时广泛改动。
 - 实验计划：`docs/experiment-plan.md`
 - O1 实验：`docs/experiments/2026-07-24-o1-inference-mode.md`
 - TTFT 边界修正：`docs/experiments/2026-07-24-ttft-token-boundary.md`
+- 英文三次复测：`docs/experiments/2026-07-24-en-m1-three-runs.md`
 - CUDA profile：`docs/experiments/2026-07-24-o2-cuda-profile.md`
 - 分层 200 条精度：`docs/experiments/2026-07-24-cn-stratified-n200.md`
 - PPU 兼容性矩阵：`docs/ppu-compatibility-matrix.md`
