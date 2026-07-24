@@ -124,7 +124,7 @@ class VLMModel:
             self.model_path,
             local_files_only=True,
             trust_remote_code=True,
-            torch_dtype=torch.bfloat16,
+            dtype=torch.bfloat16,
             device_map=self.device,
         ).eval()
         self._tokenizer = getattr(self._processor, "tokenizer", None)
@@ -165,17 +165,20 @@ class VLMModel:
         generation_kwargs = {
             **inputs,
             "max_new_tokens": generation_config.max_new_tokens,
-            "temperature": generation_config.temperature,
-            "top_p": generation_config.top_p,
             "do_sample": generation_config.temperature > 0,
             "use_cache": True,
             "streamer": streamer,
         }
+        if generation_config.temperature > 0:
+            generation_kwargs.update(
+                temperature=generation_config.temperature,
+                top_p=generation_config.top_p,
+            )
 
         output_holder: dict[str, Any] = {}
 
         def _run_generate() -> None:
-            with torch.no_grad():
+            with torch.inference_mode():
                 output_holder["output_ids"] = self._model.generate(**generation_kwargs)
 
         worker = threading.Thread(target=_run_generate, daemon=True)
@@ -212,6 +215,7 @@ class VLMModel:
             meta={
                 "backend": "transformers",
                 "choice_markup_normalized": normalized_text != text,
+                "optimization_profile": "o1_inference_mode",
             },
         )
 
