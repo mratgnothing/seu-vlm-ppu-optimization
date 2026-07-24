@@ -14,11 +14,23 @@ CHOICE_MARKUP_PATTERN = re.compile(
     r"(?P=open)(?![A-Za-z])",
     re.IGNORECASE,
 )
+CHOICE_LEADING_MARKUP_PATTERN = re.compile(
+    r"(?<![A-Za-z])(?:\*{1,2}|_{1,2}|`)(?P<choice>[ABCD])"
+    r"(?=[\s\.。,\，:：、\)\]）】])",
+    re.IGNORECASE,
+)
 
 
 def normalize_choice_markup(text: str) -> str:
     """Remove Markdown wrappers around a generated A/B/C/D choice only."""
-    return CHOICE_MARKUP_PATTERN.sub(lambda match: match.group("choice").upper(), text)
+    normalized = CHOICE_MARKUP_PATTERN.sub(
+        lambda match: match.group("choice").upper(),
+        text,
+    )
+    return CHOICE_LEADING_MARKUP_PATTERN.sub(
+        lambda match: match.group("choice").upper(),
+        normalized,
+    )
 
 
 @dataclass
