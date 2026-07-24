@@ -45,6 +45,9 @@
 - PPU SDK `2.1.0-a5f865`、驱动 `1.3.2-d7f5a2` 和 HGGC 13.0 已确认。
 - 官方 vectorAdd 已在临时目录编译、运行并通过，随后清理。
 - 共享节点未安装 PyTorch、Transformers、vLLM 或 SGLang。
+- 预置 PPU-vLLM 0.8.5 源码包含 PPU 专用矩阵、FlashAttention、causal-conv1d 和量化路径。
+- 当前 PPU-vLLM 缺少 Qwen3.5 注册与 Gated Delta Network 路径。
+- 已形成兼容性矩阵、主办方问题清单和零依赖运行时预检脚本。
 - 共享节点不上传比赛代码、模型和数据，因此这还不构成 PPU 真实模型部署。
 
 ## 尚未完成

@@ -24,6 +24,9 @@
 - 分析工具包括 `asys`、`acu`、`transProfiler_tool`
 - 系统 Python：3.12.3
 - 基础环境未发现 PyTorch、Transformers、vLLM 或 SGLang
+- 镜像 Dockerfile 原计划安装 PPU 定制 PyTorch 2.6.0、Transformers 4.51.3 和 vLLM 0.8.5+cu126，但当前共享运行态只保留 pip
+- `/opt/vllm` 保留 PPU 定制源码，包含 PPU 矩阵指令、FlashAttention、causal-conv1d 和量化配置
+- 当前 PPU-vLLM 未注册 `Qwen3_5ForConditionalGeneration`，也未发现 Qwen3.5 Gated Delta Network 实现
 
 ## 官方样例实测
 
@@ -43,9 +46,10 @@ g++: error: unrecognized command-line option '-rpath'
 
 该结果证明 PPU 驱动、HGGC 编译和基础 kernel 执行链可用；尚未证明 PyTorch/Transformers 或 Qwen3.5-2B 已在 PPU 上部署。
 
+完整兼容性判断见 [ppu-compatibility-matrix.md](ppu-compatibility-matrix.md)。
+
 ## 安全边界
 
 - 当前是公开共享节点，只运行主办方自带样例和只读环境探测。
 - 不上传模型权重、公开数据、正式代码或其他密钥。
 - 正式模型部署等待个性化资源或主办方明确允许的隔离目录。
-

@@ -14,6 +14,8 @@
 
 当前数值只来自公开集前 20 条的工程验证，不代表完整公开集或主办方私有评测成绩。可公开的聚合结果见 [results/README.md](results/README.md)。
 
+PPU 侧已完成 SDK、预置 vLLM 源码和 Qwen3.5 架构缺口核验。详见 [PPU 兼容性矩阵](docs/ppu-compatibility-matrix.md) 和 [需要向主办方确认的问题](docs/questions-for-organizer.md)。
+
 ## 仓库结构
 
 ```text
