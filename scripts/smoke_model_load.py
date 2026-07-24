@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+from collections import Counter
 import json
 import sys
 import time
@@ -32,12 +33,15 @@ def main() -> int:
         model = VLMModel(str(args.model_path), backend="transformers", device="auto")
         loaded = model._model
         device_map = getattr(loaded, "hf_device_map", None)
+        parameter_devices = Counter(str(parameter.device) for parameter in loaded.parameters())
         payload.update(
             {
                 "passed": True,
                 "backend_name": model.backend_name,
                 "model_class": type(loaded).__name__,
+                "primary_device": str(loaded.device),
                 "device_map": device_map,
+                "parameter_devices": dict(parameter_devices),
                 "memory_footprint_bytes": (
                     loaded.get_memory_footprint()
                     if hasattr(loaded, "get_memory_footprint")
