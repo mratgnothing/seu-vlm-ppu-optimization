@@ -3,6 +3,7 @@ from __future__ import annotations
 import unittest
 
 from benchmark_public import compute_throughput, extract_answer, validate_public_result
+from evaluation_wrapper import normalize_choice_markup
 
 
 class BenchmarkContractTest(unittest.TestCase):
@@ -16,6 +17,12 @@ class BenchmarkContractTest(unittest.TestCase):
         for text, expected in cases.items():
             with self.subTest(text=text):
                 self.assertEqual(extract_answer(text), expected)
+
+    def test_normalizes_markdown_wrapped_choice_without_changing_semantics(self) -> None:
+        raw = "正确答案是：**B**\n\n理由：实验比较有蜡和无蜡。"
+        normalized = normalize_choice_markup(raw)
+        self.assertEqual(normalized, "正确答案是：B\n\n理由：实验比较有蜡和无蜡。")
+        self.assertEqual(extract_answer(normalized), "B")
 
     def test_throughput_matches_official_formula(self) -> None:
         self.assertAlmostEqual(
@@ -35,4 +42,3 @@ class BenchmarkContractTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

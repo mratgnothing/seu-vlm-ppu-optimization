@@ -2,10 +2,23 @@
 
 from __future__ import annotations
 
+import re
 import threading
 import time
 from dataclasses import dataclass
 from typing import Any
+
+
+CHOICE_MARKUP_PATTERN = re.compile(
+    r"(?<![A-Za-z])(?P<open>\*{1,2}|_{1,2}|`)(?P<choice>[ABCD])"
+    r"(?P=open)(?![A-Za-z])",
+    re.IGNORECASE,
+)
+
+
+def normalize_choice_markup(text: str) -> str:
+    """Remove Markdown wrappers around a generated A/B/C/D choice only."""
+    return CHOICE_MARKUP_PATTERN.sub(lambda match: match.group("choice").upper(), text)
 
 
 @dataclass
@@ -176,14 +189,18 @@ class VLMModel:
                 skip_special_tokens=True,
                 clean_up_tokenization_spaces=False,
             ).strip()
+        normalized_text = normalize_choice_markup(text)
 
         ttft = (first_chunk_at - start) if first_chunk_at is not None else (end - start)
         return GenerationResult(
-            text=text,
+            text=normalized_text,
             token_count=int(generated_ids.shape[0]),
             ttft_seconds=ttft,
             elapsed_seconds=end - start,
-            meta={"backend": "transformers"},
+            meta={
+                "backend": "transformers",
+                "choice_markup_normalized": normalized_text != text,
+            },
         )
 
     def _generate_with_dummy(
