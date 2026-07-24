@@ -118,3 +118,16 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass `
 
 候选包默认写入 Git 忽略的 `artifacts/submission-source.zip`，不会包含模型、数据、
 原始结果、密钥或本地配置。详细边界见 [submission/README.md](submission/README.md)。
+
+## 完整公开集精度
+
+中英文 4029 条完整公开集使用可断点续跑的分块入口：
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass `
+  -File .\scripts\run_full_accuracy.ps1 `
+  -Language cn
+```
+
+默认每 200 条保存一个原始结果；再次执行会跳过结构和 profile 均匹配的已完成分块。
+全部分块完成后才生成严格聚合结果，避免一次长进程中断后从头运行。
