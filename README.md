@@ -27,14 +27,19 @@
 
 ## 第一次运行
 
-1. 建立与主办方环境一致的 Python 虚拟环境。
-2. 安装依赖：
+1. 建立本地 CUDA 环境：
 
    ```powershell
-   python -m pip install -r requirements.txt
+   .\scripts\bootstrap_local.ps1
    ```
 
-3. 把主办方指定的模型权重和公开数据放在仓库外，或放入已被忽略的 `models/`、`data/`。
+2. 下载并校验已锁定 revision 的官方模型：
+
+   ```powershell
+   .\scripts\download_model.ps1
+   ```
+
+3. 把公开数据放在仓库外，或放入已被忽略的 `data/`。
 4. 先做 dummy 冒烟：
 
    ```powershell
@@ -75,4 +80,3 @@
 - 含私有测试答案或反作弊敏感内容的产物。
 
 详细规则见 [docs/rules-and-boundaries.md](docs/rules-and-boundaries.md)。
-

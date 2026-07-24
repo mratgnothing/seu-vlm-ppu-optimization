@@ -1,0 +1,12 @@
+{
+  "repo_id": "Qwen/Qwen3.5-2B",
+  "revision": "15852e8c16360a2fea060d615a32b45270f8a8fc",
+  "task": "image-text-to-text",
+  "model_class": "AutoModelForMultimodalLM",
+  "parameter_count": 2274100000,
+  "download_size_bytes_approx": 4600000000,
+  "license": "apache-2.0",
+  "transformers_revision": "4b57c08db2cbf2576974351242f3f9834eef4e63",
+  "verified_at": "2026-07-24"
+}
+

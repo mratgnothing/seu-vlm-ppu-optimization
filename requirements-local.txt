@@ -1,0 +1,6 @@
+Pillow
+numpy
+accelerate
+safetensors
+git+https://github.com/huggingface/transformers.git@4b57c08db2cbf2576974351242f3f9834eef4e63
+

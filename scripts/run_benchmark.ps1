@@ -18,6 +18,8 @@ param(
 $ErrorActionPreference = "Stop"
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $benchmarkPath = Join-Path $repoRoot "benchmark_public.py"
+$venvPython = Join-Path $repoRoot ".venv\Scripts\python.exe"
+$python = if (Test-Path -LiteralPath $venvPython) { $venvPython } else { "python" }
 
 if (-not (Test-Path -LiteralPath $DatasetPath)) {
     throw "Dataset not found: $DatasetPath"
@@ -27,7 +29,12 @@ if ($Backend -eq "transformers" -and -not (Test-Path -LiteralPath $ModelPath)) {
     throw "Model directory not found: $ModelPath"
 }
 
-$resolvedOutput = [System.IO.Path]::GetFullPath((Join-Path $repoRoot $OutputPath))
+$resolvedOutput = if ([System.IO.Path]::IsPathRooted($OutputPath)) {
+    [System.IO.Path]::GetFullPath($OutputPath)
+}
+else {
+    [System.IO.Path]::GetFullPath((Join-Path $repoRoot $OutputPath))
+}
 $outputDirectory = Split-Path -Parent $resolvedOutput
 New-Item -ItemType Directory -Path $outputDirectory -Force | Out-Null
 
@@ -41,10 +48,9 @@ $arguments = @(
     "--output", $resolvedOutput
 )
 
-python @arguments
+& $python @arguments
 if ($LASTEXITCODE -ne 0) {
     throw "Benchmark failed with exit code $LASTEXITCODE"
 }
 
 Write-Host "Result written to $resolvedOutput"
-
