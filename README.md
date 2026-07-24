@@ -66,6 +66,13 @@
 
 真实实验必须检查结果中的 `backend` 字段，禁止把自动回退的 dummy 结果当成真实基线。
 
+运行真实 benchmark 前，先做不生成文本的模型加载门禁：
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass `
+  -File .\scripts\smoke_model_load.ps1
+```
+
 ## 协作规则
 
 - `main` 始终保持可复现。
