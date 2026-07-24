@@ -43,6 +43,33 @@ def _metric(event: Any, name: str, fallback: str | None = None) -> float:
     return float(value or 0.0)
 
 
+def _classify_cuda_op(name: str) -> str:
+    lowered = name.lower()
+    if "gemv" in lowered:
+        return "gemv"
+    if "gemm" in lowered or "cutlass" in lowered or "cublas" in lowered:
+        return "gemm"
+    if "conv" in lowered:
+        return "convolution"
+    if "memcpy" in lowered or "copy" in lowered:
+        return "memory_copy"
+    if "reduce" in lowered or "sum" in lowered or "mean" in lowered:
+        return "reduction"
+    if any(
+        marker in lowered
+        for marker in (
+            "elementwise",
+            "vectorized",
+            "binaryfunctor",
+            "unaryfunctor",
+            "pow",
+            "rsqrt",
+        )
+    ):
+        return "elementwise"
+    return "other"
+
+
 def main() -> None:
     args = parse_args()
     import torch
@@ -104,9 +131,18 @@ def main() -> None:
         ),
         reverse=True,
     )
+    total_self_cuda_us = sum(
+        _metric(
+            event,
+            "self_device_time_total",
+            "self_cuda_time_total",
+        )
+        for event in events
+    )
     top_cuda_ops = [
         {
             "name": event.key,
+            "category": _classify_cuda_op(event.key),
             "calls": int(event.count),
             "self_cuda_time_ms": round(
                 _metric(
@@ -116,6 +152,19 @@ def main() -> None:
                 )
                 / 1000.0,
                 3,
+            ),
+            "self_cuda_time_share": round(
+                (
+                    _metric(
+                        event,
+                        "self_device_time_total",
+                        "self_cuda_time_total",
+                    )
+                    / total_self_cuda_us
+                )
+                if total_self_cuda_us > 0
+                else 0.0,
+                6,
             ),
             "cuda_time_total_ms": round(
                 _metric(
@@ -132,6 +181,47 @@ def main() -> None:
             ),
         }
         for event in ranked[:30]
+    ]
+    category_totals: dict[str, dict[str, float | int]] = {}
+    for event in events:
+        self_cuda_us = _metric(
+            event,
+            "self_device_time_total",
+            "self_cuda_time_total",
+        )
+        if self_cuda_us <= 0:
+            continue
+        category = _classify_cuda_op(event.key)
+        bucket = category_totals.setdefault(
+            category,
+            {"calls": 0, "self_cuda_time_us": 0.0},
+        )
+        bucket["calls"] = int(bucket["calls"]) + int(event.count)
+        bucket["self_cuda_time_us"] = (
+            float(bucket["self_cuda_time_us"]) + self_cuda_us
+        )
+    cuda_categories = [
+        {
+            "category": category,
+            "calls": int(values["calls"]),
+            "self_cuda_time_ms": round(
+                float(values["self_cuda_time_us"]) / 1000.0,
+                3,
+            ),
+            "self_cuda_time_share": round(
+                (
+                    float(values["self_cuda_time_us"]) / total_self_cuda_us
+                    if total_self_cuda_us > 0
+                    else 0.0
+                ),
+                6,
+            ),
+        }
+        for category, values in sorted(
+            category_totals.items(),
+            key=lambda item: float(item[1]["self_cuda_time_us"]),
+            reverse=True,
+        )
     ]
 
     output = {
@@ -160,6 +250,13 @@ def main() -> None:
         "memory": {
             "peak_allocated_bytes": int(torch.cuda.max_memory_allocated()),
             "peak_reserved_bytes": int(torch.cuda.max_memory_reserved()),
+        },
+        "profiler": {
+            "total_self_cuda_time_ms": round(
+                total_self_cuda_us / 1000.0,
+                3,
+            ),
+            "cuda_categories": cuda_categories,
         },
         "top_cuda_ops": top_cuda_ops,
     }
