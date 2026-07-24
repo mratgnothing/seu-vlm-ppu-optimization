@@ -16,7 +16,6 @@ jobs:
       - name: Install lightweight test dependency
         run: python -m pip install Pillow
       - name: Compile Python sources
-        run: python -m compileall benchmark_public.py evaluation_wrapper.py tests
+        run: python -m compileall benchmark_public.py evaluation_wrapper.py scripts tests
       - name: Run wrapper contract tests
         run: python -m unittest discover -s tests -v
-
