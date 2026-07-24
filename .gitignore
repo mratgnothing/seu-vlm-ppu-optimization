@@ -40,6 +40,7 @@ datasets/
 # Local experiment artifacts
 artifacts/
 results/raw/
+results/summary.csv
 logs/
 *.log
 configs/local.psd1
