@@ -36,3 +36,15 @@
 - `-OptimizationProfile o1_inference_mode`
 
 两种 profile 只切换 `no_grad`/`inference_mode`，其余模型与生成配置共用同一实现。
+
+批量复测入口：
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass `
+  -File .\scripts\run_profile_matrix.ps1 `
+  -Profiles o0_no_grad,o1_inference_mode `
+  -Languages cn,en `
+  -NumSamples 20 `
+  -Repeats 3 `
+  -RunLabel m1
+```
