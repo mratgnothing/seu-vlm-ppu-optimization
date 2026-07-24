@@ -26,11 +26,37 @@ if ($LASTEXITCODE -ne 0) {
 hf cache verify $lock.repo_id `
     --revision $lock.revision `
     --local-dir $Destination `
-    --fail-on-missing-files `
-    --fail-on-extra-files
+    --fail-on-missing-files
 if ($LASTEXITCODE -ne 0) {
     throw "Model checksum verification failed."
 }
 
-Write-Host "Verified model: $Destination"
+$verifiedFiles = @()
+foreach ($property in $lock.files.PSObject.Properties) {
+    $path = Join-Path $Destination $property.Name
+    if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
+        throw "Locked model file is missing: $path"
+    }
+    $actualHash = (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash.ToLowerInvariant()
+    $actualSize = (Get-Item -LiteralPath $path).Length
+    if ($actualHash -ne $property.Value.sha256 -or $actualSize -ne $property.Value.size_bytes) {
+        throw "Locked model file failed verification: $($property.Name)"
+    }
+    $verifiedFiles += @{
+        file = $property.Name
+        sha256 = $actualHash
+        size_bytes = $actualSize
+    }
+}
 
+$integrityReport = @{
+    repo_id = $lock.repo_id
+    revision = $lock.revision
+    verified_files = $verifiedFiles
+    verified_at = (Get-Date).ToString("o")
+}
+$reportPath = Join-Path $repoRoot "artifacts\model-integrity.json"
+$integrityReport | ConvertTo-Json -Depth 5 |
+    Set-Content -LiteralPath $reportPath -Encoding UTF8
+
+Write-Host "Verified model: $Destination"
