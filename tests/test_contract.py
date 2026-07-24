@@ -2,10 +2,39 @@ from __future__ import annotations
 
 import unittest
 
-from evaluation_wrapper import GenerationConfig, VLMModel
+from evaluation_wrapper import FirstTokenTiming, GenerationConfig, VLMModel
 
 
 class WrapperContractTest(unittest.TestCase):
+    def test_rejects_unknown_optimization_profile(self) -> None:
+        with self.assertRaises(ValueError):
+            VLMModel(
+                "unused",
+                backend="dummy",
+                optimization_profile="unknown",
+            )
+
+    def test_first_token_timer_skips_prompt_put(self) -> None:
+        timing = FirstTokenTiming()
+        timing.observe_stream_put(
+            skip_prompt=True,
+            next_tokens_are_prompt=True,
+            now=10.0,
+        )
+        self.assertIsNone(timing.timestamp)
+
+        timing.observe_stream_put(
+            skip_prompt=True,
+            next_tokens_are_prompt=False,
+            now=12.5,
+        )
+        timing.observe_stream_put(
+            skip_prompt=True,
+            next_tokens_are_prompt=False,
+            now=13.0,
+        )
+        self.assertEqual(timing.timestamp, 12.5)
+
     def test_dummy_backend_returns_valid_metrics(self) -> None:
         model = VLMModel("unused", backend="dummy")
         result = model.generate_with_metrics(
@@ -26,4 +55,3 @@ class WrapperContractTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

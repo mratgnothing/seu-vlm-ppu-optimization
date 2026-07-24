@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import re
 import threading
 import time
@@ -49,6 +50,25 @@ class GenerationResult:
     meta: dict[str, Any]
 
 
+@dataclass
+class FirstTokenTiming:
+    """Capture the first generated-token event, excluding the prompt put."""
+
+    timestamp: float | None = None
+
+    def observe_stream_put(
+        self,
+        *,
+        skip_prompt: bool,
+        next_tokens_are_prompt: bool,
+        now: float,
+    ) -> None:
+        if skip_prompt and next_tokens_are_prompt:
+            return
+        if self.timestamp is None:
+            self.timestamp = now
+
+
 class VLMModel:
     """
     Default participant wrapper.
@@ -64,10 +84,23 @@ class VLMModel:
         *,
         backend: str = "auto",
         device: str = "auto",
+        optimization_profile: str = "auto",
     ) -> None:
         self.model_path = model_path
         self.device = device
         self.backend = backend
+        self.optimization_profile = (
+            os.getenv("VLM_OPT_PROFILE", "o1_inference_mode")
+            if optimization_profile == "auto"
+            else optimization_profile
+        )
+        if self.optimization_profile not in {
+            "o0_no_grad",
+            "o1_inference_mode",
+        }:
+            raise ValueError(
+                f"Unsupported optimization profile: {self.optimization_profile}"
+            )
         self._model = None
         self._processor = None
         self._tokenizer = None
@@ -142,6 +175,17 @@ class VLMModel:
         import torch
         from transformers import TextIteratorStreamer
 
+        timing = FirstTokenTiming()
+
+        class TimedTextIteratorStreamer(TextIteratorStreamer):
+            def put(self, value) -> None:
+                timing.observe_stream_put(
+                    skip_prompt=self.skip_prompt,
+                    next_tokens_are_prompt=self.next_tokens_are_prompt,
+                    now=time.perf_counter(),
+                )
+                super().put(value)
+
         messages = [{
             "role": "user",
             "content": [
@@ -157,7 +201,7 @@ class VLMModel:
             return_tensors="pt",
         ).to(self._model.device)
         input_len = inputs.input_ids.shape[1]
-        streamer = TextIteratorStreamer(
+        streamer = TimedTextIteratorStreamer(
             self._processor.tokenizer,
             skip_prompt=True,
             skip_special_tokens=True,
@@ -178,19 +222,20 @@ class VLMModel:
         output_holder: dict[str, Any] = {}
 
         def _run_generate() -> None:
-            with torch.inference_mode():
+            context = (
+                torch.no_grad
+                if self.optimization_profile == "o0_no_grad"
+                else torch.inference_mode
+            )
+            with context():
                 output_holder["output_ids"] = self._model.generate(**generation_kwargs)
 
         worker = threading.Thread(target=_run_generate, daemon=True)
         start = time.perf_counter()
         worker.start()
 
-        first_chunk_at = None
         chunks: list[str] = []
         for chunk in streamer:
-            now = time.perf_counter()
-            if first_chunk_at is None and chunk:
-                first_chunk_at = now
             chunks.append(chunk)
         worker.join()
         end = time.perf_counter()
@@ -206,7 +251,11 @@ class VLMModel:
             ).strip()
         normalized_text = normalize_choice_markup(text)
 
-        ttft = (first_chunk_at - start) if first_chunk_at is not None else (end - start)
+        ttft = (
+            timing.timestamp - start
+            if timing.timestamp is not None
+            else end - start
+        )
         return GenerationResult(
             text=normalized_text,
             token_count=int(generated_ids.shape[0]),
@@ -215,7 +264,8 @@ class VLMModel:
             meta={
                 "backend": "transformers",
                 "choice_markup_normalized": normalized_text != text,
-                "optimization_profile": "o1_inference_mode",
+                "optimization_profile": self.optimization_profile,
+                "ttft_measurement": "first_generated_token_put",
             },
         )
 

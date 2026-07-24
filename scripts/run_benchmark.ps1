@@ -12,6 +12,9 @@ param(
 
     [int]$WarmupSamples = 2,
 
+    [ValidateSet("o0_no_grad", "o1_inference_mode")]
+    [string]$OptimizationProfile = "o1_inference_mode",
+
     [string]$OutputPath = ".\results\raw\result_public.json"
 )
 
@@ -48,9 +51,21 @@ $arguments = @(
     "--output", $resolvedOutput
 )
 
-& $python @arguments
-if ($LASTEXITCODE -ne 0) {
-    throw "Benchmark failed with exit code $LASTEXITCODE"
+$previousProfile = $env:VLM_OPT_PROFILE
+try {
+    $env:VLM_OPT_PROFILE = $OptimizationProfile
+    & $python @arguments
+    if ($LASTEXITCODE -ne 0) {
+        throw "Benchmark failed with exit code $LASTEXITCODE"
+    }
+}
+finally {
+    if ($null -eq $previousProfile) {
+        Remove-Item Env:VLM_OPT_PROFILE -ErrorAction SilentlyContinue
+    }
+    else {
+        $env:VLM_OPT_PROFILE = $previousProfile
+    }
 }
 
 Write-Host "Result written to $resolvedOutput"
