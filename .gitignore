@@ -1,0 +1,62 @@
+# Secrets and credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa*
+id_ed25519*
+
+# Model weights and caches
+models/*
+!models/README.md
+Qwen3.5-2B/
+*.safetensors
+*.bin
+*.ckpt
+*.pt
+*.pth
+*.onnx
+.cache/
+huggingface/
+modelscope/
+
+# Competition data and organizer attachments
+data/*
+!data/README.md
+datasets/
+*.tsv
+*.parquet
+*.arrow
+*.pdf
+*.zip
+*.7z
+*.rar
+*群*聊天记录*
+*测试环境登录*
+
+# Local experiment artifacts
+artifacts/
+results/raw/
+logs/
+*.log
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# IDE and operating system
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+desktop.ini
+__MACOSX/
+
