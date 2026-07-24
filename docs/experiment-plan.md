@@ -17,11 +17,12 @@ B0-B3 已完成，B4 待运行。当前 BF16 单样本路径全部参数位于 G
 真实基线完成后按单变量方式依次评估：
 
 1. `torch.inference_mode()` 替代 `torch.no_grad()`：已完成，三次中文 20 条复测有效。
-2. GPU profiler、显存峰值和 prefill/decode 热点定位：进行中。
-3. 减少重复的 Python/processor 初始化和临时对象。
-4. KV Cache 的分配、布局和复用。
-5. 目标硬件支持的静态图、算子融合和 attention 实现。
-6. 主办方书面认可后的运行时低精度方案。
+2. GPU profiler、显存峰值和热点定位：已完成，GEMV/GEMM 占 self CUDA time 86.18%。
+3. Decode 小矩阵 GEMV、线性注意力和因果卷积 fast path。
+4. Elementwise/copy kernel 融合与启动开销。
+5. KV Cache 的分配、布局和复用。
+6. 目标硬件支持的静态图、算子融合和 attention 实现。
+7. 主办方书面认可后的运行时低精度方案。
 
 每项优化都必须同时报告 Accuracy、TTFT、Throughput、端到端耗时和内存，不允许只保留成功样本。
 

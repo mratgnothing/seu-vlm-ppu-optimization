@@ -35,6 +35,8 @@
 - O1 `torch.inference_mode()` 三次中文复测均保持 Accuracy 85%、答案和 token 数不变。
 - O1 中文三次保守中位数：TTFT 290.946 ms，提升 11.15%；吞吐 23.150 tokens/s，提升 6.13%。
 - O1 英文交叉验证保持 Accuracy 80%、答案和 token 数不变；TTFT 提升 14.10%，吞吐提升 16.65%。
+- O2 单样本 CUDA profiler 已完成：GEMV/GEMM 占 self CUDA time 86.18%，elementwise/copy 调用数高。
+- Profiler 口径 peak allocated/reserved 为 4.19/4.21 GiB。
 - 以上只覆盖固定前 20 条公开样本，不代表完整公开集或私有评测成绩。
 
 ## PPU 状态
@@ -48,11 +50,10 @@
 ## 尚未完成
 
 - 公开集完整基线与更大样本复测。
-- GPU profiler、显存峰值和热点算子证据。
 - PPU 真实 Qwen3.5-2B 模型部署、Profile 和优化闭环。
 - 量化/权重变换的正式允许范围确认。
 - 初赛技术报告和最终提交包。
 
 ## 当前风险
 
-6GB 显存可以承载当前 BF16 单样本路径，但余量有限。更长输入、更高分辨率、编译缓存或并发请求仍可能 OOM。Qwen3.5 的线性注意力和因果卷积当前使用 PyTorch fallback，缺少 fast-path 扩展；本机 Windows 环境不盲装未经验证的 CUDA 扩展。CPU offload 结果不得与纯 GPU 或 PPU 性能直接比较。
+6GB 显存可以承载当前 BF16 单样本路径，但余量有限。更长输入、更高分辨率、编译缓存或并发请求仍可能 OOM。Qwen3.5 的线性注意力和因果卷积当前使用 PyTorch fallback，缺少 fast-path 扩展；本机 Windows 环境不盲装未经验证的 CUDA 扩展。Profiler 表明 decode 侧 BF16 GEMV 是第一热点，后续优先研究 decode、融合和 PPU 目标 kernel。CPU offload 结果不得与纯 GPU 或 PPU 性能直接比较。
