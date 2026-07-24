@@ -6,8 +6,13 @@
 
 - 已导入 `dndx_participant-v1.1` 的公开评测入口和初始 wrapper。
 - 本地开发环境锁定为 Python 3.12、PyTorch 2.13.0+cu130、Transformers 5.14.1。
-- 尚未提交模型权重、评测数据、真实 baseline 或 PPU 优化结果。
+- Qwen3.5-2B 指定 revision 已通过完整性校验，并在 RTX 4050 6GB 上以 BF16 纯 GPU 加载。
+- 已完成中英文各 20 条公开集真实小样本基线；中文基线 Accuracy 85%。
+- O1 纯推理模式三次复测保持答案不变，中文 TTFT/吞吐保守中位提升为 11.15%/6.13%。
+- PPU SDK、编译链和官方 vectorAdd 已通过；Qwen3.5-2B 的 PPU 真实部署仍待目标资源开放后完成。
 - `dummy` 后端只用于接口冒烟；不得将其结果视为真实模型部署或比赛成绩。
+
+当前数值只来自公开集前 20 条的工程验证，不代表完整公开集或主办方私有评测成绩。可公开的聚合结果见 [results/README.md](results/README.md)。
 
 ## 仓库结构
 
