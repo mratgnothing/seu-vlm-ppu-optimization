@@ -18,8 +18,10 @@
 
 PPU 侧已完成 SDK、预置 vLLM 源码和 Qwen3.5 架构缺口核验。详见 [PPU 兼容性矩阵](docs/ppu-compatibility-matrix.md) 和 [需要向主办方确认的问题](docs/questions-for-organizer.md)。
 Qwen3.5-2B 的 GDN、MLP、全注意力与视觉层尺寸见 [关键算子与 PPU kernel 目标](docs/qwen35-kernel-targets.md)。
+针对三组关键解码尺寸，已准备 [PPU BF16 GEMV 微基准](ppu/microbench/README.md)；它必须在主办方提供的隔离资源中编译验证，目前不计作 PPU 优化结果。
 
 两位成员的职责、四周里程碑和当前交接点见 [两人协作与一个月推进计划](docs/team-plan.md)。
+已验证内容已同步整理到 [初赛技术报告初稿](docs/preliminary-technical-report.md)，未在 PPU 实测的部分均保留显式边界。
 
 ## 仓库结构
 

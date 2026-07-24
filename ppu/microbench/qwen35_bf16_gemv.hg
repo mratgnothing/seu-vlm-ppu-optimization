@@ -1,0 +1,304 @@
+#include <hggc_bf16.h>
+#include <hggc_runtime.h>
+
+#include <algorithm>
+#include <cmath>
+#include <cstdint>
+#include <cstdlib>
+#include <cstring>
+#include <iomanip>
+#include <iostream>
+#include <limits>
+#include <string>
+#include <vector>
+
+namespace {
+
+constexpr int kThreads = 256;
+static_assert(sizeof(__ppu_bfloat16) == sizeof(uint16_t),
+              "PPU BF16 must occupy 16 bits");
+
+struct Options {
+  int n = 6144;
+  int k = 2048;
+  int warmup = 10;
+  int iterations = 100;
+  int device = 0;
+};
+
+void print_usage(const char* program) {
+  std::cout
+      << "Usage: " << program
+      << " [--n OUTPUT_ROWS] [--k INPUT_SIZE] [--warmup COUNT]"
+         " [--iters COUNT] [--device INDEX]\n";
+}
+
+bool parse_positive_int(const char* value, int* output) {
+  char* end = nullptr;
+  const long parsed = std::strtol(value, &end, 10);
+  if (end == value || *end != '\0' || parsed <= 0 ||
+      parsed > std::numeric_limits<int>::max()) {
+    return false;
+  }
+  *output = static_cast<int>(parsed);
+  return true;
+}
+
+bool parse_nonnegative_int(const char* value, int* output) {
+  char* end = nullptr;
+  const long parsed = std::strtol(value, &end, 10);
+  if (end == value || *end != '\0' || parsed < 0 ||
+      parsed > std::numeric_limits<int>::max()) {
+    return false;
+  }
+  *output = static_cast<int>(parsed);
+  return true;
+}
+
+bool parse_options(int argc, char** argv, Options* options) {
+  for (int index = 1; index < argc; ++index) {
+    const std::string argument = argv[index];
+    if (argument == "--help" || argument == "-h") {
+      print_usage(argv[0]);
+      std::exit(EXIT_SUCCESS);
+    }
+    if (index + 1 >= argc) {
+      std::cerr << "Missing value for " << argument << '\n';
+      return false;
+    }
+
+    const char* value = argv[++index];
+    if (argument == "--n") {
+      if (!parse_positive_int(value, &options->n)) {
+        return false;
+      }
+    } else if (argument == "--k") {
+      if (!parse_positive_int(value, &options->k)) {
+        return false;
+      }
+    } else if (argument == "--warmup") {
+      if (!parse_nonnegative_int(value, &options->warmup)) {
+        return false;
+      }
+    } else if (argument == "--iters") {
+      if (!parse_positive_int(value, &options->iterations)) {
+        return false;
+      }
+    } else if (argument == "--device") {
+      if (!parse_nonnegative_int(value, &options->device)) {
+        return false;
+      }
+    } else {
+      std::cerr << "Unknown option: " << argument << '\n';
+      return false;
+    }
+  }
+  return true;
+}
+
+uint16_t float_to_bf16(float value) {
+  uint32_t bits = 0;
+  std::memcpy(&bits, &value, sizeof(bits));
+  const uint32_t rounding_bias = 0x7fffU + ((bits >> 16U) & 1U);
+  return static_cast<uint16_t>((bits + rounding_bias) >> 16U);
+}
+
+float bf16_to_float(uint16_t value) {
+  const uint32_t bits = static_cast<uint32_t>(value) << 16U;
+  float result = 0.0F;
+  std::memcpy(&result, &bits, sizeof(result));
+  return result;
+}
+
+__global__ void bf16_gemv_reference(const __ppu_bfloat16* weights,
+                                    const __ppu_bfloat16* input,
+                                    float* output,
+                                    int n,
+                                    int k) {
+  const int row = blockIdx.x;
+  const int lane = threadIdx.x;
+  if (row >= n) {
+    return;
+  }
+
+  float partial = 0.0F;
+  const size_t row_offset = static_cast<size_t>(row) * static_cast<size_t>(k);
+  for (int column = lane; column < k; column += blockDim.x) {
+    partial += __bfloat162float(weights[row_offset + column]) *
+               __bfloat162float(input[column]);
+  }
+
+  __shared__ float reduction[kThreads];
+  reduction[lane] = partial;
+  __syncthreads();
+  for (int stride = blockDim.x / 2; stride > 0; stride >>= 1) {
+    if (lane < stride) {
+      reduction[lane] += reduction[lane + stride];
+    }
+    __syncthreads();
+  }
+  if (lane == 0) {
+    output[row] = reduction[0];
+  }
+}
+
+bool check_hggc(hggcError_t status, const char* expression, int line) {
+  if (status == hggcSuccess) {
+    return true;
+  }
+  std::cerr << "HGGC call failed at line " << line << ": " << expression
+            << " -> " << hggcGetErrorString(status) << '\n';
+  return false;
+}
+
+#define HGGC_CHECK(expression)                                      \
+  do {                                                              \
+    if (!check_hggc((expression), #expression, __LINE__)) {         \
+      return EXIT_FAILURE;                                          \
+    }                                                               \
+  } while (false)
+
+}  // namespace
+
+int main(int argc, char** argv) {
+  Options options;
+  if (!parse_options(argc, argv, &options)) {
+    print_usage(argv[0]);
+    return EXIT_FAILURE;
+  }
+
+  const size_t element_count =
+      static_cast<size_t>(options.n) * static_cast<size_t>(options.k);
+  if (element_count > std::numeric_limits<size_t>::max() / sizeof(uint16_t)) {
+    std::cerr << "Requested matrix is too large\n";
+    return EXIT_FAILURE;
+  }
+
+  std::vector<uint16_t> host_weights(element_count);
+  std::vector<uint16_t> host_input(static_cast<size_t>(options.k));
+  std::vector<float> host_output(static_cast<size_t>(options.n), 0.0F);
+  std::vector<float> reference(static_cast<size_t>(options.n), 0.0F);
+
+  for (int column = 0; column < options.k; ++column) {
+    const float value = static_cast<float>((column % 17) - 8) / 32.0F;
+    host_input[static_cast<size_t>(column)] = float_to_bf16(value);
+  }
+  for (int row = 0; row < options.n; ++row) {
+    float expected = 0.0F;
+    for (int column = 0; column < options.k; ++column) {
+      const float value =
+          static_cast<float>(((row * 13 + column * 7) % 29) - 14) / 64.0F;
+      const uint16_t rounded = float_to_bf16(value);
+      const size_t offset =
+          static_cast<size_t>(row) * static_cast<size_t>(options.k) +
+          static_cast<size_t>(column);
+      host_weights[offset] = rounded;
+      expected += bf16_to_float(rounded) *
+                  bf16_to_float(host_input[static_cast<size_t>(column)]);
+    }
+    reference[static_cast<size_t>(row)] = expected;
+  }
+
+  __ppu_bfloat16* device_weights = nullptr;
+  __ppu_bfloat16* device_input = nullptr;
+  float* device_output = nullptr;
+  hggcEvent_t start = nullptr;
+  hggcEvent_t stop = nullptr;
+
+  HGGC_CHECK(hggcSetDevice(options.device));
+  HGGC_CHECK(hggcMalloc(reinterpret_cast<void**>(&device_weights),
+                        element_count * sizeof(uint16_t)));
+  HGGC_CHECK(hggcMalloc(reinterpret_cast<void**>(&device_input),
+                        static_cast<size_t>(options.k) * sizeof(uint16_t)));
+  HGGC_CHECK(hggcMalloc(reinterpret_cast<void**>(&device_output),
+                        static_cast<size_t>(options.n) * sizeof(float)));
+  HGGC_CHECK(hggcMemcpy(device_weights, host_weights.data(),
+                        element_count * sizeof(uint16_t),
+                        hggcMemcpyHostToDevice));
+  HGGC_CHECK(hggcMemcpy(device_input, host_input.data(),
+                        static_cast<size_t>(options.k) * sizeof(uint16_t),
+                        hggcMemcpyHostToDevice));
+
+  for (int iteration = 0; iteration < options.warmup; ++iteration) {
+    bf16_gemv_reference<<<options.n, kThreads>>>(
+        device_weights, device_input, device_output, options.n, options.k);
+  }
+  HGGC_CHECK(hggcGetLastError());
+  HGGC_CHECK(hggcDeviceSynchronize());
+
+  HGGC_CHECK(hggcEventCreate(&start));
+  HGGC_CHECK(hggcEventCreate(&stop));
+  HGGC_CHECK(hggcEventRecord(start, 0));
+  for (int iteration = 0; iteration < options.iterations; ++iteration) {
+    bf16_gemv_reference<<<options.n, kThreads>>>(
+        device_weights, device_input, device_output, options.n, options.k);
+  }
+  HGGC_CHECK(hggcEventRecord(stop, 0));
+  HGGC_CHECK(hggcEventSynchronize(stop));
+
+  float total_ms = 0.0F;
+  HGGC_CHECK(hggcEventElapsedTime(&total_ms, start, stop));
+  if (!(total_ms > 0.0F)) {
+    std::cerr << "Event timer returned a non-positive duration\n";
+    return EXIT_FAILURE;
+  }
+  HGGC_CHECK(hggcMemcpy(host_output.data(), device_output,
+                        static_cast<size_t>(options.n) * sizeof(float),
+                        hggcMemcpyDeviceToHost));
+
+  float max_absolute_error = 0.0F;
+  float max_relative_error = 0.0F;
+  int failed_values = 0;
+  for (int row = 0; row < options.n; ++row) {
+    const float expected = reference[static_cast<size_t>(row)];
+    const float actual = host_output[static_cast<size_t>(row)];
+    const float absolute_error = std::abs(actual - expected);
+    const float relative_error =
+        absolute_error / std::max(std::abs(expected), 1.0e-6F);
+    max_absolute_error = std::max(max_absolute_error, absolute_error);
+    max_relative_error = std::max(max_relative_error, relative_error);
+    if (!std::isfinite(actual) ||
+        absolute_error > 1.0e-2F + 1.0e-3F * std::abs(expected)) {
+      ++failed_values;
+    }
+  }
+
+  const double average_ms =
+      static_cast<double>(total_ms) / static_cast<double>(options.iterations);
+  const double seconds = average_ms / 1000.0;
+  const double flops =
+      2.0 * static_cast<double>(options.n) * static_cast<double>(options.k);
+  const double bytes =
+      static_cast<double>(element_count * sizeof(uint16_t)) +
+      static_cast<double>(static_cast<size_t>(options.k) * sizeof(uint16_t)) +
+      static_cast<double>(static_cast<size_t>(options.n) * sizeof(float));
+  const double gflops = flops / seconds / 1.0e9;
+  const double effective_gbps = bytes / seconds / 1.0e9;
+  const bool passed = failed_values == 0;
+
+  std::cout << std::fixed << std::setprecision(6)
+            << "BF16 GEMV reference: N=" << options.n << ", K=" << options.k
+            << ", average_ms=" << average_ms << ", GFLOP/s=" << gflops
+            << ", effective_GB/s=" << effective_gbps << '\n'
+            << "Correctness: " << (passed ? "PASS" : "FAIL")
+            << ", failed_values=" << failed_values
+            << ", max_abs_error=" << max_absolute_error
+            << ", max_rel_error=" << max_relative_error << '\n'
+            << "RESULT {\"kernel\":\"bf16_gemv_reference\",\"n\":"
+            << options.n << ",\"k\":" << options.k
+            << ",\"warmup\":" << options.warmup
+            << ",\"iterations\":" << options.iterations
+            << ",\"average_ms\":" << average_ms
+            << ",\"gflops\":" << gflops
+            << ",\"effective_gbps\":" << effective_gbps
+            << ",\"max_absolute_error\":" << max_absolute_error
+            << ",\"max_relative_error\":" << max_relative_error
+            << ",\"passed\":" << (passed ? "true" : "false") << "}\n";
+
+  HGGC_CHECK(hggcEventDestroy(start));
+  HGGC_CHECK(hggcEventDestroy(stop));
+  HGGC_CHECK(hggcFree(device_output));
+  HGGC_CHECK(hggcFree(device_input));
+  HGGC_CHECK(hggcFree(device_weights));
+  return passed ? EXIT_SUCCESS : EXIT_FAILURE;
+}

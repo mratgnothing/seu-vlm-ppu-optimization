@@ -84,6 +84,13 @@ Q projection 同时输出 query 和 gate：
 
 这不代表底层 kernel 无法运行，但意味着量化路线可能需要在线调优、补充配置或保留部分层为 BF16。
 
+## 已准备的尺寸级验证入口
+
+[`ppu/microbench/qwen35_bf16_gemv.hg`](../ppu/microbench/qwen35_bf16_gemv.hg)
+覆盖 `N=6144,K=2048`、`N=2048,K=6144` 和 `N=2048,K=2048` 三组解码
+关键尺寸。它是 BF16 输入、FP32 累加的正确性参考 kernel，用于隔离 PPU 环境中的
+编译、误差、延迟和访存基线，不代表已经完成 PPU 实测或生产级优化。
+
 ## 优化优先级
 
 1. GDN 单 token recurrent update：18 层 decode 必经路径。
@@ -95,4 +102,3 @@ Q projection 同时输出 query 和 gate：
 7. 视觉 MLP 与 patch/merge，只在 TTFT 优化阶段重点处理。
 
 本地 CUDA profiler 显示 GEMV + GEMM 占 self CUDA time 86.18%，与上述 decode 小矩阵路径一致。
-

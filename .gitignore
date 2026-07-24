@@ -42,6 +42,7 @@ artifacts/
 results/raw/
 results/summary.csv
 logs/
+ppu/microbench/build/
 *.log
 configs/local.psd1
 
