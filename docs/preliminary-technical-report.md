@@ -69,8 +69,8 @@ SHA-256 已写入锁定文件。当前路径使用 BF16 权重、单样本、确
 - MMBench Dev CN：4029 条，图像、问题、选项和答案字段审计通过。
 - MMBench Dev EN：4029 条，字段审计通过。
 - 快速迭代集：中英文各固定前 20 条。
-- 精度扩展集：中文按 category/二级类别比例分层抽取 200 条，固定随机种子
-  `20260625`，覆盖 20 个分组。
+- 精度扩展集：中英文分别按 category/二级类别比例分层抽取 200 条，固定随机种子
+  `20260625`，两种语言均覆盖 20 个分组。
 
 分层 200 条用于观察跨类别稳定性，固定前 20 条用于性能回归。两者都不等同于
 赛事私有评测集。
@@ -131,11 +131,15 @@ SHA-256 已写入锁定文件。当前路径使用 BF16 权重、单样本、确
 英文 6 个结果文件的 question ID、答案和 Token 数完全一致，全部通过公开接口校验。
 最初单次吞吐提升 10.57% 偏乐观，因此正式报告改用三次中位数。
 
-### 5.3 中文比例分层 200 条
+### 5.3 中英文比例分层 200 条
 
 O1 在 200 条分层样本上的 Accuracy 为 84.5%（169/200），公开接口验证全部通过。
 较弱子类包括逻辑推理、关系理解和跨实例推理，后续精度验证应优先观察这些类别，
 不得针对单个公开样本手工过拟合。
+
+英文使用相同种子和分层方法，Accuracy 为 82.5%（165/200），公开接口验证全部
+通过。英文 logic reasoning 为 47.37%，relation reasoning 为 76.19%；
+中英文均确认这两类是后续低精度与 kernel 优化的重点精度护栏。
 
 ## 6. Profile 与关键算子
 
@@ -229,6 +233,7 @@ GDN 和 causal conv，而非在缺少证据时广泛改动。
 - 英文三次复测：`docs/experiments/2026-07-24-en-m1-three-runs.md`
 - CUDA profile：`docs/experiments/2026-07-24-o2-cuda-profile.md`
 - 分层 200 条精度：`docs/experiments/2026-07-24-cn-stratified-n200.md`
+- 英文分层 200 条精度：`docs/experiments/2026-07-24-en-stratified-n200.md`
 - PPU 兼容性矩阵：`docs/ppu-compatibility-matrix.md`
 - 关键算子尺寸：`docs/qwen35-kernel-targets.md`
 - 主办方问题：`docs/questions-for-organizer.md`

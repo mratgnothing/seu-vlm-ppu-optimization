@@ -8,15 +8,16 @@
 | B1 | 真实模型仅加载 | 模型 class、device map 和内存占用有记录 |
 | B2 | 中英文真实模型各 1 条 | 唯一 A/B/C/D、无验证错误、无 OOM |
 | B3 | 中英文真实模型各 20 条 | 保存 Accuracy、TTFT、Throughput 和逐样本结果 |
+| B3a | 中英文比例分层各 200 条 | 固定 seed、类别覆盖、Accuracy 和接口校验可追溯 |
 | B4 | 公开集完整基线 | 环境稳定后再运行，结果与配置可追溯 |
 
-B0-B3 已完成，B4 待运行。当前 BF16 单样本路径全部参数位于 GPU，未使用 CPU offload。
+B0-B3a 已完成，B4 待运行。当前 BF16 单样本路径全部参数位于 GPU，未使用 CPU offload。
 
 ## 阶段 O：低风险优化候选
 
 真实基线完成后按单变量方式依次评估：
 
-1. `torch.inference_mode()` 替代 `torch.no_grad()`：已完成，三次中文 20 条复测有效。
+1. `torch.inference_mode()` 替代 `torch.no_grad()`：已完成，中英文各三次 20 条复测有效。
 2. GPU profiler、显存峰值和热点定位：已完成，GEMV/GEMM 占 self CUDA time 86.18%。
 3. Decode 小矩阵 GEMV、线性注意力和因果卷积 fast path。
 4. Elementwise/copy kernel 融合与启动开销。

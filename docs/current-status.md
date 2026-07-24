@@ -39,9 +39,10 @@
 - O1 英文三次复测：TTFT 中位提升 10.22%，吞吐中位提升 6.37%，Accuracy 仍为 80%。
 - 中英文跨 profile 的 question ID、答案和 token 数均完全一致，公开接口校验通过。
 - 中文比例分层 200 条 Accuracy 84.5%（169/200），20 个类别覆盖，接口校验通过。
+- 英文比例分层 200 条 Accuracy 82.5%（165/200），20 个类别覆盖，接口校验通过。
 - O2 单样本 CUDA profiler 已完成：GEMV/GEMM 占 self CUDA time 86.18%，elementwise/copy 调用数高。
 - Profiler 口径 peak allocated/reserved 为 4.19/4.21 GiB。
-- 当前正式性能数据使用首个生成 token 计时，只覆盖固定前 20 条；Accuracy 已扩展到分层 200 条，仍不代表完整公开集或私有评测成绩。
+- 当前正式性能数据使用首个生成 token 计时，只覆盖固定前 20 条；中英文 Accuracy 均已扩展到分层 200 条，仍不代表完整公开集或私有评测成绩。
 
 ## PPU 状态
 
