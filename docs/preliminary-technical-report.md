@@ -141,6 +141,22 @@ O1 在 200 条分层样本上的 Accuracy 为 84.5%（169/200），公开接口�
 通过。英文 logic reasoning 为 47.37%，relation reasoning 为 76.19%；
 中英文均确认这两类是后续低精度与 kernel 优化的重点精度护栏。
 
+### 5.4 中文完整公开集
+
+O1 在中文 MMBench Dev 全部 4029 条上的 Accuracy 为 83.94%（3382/4029），
+公开接口验证 4029/4029 通过，无无效答案。完整集按 200 条分块运行，共 21 块；
+来源文件、分块和合并结果均带 SHA-256 校验。独立审计确认合并结果恰有 4029 个
+唯一题目 ID，与原始 TSV 的题号集合完全一致，逐样本重新统计的正确数与汇总字段
+一致。
+
+一级类别中，Coarse Perception 为 88.96%，实例级 Fine-grained Perception 为
+87.64%，Attribute Reasoning 为 85.52%；较弱的 Logic Reasoning 为 71.05%，
+跨实例 Fine-grained Perception 为 76.72%。完整集结果与中文分层 200 条的 84.5%
+接近，未观察到规模扩大后的异常精度坍塌。
+
+完整集只运行一次，因此本节仅作为 Accuracy 和管线完整性证据。其 TTFT 与
+Throughput 不进入正式性能表；性能结论仍采用固定 20 条、三次运行的中位数。
+
 ## 6. Profile 与关键算子
 
 单条中文样本的 CUDA profiler 结果：
@@ -214,8 +230,9 @@ SHA-256 的可复现构建验证，但仍需根据主办方最终目录和启动
 ## 9. 当前结论与下一步
 
 O1 已在本地固定中英文样本上取得稳定、无精度变化的 TTFT 和吞吐收益，且评测计时
-边界已修正到第一个生成 Token。Profile 说明后续优化应集中于 decode GEMV/GEMM、
-GDN 和 causal conv，而非在缺少证据时广泛改动。
+边界已修正到第一个生成 Token。中文完整公开集 Accuracy 为 83.94%，结果完整性
+已独立审计。Profile 说明后续优化应集中于 decode GEMV/GEMM、GDN 和 causal
+conv，而非在缺少证据时广泛改动。
 
 当前最小外部依赖是主办方明确：
 
@@ -237,6 +254,7 @@ GDN 和 causal conv，而非在缺少证据时广泛改动。
 - CUDA profile：`docs/experiments/2026-07-24-o2-cuda-profile.md`
 - 分层 200 条精度：`docs/experiments/2026-07-24-cn-stratified-n200.md`
 - 英文分层 200 条精度：`docs/experiments/2026-07-24-en-stratified-n200.md`
+- 中文完整公开集：`docs/experiments/2026-07-26-cn-full-n4029.md`
 - PPU 兼容性矩阵：`docs/ppu-compatibility-matrix.md`
 - 关键算子尺寸：`docs/qwen35-kernel-targets.md`
 - 主办方问题：`docs/questions-for-organizer.md`

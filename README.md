@@ -11,10 +11,13 @@
 - 严格首 token 口径下，O1 中文三次中位 TTFT 从 313.562 ms 降至 287.706 ms，吞吐从 21.328 升至 23.209 tokens/s，提升 8.25%/8.82%。
 - 英文三次复测的 TTFT/吞吐中位提升为 10.22%/6.37%，中英文答案、token 数和 Accuracy 均无变化。
 - 中英文比例分层 200 条 Accuracy 分别为 84.5%（169/200）和 82.5%（165/200），20 个类别全部覆盖。
+- 中文完整公开集 4029 条 Accuracy 为 83.94%（3382/4029），题号集合、答案域和分块完整性审计全部通过。
 - PPU SDK、编译链和官方 vectorAdd 已通过；Qwen3.5-2B 的 PPU 真实部署仍待目标资源开放后完成。
 - `dummy` 后端只用于接口冒烟；不得将其结果视为真实模型部署或比赛成绩。
 
-当前数值只来自公开集前 20 条的工程验证，不代表完整公开集或主办方私有评测成绩。可公开的聚合结果见 [results/README.md](results/README.md)。
+正式性能提升来自公开集固定前 20 条的三次工程复测；完整公开集当前用于 Accuracy
+验证。所有本地结果均不代表主办方私有评测成绩。可公开的聚合结果见
+[results/README.md](results/README.md)。
 
 PPU 侧已完成 SDK、预置 vLLM 源码和 Qwen3.5 架构缺口核验。详见 [PPU 兼容性矩阵](docs/ppu-compatibility-matrix.md) 和 [需要向主办方确认的问题](docs/questions-for-organizer.md)。
 Qwen3.5-2B 的 GDN、MLP、全注意力与视觉层尺寸见 [关键算子与 PPU kernel 目标](docs/qwen35-kernel-targets.md)。

@@ -20,6 +20,18 @@ CHOICE_LEADING_MARKUP_PATTERN = re.compile(
     r"(?=[\s\.。,\，:：、\)\]）】])",
     re.IGNORECASE,
 )
+EXPLICIT_BOLDED_CONCLUSION_PATTERN = re.compile(
+    r"^\s*[-*]\s*(?P<choice>[ABCD])\s*[:：][^\r\n]*"
+    r"\*\*(?:matches exactly|is correct|is the correct choice|"
+    r"完全符合|正确选项|符合题意)\*\*\s*[.!。]?\s*$",
+    re.IGNORECASE | re.MULTILINE,
+)
+CANONICAL_CHOICE_OUTPUT_PATTERN = re.compile(
+    r"(?:final\s*)?(?:answer|choice|option|答案|选项|选择|正确答案|最终答案)"
+    r"\s*(?:(?:is|为|是|[:：])\s*)*[\(\[（【]?\s*[ABCD]"
+    r"\s*[\)\]）】]?",
+    re.IGNORECASE,
+)
 
 
 def normalize_choice_markup(text: str) -> str:
@@ -32,6 +44,26 @@ def normalize_choice_markup(text: str) -> str:
         lambda match: match.group("choice").upper(),
         normalized,
     )
+
+
+def normalize_explicit_choice_conclusion(text: str) -> str:
+    """Append a canonical answer for one unambiguous bolded option verdict.
+
+    Some long multiple-choice explanations reach the token budget after marking
+    one list item as an explicit positive conclusion but before emitting their
+    final ``Answer: X`` line. This normalization is deliberately strict: it
+    requires exactly one bolded positive verdict and never uses question IDs or
+    reference answers.
+    """
+    if not text or CANONICAL_CHOICE_OUTPUT_PATTERN.search(text):
+        return text
+    choices = {
+        match.group("choice").upper()
+        for match in EXPLICIT_BOLDED_CONCLUSION_PATTERN.finditer(text)
+    }
+    if len(choices) != 1:
+        return text
+    return f"{text.rstrip()}\nAnswer: {next(iter(choices))}"
 
 
 @dataclass
@@ -249,7 +281,10 @@ class VLMModel:
                 skip_special_tokens=True,
                 clean_up_tokenization_spaces=False,
             ).strip()
-        normalized_text = normalize_choice_markup(text)
+        markup_normalized_text = normalize_choice_markup(text)
+        normalized_text = normalize_explicit_choice_conclusion(
+            markup_normalized_text
+        )
 
         ttft = (
             timing.timestamp - start
@@ -263,7 +298,10 @@ class VLMModel:
             elapsed_seconds=end - start,
             meta={
                 "backend": "transformers",
-                "choice_markup_normalized": normalized_text != text,
+                "choice_markup_normalized": markup_normalized_text != text,
+                "choice_conclusion_normalized": (
+                    normalized_text != markup_normalized_text
+                ),
                 "optimization_profile": self.optimization_profile,
                 "ttft_measurement": "first_generated_token_put",
             },

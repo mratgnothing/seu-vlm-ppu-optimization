@@ -3,7 +3,10 @@ from __future__ import annotations
 import unittest
 
 from benchmark_public import compute_throughput, extract_answer, validate_public_result
-from evaluation_wrapper import normalize_choice_markup
+from evaluation_wrapper import (
+    normalize_choice_markup,
+    normalize_explicit_choice_conclusion,
+)
 
 
 class BenchmarkContractTest(unittest.TestCase):
@@ -28,6 +31,32 @@ class BenchmarkContractTest(unittest.TestCase):
             with self.subTest(raw=raw):
                 normalized = normalize_choice_markup(raw)
                 self.assertEqual(extract_answer(normalized), expected)
+
+    def test_normalizes_one_explicit_bolded_conclusion(self) -> None:
+        raw = (
+            "- A: skips required values, so it doesn't match.\n"
+            "- B: includes an extra value, so it doesn't match.\n"
+            "- C: covers exactly 0 through 8 — **matches exactly**.\n"
+            "- D: starts from the wrong value."
+        )
+        normalized = normalize_explicit_choice_conclusion(raw)
+
+        self.assertTrue(normalized.endswith("Answer: C"))
+        self.assertEqual(extract_answer(normalized), "C")
+
+    def test_does_not_normalize_ambiguous_or_unbolded_reasoning(self) -> None:
+        cases = [
+            "- A: **is correct**.\n- B: **matches exactly**.",
+            "- C: matches exactly.",
+            "The code in option C appears suitable.",
+        ]
+        for raw in cases:
+            with self.subTest(raw=raw):
+                self.assertEqual(normalize_explicit_choice_conclusion(raw), raw)
+
+    def test_preserves_existing_canonical_answer(self) -> None:
+        raw = "Answer: B\n- C: the value **matches exactly**."
+        self.assertEqual(normalize_explicit_choice_conclusion(raw), raw)
 
     def test_throughput_matches_official_formula(self) -> None:
         self.assertAlmostEqual(
