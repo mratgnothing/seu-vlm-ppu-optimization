@@ -43,6 +43,7 @@ results/raw/
 results/summary.csv
 logs/
 ppu/microbench/build/
+.playwright-cli/
 *.log
 configs/local.psd1
 
