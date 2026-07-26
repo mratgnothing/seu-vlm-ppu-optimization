@@ -141,7 +141,7 @@ O1 在 200 条分层样本上的 Accuracy 为 84.5%（169/200），公开接口�
 通过。英文 logic reasoning 为 47.37%，relation reasoning 为 76.19%；
 中英文均确认这两类是后续低精度与 kernel 优化的重点精度护栏。
 
-### 5.4 中文完整公开集
+### 5.4 中英文完整公开集
 
 O1 在中文 MMBench Dev 全部 4029 条上的 Accuracy 为 83.94%（3382/4029），
 公开接口验证 4029/4029 通过，无无效答案。完整集按 200 条分块运行，共 21 块；
@@ -156,6 +156,17 @@ O1 在中文 MMBench Dev 全部 4029 条上的 Accuracy 为 83.94%（3382/4029�
 
 完整集只运行一次，因此本节仅作为 Accuracy 和管线完整性证据。其 TTFT 与
 Throughput 不进入正式性能表；性能结论仍采用固定 20 条、三次运行的中位数。
+
+英文完整公开集原始 Accuracy 为 79.72%（3212/4029）。唯一无效输出在 256-token
+上限前已经把 C 标记为加粗的 “matches exactly”，但来不及生成最终答案行。为此，
+模型 wrapper 增加严格的通用结论规范化：仅当输出恰有一个加粗正向结论且没有标准
+答案行时，追加 `Answer: X`；不读取题号和参考答案。
+
+修复后完整重跑异常所在的 200 条分块。逐样本比较确认 199 个已有解析答案和全部
+token 数不变，仅该无效输出恢复为 C。严格重新合并后的英文 Accuracy 为 79.75%
+（3213/4029），公开接口验证 4029/4029 通过。英文一级类别中 Coarse Perception
+为 87.56%，实例级 Fine-grained Perception 为 85.47%；Logic Reasoning 最弱，
+为 56.22%。修复前后的完整 artifact 均保留在本地，以便审计。
 
 ## 6. Profile 与关键算子
 
@@ -230,9 +241,9 @@ SHA-256 的可复现构建验证，但仍需根据主办方最终目录和启动
 ## 9. 当前结论与下一步
 
 O1 已在本地固定中英文样本上取得稳定、无精度变化的 TTFT 和吞吐收益，且评测计时
-边界已修正到第一个生成 Token。中文完整公开集 Accuracy 为 83.94%，结果完整性
-已独立审计。Profile 说明后续优化应集中于 decode GEMV/GEMM、GDN 和 causal
-conv，而非在缺少证据时广泛改动。
+边界已修正到第一个生成 Token。中英文完整公开集 Accuracy 分别为 83.94% 和
+79.75%，结果完整性均已独立审计。Profile 说明后续优化应集中于 decode
+GEMV/GEMM、GDN 和 causal conv，而非在缺少证据时广泛改动。
 
 当前最小外部依赖是主办方明确：
 
@@ -255,6 +266,7 @@ conv，而非在缺少证据时广泛改动。
 - 分层 200 条精度：`docs/experiments/2026-07-24-cn-stratified-n200.md`
 - 英文分层 200 条精度：`docs/experiments/2026-07-24-en-stratified-n200.md`
 - 中文完整公开集：`docs/experiments/2026-07-26-cn-full-n4029.md`
+- 英文完整公开集：`docs/experiments/2026-07-26-en-full-n4029.md`
 - PPU 兼容性矩阵：`docs/ppu-compatibility-matrix.md`
 - 关键算子尺寸：`docs/qwen35-kernel-targets.md`
 - 主办方问题：`docs/questions-for-organizer.md`
