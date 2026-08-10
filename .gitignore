@@ -31,6 +31,7 @@ datasets/
 *.parquet
 *.arrow
 *.pdf
+!conprehension/pdf/*.pdf
 *.zip
 *.7z
 *.rar
