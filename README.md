@@ -6,6 +6,11 @@
 
 - 已导入 `dndx_participant-v1.1` 的公开评测入口和初始 wrapper。
 - 本地开发环境锁定为 Python 3.12、PyTorch 2.13.0+cu130、Transformers 5.14.1。
+- `5070ti` 分支已在 RTX 5070 Ti Laptop 12GB 上建立独立 Conda 环境：
+  Python 3.12.13、CUDA 13.0、BF16 可用，31 项无模型测试通过；原 RTX 4050
+  性能结果仍作为历史基线，不与新机器混用。
+- 锁定 revision 的 Qwen3.5-2B 已在该环境通过完整性校验和纯 GPU 加载冒烟：
+  617 个参数张量均位于 `cuda:0`，模型内存占用约 4.12 GiB。
 - Qwen3.5-2B 指定 revision 已通过完整性校验，并在 RTX 4050 6GB 上以 BF16 纯 GPU 加载。
 - 已完成中英文各 20 条公开集真实小样本基线；中文基线 Accuracy 85%。
 - 严格首 token 口径下，O1 中文三次中位 TTFT 从 313.562 ms 降至 287.706 ms，吞吐从 21.328 升至 23.209 tokens/s，提升 8.25%/8.82%。
@@ -22,6 +27,33 @@
 PPU 侧已完成 SDK、预置 vLLM 源码和 Qwen3.5 架构缺口核验。详见 [PPU 兼容性矩阵](docs/ppu-compatibility-matrix.md) 和 [需要向主办方确认的问题](docs/questions-for-organizer.md)。
 Qwen3.5-2B 的 GDN、MLP、全注意力与视觉层尺寸见 [关键算子与 PPU kernel 目标](docs/qwen35-kernel-targets.md)。
 针对三组关键解码尺寸，已准备 [PPU BF16 GEMV 微基准](ppu/microbench/README.md)；它必须在主办方提供的隔离资源中编译验证，目前不计作 PPU 优化结果。
+
+## PPU 服务器首次验证
+
+获得主办方允许上传代码的隔离 PPU 节点后，先运行只读预检：
+
+```bash
+chmod +x scripts/run_ppu_first_validation.sh
+scripts/run_ppu_first_validation.sh \
+  --vllm-source /opt/vllm \
+  --model-path /path/to/Qwen3.5-2B
+```
+
+输出默认保存在忽略目录 `artifacts/ppu-first-validation/`，包括环境清单、
+`runtime.json`、PPU-SMI 快照和两条部署路线的阻塞项。默认不会编译或运行比赛
+kernel；仅在主办方批准的个性化隔离节点显式加入 `--run-microbench`：
+
+```bash
+scripts/run_ppu_first_validation.sh \
+  --model-path /path/to/Qwen3.5-2B \
+  --run-microbench \
+  --device 0 \
+  --warmup 10 \
+  --iterations 100
+```
+
+脚本会先做一次 `warmup=0, iterations=1` 的单尺寸冒烟，再运行三组 Qwen3.5
+BF16 GEMV。共享节点仍遵守“不上传、不运行本目录”的既有边界。
 
 两位成员的职责、四周里程碑和当前交接点见 [两人协作与一个月推进计划](docs/team-plan.md)。
 已验证内容已同步整理到 [初赛技术报告初稿](docs/preliminary-technical-report.md)，未在 PPU 实测的部分均保留显式边界。
@@ -44,6 +76,20 @@ Qwen3.5-2B 的 GDN、MLP、全注意力与视觉层尺寸见 [关键算子与 PP
 ```
 
 ## 第一次运行
+
+当前 Windows 5070 Ti 开发环境位于仓库外：
+
+```text
+G:\seu-AI\.conda-envs\seu-vlm-5070ti
+```
+
+可直接使用环境内 Python，避免修改 Conda `base`：
+
+```powershell
+$python = "G:\seu-AI\.conda-envs\seu-vlm-5070ti\python.exe"
+& $python .\scripts\check_environment.py
+& $python -m unittest discover -s tests -v
+```
 
 1. 建立本地 CUDA 环境：
 

@@ -69,6 +69,14 @@ def _package_versions() -> dict[str, str | None]:
     return versions
 
 
+def _module_available(module_name: str) -> bool:
+    """Check a possibly nested module without failing when its parent is absent."""
+    try:
+        return importlib.util.find_spec(module_name) is not None
+    except (ImportError, ModuleNotFoundError, ValueError):
+        return False
+
+
 def _source_contains(root: Path, markers: tuple[str, ...]) -> bool:
     if not root.is_dir():
         return False
@@ -110,14 +118,21 @@ def _model_config_smoke(model_path: Path | None) -> dict[str, Any]:
     return result
 
 
+def _assess_route(checks: tuple[tuple[bool, str], ...]) -> dict[str, Any]:
+    """Return a machine-readable readiness result and actionable blockers."""
+    blockers = [blocker for passed, blocker in checks if not passed]
+    return {
+        "ready": not blockers,
+        "blockers": blockers,
+    }
+
+
 def build_report(args: argparse.Namespace) -> dict[str, Any]:
     packages = _package_versions()
     device_nodes = sorted(
         set(glob.glob("/dev/alixpu*") + glob.glob("/dev/*ppu*"))
     )
-    qwen35_transformers_module = importlib.util.find_spec(
-        "transformers.models.qwen3_5"
-    )
+    qwen35_transformers_module = _module_available("transformers.models.qwen3_5")
     vllm_source = args.vllm_source.resolve()
     vllm_qwen35 = _source_contains(
         vllm_source,
@@ -131,27 +146,42 @@ def build_report(args: argparse.Namespace) -> dict[str, Any]:
         vllm_source,
         ("causal_conv1d_fwd", "causal_conv1d_update"),
     )
-    transformers_stack_present = all(
-        packages[name] is not None for name in ("torch", "transformers")
-    )
+    torch_present = packages["torch"] is not None
+    transformers_present = packages["transformers"] is not None
+    transformers_stack_present = torch_present and transformers_present
     vllm_stack_present = transformers_stack_present and packages["vllm"] is not None
     hardware_visible = bool(device_nodes)
-    transformers_runtime_ready = bool(
-        hardware_visible
-        and transformers_stack_present
-        and qwen35_transformers_module is not None
-    )
-    vllm_runtime_ready = bool(
-        hardware_visible
-        and vllm_stack_present
-        and vllm_qwen35
-        and vllm_gdn
-    )
     model_smoke = _model_config_smoke(args.model_path)
-    model_gate = (
-        bool(model_smoke.get("loaded"))
-        if model_smoke.get("requested")
-        else True
+    model_checks: tuple[tuple[bool, str], ...] = ()
+    if model_smoke.get("requested"):
+        model_checks = (
+            (bool(model_smoke.get("exists")), "model_path_missing"),
+            (bool(model_smoke.get("loaded")), "model_config_load_failed"),
+        )
+
+    transformers_route = _assess_route(
+        (
+            (hardware_visible, "ppu_device_not_visible"),
+            (torch_present, "torch_not_installed"),
+            (transformers_present, "transformers_not_installed"),
+            (
+                qwen35_transformers_module,
+                "transformers_qwen35_module_missing",
+            ),
+        )
+        + model_checks
+    )
+    vllm_route = _assess_route(
+        (
+            (hardware_visible, "ppu_device_not_visible"),
+            (torch_present, "torch_not_installed"),
+            (transformers_present, "transformers_not_installed"),
+            (packages["vllm"] is not None, "vllm_not_installed"),
+            (vllm_source.is_dir(), "vllm_source_missing"),
+            (vllm_qwen35, "vllm_qwen35_source_missing"),
+            (vllm_gdn, "vllm_gdn_source_missing"),
+        )
+        + model_checks
     )
 
     return {
@@ -180,8 +210,7 @@ def build_report(args: argparse.Namespace) -> dict[str, Any]:
         "compatibility": {
             "transformers_stack_present": transformers_stack_present,
             "vllm_stack_present": vllm_stack_present,
-            "transformers_qwen35_module": qwen35_transformers_module
-            is not None,
+            "transformers_qwen35_module": qwen35_transformers_module,
             "vllm_source_path": str(vllm_source),
             "vllm_qwen35_source": vllm_qwen35,
             "vllm_gdn_source": vllm_gdn,
@@ -190,13 +219,15 @@ def build_report(args: argparse.Namespace) -> dict[str, Any]:
         "model_config_smoke": model_smoke,
         "readiness": {
             "hardware_visible": hardware_visible,
-            "transformers_eager_ready": transformers_runtime_ready
-            and model_gate,
-            "vllm_ready": vllm_runtime_ready and model_gate,
+            "transformers_eager_ready": transformers_route["ready"],
+            "vllm_ready": vllm_route["ready"],
+        },
+        "routes": {
+            "transformers_eager": transformers_route,
+            "vllm": vllm_route,
         },
         "deployment_ready": bool(
-            model_gate
-            and (transformers_runtime_ready or vllm_runtime_ready)
+            transformers_route["ready"] or vllm_route["ready"]
         ),
     }
 

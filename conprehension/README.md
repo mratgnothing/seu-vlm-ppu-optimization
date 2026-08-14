@@ -3,7 +3,7 @@
 > 本目录用于在迁移到 Linux 或更换开发环境后，保留当前项目背景、技术判断、
 > 协作约定、学习路径和外部资料入口。
 >
-> 更新时间：2026-07-29  
+> 更新时间：2026-08-12
 > 当前本地分支：`5070ti`  
 > 仓库：`seu-vlm-ppu-optimization`
 
@@ -100,6 +100,19 @@ Qwen3.5-2B
 ```
 
 ## 4. 开发环境和工作方式
+
+### 当前本机验证状态
+
+- RTX 5070 Ti Laptop GPU，约 11.94 GiB 显存；
+- NVIDIA 驱动 591.97；
+- 独立 Conda 环境：`G:\seu-AI\.conda-envs\seu-vlm-5070ti`；
+- Python 3.12.13、PyTorch 2.13.0+cu130、Transformers 5.14.1；
+- CUDA runtime 13.0、BF16 可用；
+- 31 项无模型测试通过；
+- 锁定 revision 的 Qwen3.5-2B 已完成完整性校验并在 `cuda:0` 真实加载，模型报告
+  内存占用约 4.12 GiB；当前缺少可选 fast-path 依赖，性能测试前需单独处理；
+- 未修改 Conda `base`；
+- 旧 RTX 4050 性能数据继续作为历史基线，尚未在 5070 Ti 重跑。
 
 ### 推荐环境
 
@@ -320,6 +333,19 @@ python3 scripts/check_ppu_runtime.py \
   --output ppu-runtime-report.json
 ```
 
+仓库也提供保留环境、日志和 Git 版本证据的一键入口：
+
+```bash
+chmod +x scripts/run_ppu_first_validation.sh
+scripts/run_ppu_first_validation.sh \
+  --vllm-source /opt/vllm \
+  --model-path /path/to/Qwen3.5-2B
+```
+
+默认只读预检。只有在主办方批准的个性化隔离节点才加入
+`--run-microbench`；脚本会先做单次冒烟，再运行三组 BF16 GEMV，并把证据写入
+`artifacts/ppu-first-validation/`。
+
 然后按以下顺序验收：
 
 ```text
@@ -334,6 +360,10 @@ python3 scripts/check_ppu_runtime.py \
 ```
 
 ## 11. 推荐学习顺序
+
+中文第一阶段讲义见
+[第一阶段：模型推理与评测入门](chinese/stage-1-model-inference.md)，中文离线资料总入口见
+[中文资料离线入口](chinese/README.md)。
 
 ### 阶段 1：模型推理
 
@@ -393,6 +423,12 @@ python3 scripts/check_ppu_runtime.py \
 - [NVIDIA Deep Learning Performance Guide](https://docs.nvidia.com/deeplearning/performance/)
 - [NVIDIA CUTLASS Documentation](https://docs.nvidia.com/cutlass/)
 
+中文入口：
+
+- [NVIDIA 中国 CUDA 文档中心](https://docs.nvidia.cn/cuda/doc/index.html)：官方中文导航，底层 API 名称和核心手册正文仍应以英文最新版为准；
+- [CUDA 中文手册社区翻译](https://cuda-doc.readthedocs.io/zh-cn/latest/CUDA-C-Programming-Guide/index.html)：适合第一次理解 SIMT、线程层次和内存模型；
+- [新版 CUDA Programming Guide 中文翻译](https://bearneck.github.io/cuda-programming-guide-zh/)：社区维护，阅读时与 NVIDIA 英文原文交叉核对。
+
 推荐阅读顺序：Programming Guide 的 Programming Model、Intro to CUDA C++ 和
 SIMT Kernels，然后读 Best Practices 的 profiling、timing、memory optimization、
 execution configuration 和 numerical accuracy。
@@ -408,6 +444,21 @@ execution configuration 和 numerical accuracy。
 - [Triton Layer Normalization](https://triton-lang.org/main/getting-started/tutorials/05-layer-norm.html)
 - [Triton Fused Attention](https://triton-lang.org/main/getting-started/tutorials/06-fused-attention.html)
 - [vLLM Documentation](https://docs.vllm.ai/)
+
+### 平头哥真武 PPU/HGGC
+
+- [PPU SDK v2.1 Release Note](https://help.aliyun.com/zh/document_detail/3030339.html)：官方说明源码级兼容 CUDA C/C++，支持到 CUDA 13.0 API 和 Triton 3.5.x，但 PPU 与 GPU 二进制不兼容；
+- [PPU SDK 快速入门](https://help.aliyun.com/zh/document_detail/3030340.html)：设备、驱动、SDK 和基础编译链检查；
+- [Asight Systems 快速入门](https://help.aliyun.com/zh/document_detail/2879847.html)：PPU 系统级性能分析；
+- [PPU 活动跟踪](https://help.aliyun.com/zh/document_detail/2996757.html)：HGGC、ACDNN、ACBLAS、PCCL 与 kernel/memcpy/memset 跟踪；
+- [hgobjdump v2.1](https://help.aliyun.com/zh/document_detail/3031866.html)：查看 PPU device binary、汇编和 `.hggc_fatbin`；
+- [hgfatbinary v2.1](https://help.aliyun.com/zh/document_detail/3031873.html)：多 PPU 架构 device code 打包格式。
+
+目前公开帮助中心能确认 PPU SDK 以 Clang/LLVM 为基础、采用 host/device 混合
+C/C++ 扩展并在源码级兼容 CUDA C/C++。完整 HGGC runtime/driver API、设备内建函数、
+PPU tensor-core/PTX 指令和支持矩阵仍应以服务器上对应版本的
+`/usr/local/PPU_SDK/include`、SDK samples、编译器 `--help` 以及主办方随镜像提供的
+手册为准，不能仅按 CUDA 文档推断硬件语义。
 
 ### 微调
 
@@ -433,13 +484,15 @@ execution configuration 和 numerical accuracy。
 
 PDF 保存在 [`pdf/`](pdf/)：
 
-1. [CUDA Programming Guide](pdf/cuda-programming-guide.pdf)
-2. [CUDA C++ Best Practices Guide](pdf/cuda-c-best-practices-guide.pdf)
-3. [LoRA: Low-Rank Adaptation of Large Language Models](pdf/lora.pdf)
-4. [QLoRA: Efficient Finetuning of Quantized LLMs](pdf/qlora.pdf)
-5. [AWQ: Activation-aware Weight Quantization](pdf/awq.pdf)
-6. [SmoothQuant: Accurate and Efficient Post-Training Quantization](pdf/smoothquant.pdf)
-7. [GPTQ: Accurate Post-Training Quantization for Generative Transformers](pdf/gptq.pdf)
+1. [CUDA 中文指南首页与核心概念速查](pdf/cuda-programming-guide-zh.pdf)：4 页网页离线打印；完整中文正文见 [`chinese/cuda-programming-guide-zh/`](chinese/cuda-programming-guide-zh/README.md)；
+2. [PPU SDK 快速入门（官方中文）](pdf/ppu-sdk-quick-start-zh.pdf)：15 页 A4 网页离线打印，包含历史版本示例，实际环境以比赛服务器为准；
+3. [CUDA Programming Guide](pdf/cuda-programming-guide.pdf)
+4. [CUDA C++ Best Practices Guide](pdf/cuda-c-best-practices-guide.pdf)
+5. [LoRA: Low-Rank Adaptation of Large Language Models](pdf/lora.pdf)
+6. [QLoRA: Efficient Finetuning of Quantized LLMs](pdf/qlora.pdf)
+7. [AWQ: Activation-aware Weight Quantization](pdf/awq.pdf)
+8. [SmoothQuant: Accurate and Efficient Post-Training Quantization](pdf/smoothquant.pdf)
+9. [GPTQ: Accurate Post-Training Quantization for Generative Transformers](pdf/gptq.pdf)
 
 PDF 论文用于理解方法，不等于比赛允许直接使用这些权重格式或实现。最终路线必须同时
 满足主办方规则、Qwen3.5/VLM 兼容性和 PPU kernel 支持。

@@ -26,7 +26,7 @@
 | 完整公开集精度 | 已完成 | 中英文各 4029 条、分块哈希与题号集合审计 | 私有集评测时保持同一 Accuracy 护栏 | [中文全量](experiments/2026-07-26-cn-full-n4029.md)、[英文全量](experiments/2026-07-26-en-full-n4029.md) |
 | 输出解析鲁棒性 | 已完成 | Markdown 选项、截断结论规范化和整块复测 | 继续记录新格式边界，禁止按题号修补 | [英文全量修复记录](experiments/2026-07-26-en-full-n4029.md) |
 | CUDA 热点定位 | 已完成 | GEMV/GEMM 占 self CUDA time 86.18%，显存峰值已记录 | 映射到 PPU kernel/profile | [CUDA Profile](experiments/2026-07-24-o2-cuda-profile.md) |
-| PPU 工具链 | 部分完成 | SDK、驱动、HGGC、vectorAdd、PPU-vLLM 源码调查 | 获取隔离资源和 Qwen3.5 Python/vLLM 镜像 | [PPU 环境](ppu-environment.md)、[兼容性矩阵](ppu-compatibility-matrix.md) |
+| PPU 工具链 | 部分完成 | SDK、驱动、HGGC、vectorAdd、PPU-vLLM 源码调查、首次验证入口 | 获取隔离资源并运行预检，按路线阻塞项选择 Python/vLLM 镜像 | [PPU 环境](ppu-environment.md)、[兼容性矩阵](ppu-compatibility-matrix.md)、[根目录 README](../README.md#ppu-服务器首次验证) |
 | PPU 关键算子 | 已准备，未实测 | 三组 BF16 GEMV 参考微基准和数值校验逻辑 | 在隔离 PPU 编译、校验、profile | [关键算子目标](qwen35-kernel-targets.md) |
 | 技术报告 | 初稿完成 | 方法、指标、结果和真实性边界已整理 | 补 PPU 真实实验、最终复现命令 | [初赛技术报告](preliminary-technical-report.md) |
 | 源码交付 | 候选包可用 | 白名单打包、敏感扫描、可复现 ZIP | 按主办方最终目录要求定稿 | [根目录 README](../README.md) |
@@ -52,6 +52,10 @@
 3. 从 `main` 拉出短分支；
 4. 使用 [实验模板](experiment-template.md) 记录配置、提交、结果和失败；
 5. 通过 Pull Request 合并，避免两人直接覆盖同一实验记录。
+
+隔离 PPU 节点首次接入时，先运行根目录 README 中的
+`scripts/run_ppu_first_validation.sh`。默认只做只读环境预检；微基准必须使用
+`--run-microbench` 显式启用，并且只允许在主办方批准的个性化隔离资源执行。
 
 ### Agent
 
@@ -88,4 +92,3 @@
 - [PPU 兼容性矩阵](ppu-compatibility-matrix.md)
 - [需要向主办方确认的问题](questions-for-organizer.md)
 - [实验记录目录](experiments/)
-
