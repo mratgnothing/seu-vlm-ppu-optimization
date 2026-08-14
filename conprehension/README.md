@@ -365,6 +365,12 @@ scripts/run_ppu_first_validation.sh \
 [第一阶段：模型推理与评测入门](chinese/stage-1-model-inference.md)，中文离线资料总入口见
 [中文资料离线入口](chinese/README.md)。
 
+Ubuntu 下载第三方中文教程：
+
+```bash
+./scripts/download_chinese_tutorials.sh
+```
+
 ### 阶段 1：模型推理
 
 - Transformer prefill/decode；

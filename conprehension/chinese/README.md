@@ -1,12 +1,35 @@
 # 中文资料离线入口
 
-更新时间：2026-08-12
+更新时间：2026-08-14
 
 本目录保存可以离线阅读的中文学习材料。外部翻译不属于本项目原创内容；涉及
 CUDA API、硬件行为和版本差异时，以 NVIDIA 英文原文为最终依据。
 
 第三方中文教程副本和网页 PDF 仅保存在本机，并由 `.gitignore` 排除，避免随项目
 仓库再分发；本项目原创的第一阶段讲义可以正常进入版本控制。
+
+## Ubuntu 一键下载
+
+克隆或更新 `5070ti` 分支后，在仓库根目录运行：
+
+```bash
+chmod +x scripts/download_chinese_tutorials.sh
+./scripts/download_chinese_tutorials.sh
+```
+
+脚本会：
+
+1. 浅克隆或快进更新完整的 CUDA 中文教程；
+2. 下载阿里云官方 PPU SDK 快速入门网页；
+3. 将文件保存到本目录下；
+4. 保持第三方副本处于 Git 忽略状态。
+
+需要 `git`、`curl`，Ubuntu 可用以下命令安装：
+
+```bash
+sudo apt-get update
+sudo apt-get install -y git curl
+```
 
 ## 从这里开始
 
@@ -20,7 +43,8 @@ CUDA API、硬件行为和版本差异时，以 NVIDIA 英文原文为最终依�
    核心概念速查，不是完整 112 章内容。
 4. 准备进入主办方服务器时，读
    [PPU SDK 快速入门 PDF](../pdf/ppu-sdk-quick-start-zh.pdf)。这是阿里云官方中文页面
-   的离线打印版。
+   的 Windows 本地离线打印版。在 Ubuntu 运行下载脚本后，也可以直接打开
+   `ppu-sdk-quick-start-zh.html`。
 
 ## CUDA 中文源码怎么读
 
