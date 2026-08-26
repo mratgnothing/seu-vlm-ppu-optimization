@@ -50,6 +50,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--rmsnorm-threads", type=int, default=512)
     parser.add_argument("--fuse-gated-rmsnorm", action="store_true")
     parser.add_argument("--gated-rmsnorm-threads", type=int, default=128)
+    parser.add_argument("--fuse-qk-rope", action="store_true")
     return parser.parse_args()
 
 
@@ -119,6 +120,24 @@ def main() -> int:
             patched_modules.append(module)
     if len(patched_modules) != 18:
         raise RuntimeError(f"expected 18 Qwen3.5 GDN modules, patched {len(patched_modules)}")
+    patched_qk_rope_modules = 0
+    if args.fuse_qk_rope:
+        from transformers.models.qwen3_5 import modeling_qwen3_5 as qwen35_modeling
+
+        for module in model._model.modules():
+            if type(module).__name__ != "Qwen3_5Attention":
+                continue
+            module.forward = library.transformers_attention_callable(
+                module,
+                qwen35_modeling.ALL_ATTENTION_FUNCTIONS,
+                qwen35_modeling.eager_attention_forward,
+            )
+            patched_qk_rope_modules += 1
+        if patched_qk_rope_modules != 6:
+            raise RuntimeError(
+                "expected 6 Qwen3.5 attention modules, "
+                f"patched {patched_qk_rope_modules}"
+            )
     patched_rmsnorm_modules = 0
     if args.fuse_rmsnorm:
         for module_name, module in model._model.named_modules():
@@ -191,6 +210,7 @@ def main() -> int:
         "gated_rmsnorm_threads": (
             args.gated_rmsnorm_threads if args.fuse_gated_rmsnorm else None
         ),
+        "fused_qk_rmsnorm_rope_modules": patched_qk_rope_modules,
         "eager": eager,
         "fused": fused,
         "speedup": {

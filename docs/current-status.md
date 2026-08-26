@@ -85,8 +85,9 @@
   launch、8,832 次 `empty_strided`；热点是 eager 小算子/调度/分配而非单个 GEMV。
 - HGGC `warp_vec2` 相对 reference 快 1.88--2.08 倍，但三个形状仍比 `torch.mv`
   慢 16.7%--62.6%，因此暂不接入模型。
-- 已实现并接入四枚 HGGC decode 融合核：18 层 recurrent GDN、18 层 causal-conv、
-  49 个 2048 维 RMSNorm、18 个 128 维 gated RMSNorm；默认均需显式环境变量启用。
+- 已实现并接入五类 HGGC decode 融合核：18 层 recurrent GDN、18 层 causal-conv、
+  49 个 2048 维 RMSNorm、18 个 128 维 gated RMSNorm，以及 6 层 full-attention
+  q/k RMSNorm+partial RoPE；默认均需显式环境变量启用。
 - 同机固定中文前 20 条：eager 为 118.493 ms / 49.737 token/s / 85%；GDN+conv
   为 117.262 ms / 63.911 token/s / 85%；all-four 为 119.677 ms /
   81.307 token/s / 85%，all-four 吞吐提升 63.47%。
@@ -95,6 +96,12 @@
 - 完整 all-four 16-token profile 的 self CPU/PPU 为 514.366/131.899 ms；其中
   18/18/49/18 个模块均已挂载，下一热点为运行时 GEMV/GEMM 和剩余
   elementwise/cat/reduce，而不是 causal-conv。
+- all-five 固定中文前 20 条两次为 124.930/118.227 ms、93.918/94.889 token/s、
+  85%；相对 eager 吞吐提升 88.83%/90.78%，答案与正确性 20/20 一致，token 数
+  漂移仍为 5/20。51-token 单样本三次还通过 exact-text SHA-256 gate。
+- all-five profile 的 self CPU/PPU 为 409.545/121.871 ms；相对 all-four，
+  `cudaLaunchKernel` 19,878→17,088、`aten::cat` 747→387、`empty_strided`
+  5,472→4,932。新 q/k RMSNorm+RoPE 核 90 次合计约 0.216 ms。
 - 当前没有 vLLM 或 `/opt/vllm`，Transformers 提示缺少 GDN/causal-conv fast path；
   eager 正确性可用，但不是最终性能路线。
 - 完整证据见 [PPU 首次真实基线、Profile 与 GEMV](experiments/2026-08-26-ppu-baseline-and-gemv.md)
@@ -103,9 +110,9 @@
 ## 尚未完成
 
 - 获取主办方 PPU-vLLM/Qwen3.5/GDN fast path，并与 eager 做同口径对照。
-- 在完整公开集验证 GDN+conv 与 all-four 的 Accuracy、答案和生成长度漂移，再决定
+- 在完整公开集验证 GDN+conv、all-four 与 all-five 的 Accuracy、答案和生成长度漂移，再决定
   最终默认开关。
-- 对 all-four 后的 GEMV/GEMM、remaining elementwise/cat/reduce 重新排优先级；
+- 对 all-five 后的 GEMV/GEMM、remaining elementwise/cat/reduce 重新排优先级；
   当前通用 HGGC GEMV 慢于 `torch.mv`，不直接接入。
 - 量化/权重变换的正式允许范围确认。
 - 初赛技术报告已形成可持续更新的初稿，源码候选包可一键生成；仍缺 PPU 实测章节、最终复现说明和按主办方格式定稿。
@@ -114,7 +121,7 @@
 
 RTX 4050 的 6GB 显存仍只适合作为历史单样本环境；更长输入、更高分辨率、编译缓存
 或并发请求可能 OOM。PPU 显存充足，但当前 Transformers eager 的线性注意力和
-因果卷积原始 fast path 缺失的问题已由仓库融合候选缓解；all-four 小样本吞吐提高
-63.47%，但 5/20 生成长度漂移说明 reduction 数值顺序仍是精度风险。下一步优先跑
+因果卷积原始 fast path 缺失的问题已由仓库融合候选缓解；all-five 小样本吞吐提高
+88.83%--90.78%，但 5/20 生成长度漂移说明 reduction 数值顺序仍是精度风险。下一步优先跑
 完整公开集并获取官方 PPU-vLLM/FLA 对照，不能只凭 20 条 Accuracy 宣称无损。
 CPU offload、冷 RTC、profiler 插桩和稳态 PPU 结果不得混算。

@@ -22,10 +22,11 @@
   约 118.5 ms，吞吐约 48.85 token/s。
 - PPU profile 表明 eager 路径存在 37,293 次 kernel launch/16-token 和大量
   elementwise、reduce、copy、临时分配；当前首要瓶颈是缺少融合/fast path。
-- 已实装并上机验证 recurrent GDN、causal-conv、RMSNorm、gated RMSNorm 四枚
-  HGGC decode 融合核。固定中文前 20 条 all-four 候选从 49.737 提高到
-  81.307 token/s（+63.47%），TTFT 基本不变，Accuracy 仍为 85%、20/20 答案一致；
-  但有 5/20 生成长度变化，因此 norm 融合仍为显式 opt-in，待完整集验证。
+- 已实装并上机验证 recurrent GDN、causal-conv、RMSNorm、gated RMSNorm 以及
+  full-attention q/k RMSNorm+RoPE 五类 HGGC decode 融合核。固定中文前 20 条
+  all-five 两次为 93.918/94.889 token/s，相对 eager 49.737 提升
+  88.83%/90.78%；Accuracy 均为 85%、20/20 答案一致。仍有 5/20 生成长度变化，
+  因此全部融合保持显式 opt-in，待完整集验证。
 - `dummy` 后端只用于接口冒烟；不得将其结果视为真实模型部署或比赛成绩。
 
 正式性能提升来自公开集固定前 20 条的三次工程复测；完整公开集当前用于 Accuracy

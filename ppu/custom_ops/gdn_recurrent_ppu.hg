@@ -14,6 +14,10 @@ constexpr int kConvChannels = 6144;
 constexpr int kConvWidth = 4;
 constexpr int kHiddenSize = 2048;
 constexpr int kGatedNormWidth = 128;
+constexpr int kAttentionHeads = 8;
+constexpr int kKeyValueHeads = 2;
+constexpr int kAttentionHeadDim = 256;
+constexpr int kRotaryDim = 64;
 constexpr int kThreads = 128;
 constexpr int kWarpSize = 32;
 constexpr unsigned kFullWarpMask = 0xffffffffU;
@@ -256,6 +260,82 @@ __global__ void gated_rmsnorm_decode_kernel(
   }
 }
 
+__global__ void qk_rmsnorm_rope_decode_kernel(
+    const __ppu_bfloat16* query,
+    const __ppu_bfloat16* key,
+    const __ppu_bfloat16* query_weight,
+    const __ppu_bfloat16* key_weight,
+    const __ppu_bfloat16* cosine,
+    const __ppu_bfloat16* sine,
+    __ppu_bfloat16* query_output,
+    __ppu_bfloat16* key_output,
+    int batch_size,
+    int64_t query_batch_stride,
+    int64_t query_head_stride,
+    int64_t key_batch_stride,
+    int64_t key_head_stride,
+    int64_t cosine_batch_stride,
+    int64_t sine_batch_stride,
+    float epsilon) {
+  const int batch_head = blockIdx.x;
+  const int heads_per_batch = kAttentionHeads + kKeyValueHeads;
+  const int batch = batch_head / heads_per_batch;
+  const int local_head = batch_head % heads_per_batch;
+  const int thread = threadIdx.x;
+  if (batch >= batch_size || thread >= kAttentionHeadDim) return;
+
+  const bool is_query = local_head < kAttentionHeads;
+  const int head = is_query ? local_head : local_head - kAttentionHeads;
+  const __ppu_bfloat16* input = is_query ? query : key;
+  const __ppu_bfloat16* weight = is_query ? query_weight : key_weight;
+  __ppu_bfloat16* output = is_query ? query_output : key_output;
+  const int64_t input_batch_stride =
+      is_query ? query_batch_stride : key_batch_stride;
+  const int64_t input_head_stride =
+      is_query ? query_head_stride : key_head_stride;
+  const int head_count = is_query ? kAttentionHeads : kKeyValueHeads;
+  const int64_t row_offset =
+      static_cast<int64_t>(batch) * input_batch_stride +
+      head * input_head_stride;
+
+  const float value = __bfloat162float(input[row_offset + thread]);
+  float square_sum = block_sum(value * value);
+  __shared__ float inv_rms;
+  __shared__ float normalized[kAttentionHeadDim];
+  if (thread == 0) {
+    inv_rms = rsqrtf(
+        square_sum / static_cast<float>(kAttentionHeadDim) + epsilon);
+  }
+  __syncthreads();
+
+  const float scale = 1.0F + __bfloat162float(weight[thread]);
+  normalized[thread] = round_to_bf16(value * inv_rms * scale);
+  __syncthreads();
+
+  float result = normalized[thread];
+  if (thread < kRotaryDim) {
+    constexpr int kRotaryHalf = kRotaryDim / 2;
+    const int pair = thread < kRotaryHalf
+        ? thread + kRotaryHalf
+        : thread - kRotaryHalf;
+    const float rotated = thread < kRotaryHalf
+        ? -normalized[pair]
+        : normalized[pair];
+    const float cos_value = __bfloat162float(
+        cosine[static_cast<int64_t>(batch) * cosine_batch_stride + thread]);
+    const float sin_value = __bfloat162float(
+        sine[static_cast<int64_t>(batch) * sine_batch_stride + thread]);
+    const float cosine_product = round_to_bf16(result * cos_value);
+    const float sine_product = round_to_bf16(rotated * sin_value);
+    result = round_to_bf16(cosine_product + sine_product);
+  }
+
+  const int64_t output_offset =
+      (static_cast<int64_t>(batch) * head_count + head) *
+      kAttentionHeadDim;
+  output[output_offset + thread] = __float2bfloat16_rn(result);
+}
+
 }  // namespace
 
 extern "C" int seu_ppu_gdn_recurrent_decode_bf16(
@@ -381,6 +461,50 @@ extern "C" int seu_ppu_gated_rmsnorm_decode_bf16(
       rows,
       hidden_row_stride,
       gate_row_stride,
+      epsilon);
+  return static_cast<int>(hggcGetLastError());
+}
+
+extern "C" int seu_ppu_qk_rmsnorm_rope_decode_bf16(
+    const uint16_t* query,
+    const uint16_t* key,
+    const uint16_t* query_weight,
+    const uint16_t* key_weight,
+    const uint16_t* cosine,
+    const uint16_t* sine,
+    uint16_t* query_output,
+    uint16_t* key_output,
+    int batch_size,
+    int64_t query_batch_stride,
+    int64_t query_head_stride,
+    int64_t key_batch_stride,
+    int64_t key_head_stride,
+    int64_t cosine_batch_stride,
+    int64_t sine_batch_stride,
+    float epsilon,
+    void* stream_handle) {
+  if (batch_size <= 0) return static_cast<int>(hggcErrorInvalidValue);
+  const hggcStream_t stream = reinterpret_cast<hggcStream_t>(stream_handle);
+  qk_rmsnorm_rope_decode_kernel<<<
+      batch_size * (kAttentionHeads + kKeyValueHeads),
+      kAttentionHeadDim,
+      0,
+      stream>>>(
+      reinterpret_cast<const __ppu_bfloat16*>(query),
+      reinterpret_cast<const __ppu_bfloat16*>(key),
+      reinterpret_cast<const __ppu_bfloat16*>(query_weight),
+      reinterpret_cast<const __ppu_bfloat16*>(key_weight),
+      reinterpret_cast<const __ppu_bfloat16*>(cosine),
+      reinterpret_cast<const __ppu_bfloat16*>(sine),
+      reinterpret_cast<__ppu_bfloat16*>(query_output),
+      reinterpret_cast<__ppu_bfloat16*>(key_output),
+      batch_size,
+      query_batch_stride,
+      query_head_stride,
+      key_batch_stride,
+      key_head_stride,
+      cosine_batch_stride,
+      sine_batch_stride,
       epsilon);
   return static_cast<int>(hggcGetLastError());
 }

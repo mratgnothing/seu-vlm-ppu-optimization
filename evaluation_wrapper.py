@@ -239,6 +239,28 @@ class VLMModel:
                     "SEU PPU GDN integration expected 18 Qwen3.5 modules, "
                     f"patched {self._ppu_gdn_patched_modules}"
                 )
+            self._ppu_qk_rope_patched_modules = 0
+            if os.getenv("SEU_PPU_QK_ROPE_ENABLE", "0") == "1":
+                from transformers.models.qwen3_5 import (
+                    modeling_qwen3_5 as qwen35_modeling,
+                )
+
+                for module in self._model.modules():
+                    if type(module).__name__ != "Qwen3_5Attention":
+                        continue
+                    module.forward = (
+                        self._ppu_gdn_library.transformers_attention_callable(
+                            module,
+                            qwen35_modeling.ALL_ATTENTION_FUNCTIONS,
+                            qwen35_modeling.eager_attention_forward,
+                        )
+                    )
+                    self._ppu_qk_rope_patched_modules += 1
+                if self._ppu_qk_rope_patched_modules != 6:
+                    raise RuntimeError(
+                        "SEU PPU q/k RMSNorm+RoPE expected 6 attention modules, "
+                        f"patched {self._ppu_qk_rope_patched_modules}"
+                    )
             self._ppu_rmsnorm_patched_modules = 0
             if os.getenv("SEU_PPU_RMSNORM_ENABLE", "0") == "1":
                 for module_name, module in self._model.named_modules():
@@ -419,6 +441,9 @@ class VLMModel:
                 ),
                 "ppu_gated_rmsnorm_patched_modules": getattr(
                     self, "_ppu_gated_rmsnorm_patched_modules", 0
+                ),
+                "ppu_qk_rope_patched_modules": getattr(
+                    self, "_ppu_qk_rope_patched_modules", 0
                 ),
             },
         )

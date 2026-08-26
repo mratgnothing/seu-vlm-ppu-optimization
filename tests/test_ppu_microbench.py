@@ -99,9 +99,11 @@ class PPUMicrobenchContractTest(unittest.TestCase):
             "seu_ppu_causal_conv1d_decode_bf16",
             "seu_ppu_rmsnorm_decode_bf16",
             "seu_ppu_gated_rmsnorm_decode_bf16",
+            "seu_ppu_qk_rmsnorm_rope_decode_bf16",
         ):
             self.assertIn(symbol, kernel)
         self.assertIn("query.stride(0)", wrapper)
+        self.assertIn("query.stride(-2)", wrapper)
         self.assertIn("state must be contiguous", wrapper)
         self.assertIn("beta must be torch.bfloat16", wrapper)
         self.assertIn("expected 18 Qwen3.5 GDN modules", benchmark)
@@ -112,6 +114,7 @@ class PPUMicrobenchContractTest(unittest.TestCase):
             "SEU_PPU_CONV_ENABLE",
             "SEU_PPU_RMSNORM_ENABLE",
             "SEU_PPU_GATED_RMSNORM_ENABLE",
+            "SEU_PPU_QK_ROPE_ENABLE",
         ):
             self.assertIn(variable, integration)
 
