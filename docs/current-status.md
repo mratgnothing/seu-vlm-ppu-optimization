@@ -1,6 +1,6 @@
 # 当前状态
 
-更新时间：2026-08-10
+更新时间：2026-08-26
 
 ## 已确认
 
@@ -27,7 +27,7 @@
 - Transformers 5.14.1
 - NVIDIA GeForce RTX 5070 Ti Laptop GPU，约 11.94 GiB 显存
 - CUDA runtime 13.0，驱动 591.97，BF16 可用
-- 31 项无模型测试通过
+- 42 项无模型测试通过
 - Qwen3.5-2B 锁定 revision 已通过完整性校验和真实加载冒烟；617 个参数张量均在
   `cuda:0`，模型报告内存占用 4,426,483,648 bytes（约 4.12 GiB）
 - 当前 Transformers 未安装可选的 fast-path 依赖，加载时会回退到 PyTorch 实现；
@@ -64,27 +64,43 @@
 - 英文完整公开集原始 Accuracy 79.72%（3212/4029），有 1 条截断输出未解析；通用结论规范化经完整 200 条异常分块复测后，仅恢复该样本，最终 Accuracy 79.75%（3213/4029），公开接口校验全部通过。
 - O2 单样本 CUDA profiler 已完成：GEMV/GEMM 占 self CUDA time 86.18%，elementwise/copy 调用数高。
 - Profiler 口径 peak allocated/reserved 为 4.19/4.21 GiB。
-- 原基线代码通过 25 项测试；当前 `5070ti` 工作分支扩展后通过 31 项测试。源码候选包生成器可自动排除模型、数据、原始结果、密钥与本地配置。
+- 原基线代码通过 25 项测试；当前 `5070ti` 工作分支扩展后通过 42 项测试。源码候选包生成器可自动排除模型、数据、原始结果、密钥与本地配置。
 - 当前正式性能数据使用首个生成 token 计时，只覆盖固定前 20 条；中英文 Accuracy 均已扩展到完整公开集。完整集单次运行只作为精度证据，不进入正式性能表，也不代表私有评测成绩。
 
 ## PPU 状态
 
-- 共享节点识别到 4 张 PPU-ZW810E，每张显存约 97.9GB。
-- PPU SDK `2.1.0-a5f865`、驱动 `1.3.2-d7f5a2` 和 HGGC 13.0 已确认。
-- 官方 vectorAdd 已在临时目录编译、运行并通过，随后清理。
-- 共享节点未安装 PyTorch、Transformers、vLLM 或 SGLang。
-- 预置 PPU-vLLM 0.8.5 源码包含 PPU 专用矩阵、FlashAttention、causal-conv1d 和量化路径。
-- 当前 PPU-vLLM 缺少 Qwen3.5 注册与 Gated Delta Network 路径。
-- 已形成兼容性矩阵、主办方问题清单和零依赖运行时预检脚本。
-- 已按 Qwen3.5-2B 的三组关键解码尺寸准备 HGGC BF16 GEMV 参考微基准，等待隔离资源后编译、数值校验和 profile；当前不计作 PPU 实测结果。
-- 共享节点不上传比赛代码、模型和数据，因此这还不构成 PPU 真实模型部署。
+- 个性化隔离节点识别到 1 张 PPU-ZW810E，显存 98,304 MiB；Driver
+  `2.1.0-ra1f23`、PPU-SMI 1.28、SDK/compiler `2.1.1-a5c56e`、HGGC 13.0。
+- 独立 venv 复用 PPU PyTorch `2.11.0+v0.1.0.ppu2.1.1` 和定制 Triton，另装
+  Transformers 5.14.1；未替换系统 PPU torch/triton。
+- Qwen3.5-2B 617 个参数张量全部在 `cuda:0`，无 CPU/meta/disk offload；真实中文
+  MMBench 图片的视觉、GDN、全注意力和 51-token 解码均通过。
+- RTC 首次因 `PPU_SDK`/`PPU_HOME` 均未导出而在视觉 qkv 处 abort；已用叶子模块
+  日志定位，并在启动脚本中自动发现 `/usr/local/PPU_SDK` 后修复。
+- 中文前 20 条缓存稳定后两次 O1：平均 TTFT 119.171/117.852 ms，吞吐
+  49.014/48.683 token/s，Accuracy 均为 85%，公开校验全部通过。
+- O0 `no_grad` 对照为 133.128 ms、44.096 token/s；O1 稳态聚合约降低 TTFT
+  10.98%、提高吞吐 10.78%，Accuracy 不变。
+- 16-token PPU profile：self CPU/PPU 854.810/173.799 ms，37,293 次 kernel
+  launch、8,832 次 `empty_strided`；热点是 eager 小算子/调度/分配而非单个 GEMV。
+- HGGC `warp_vec2` 相对 reference 快 1.88--2.08 倍，但三个形状仍比 `torch.mv`
+  慢 16.7%--62.6%，因此暂不接入模型。
+- 当前没有 vLLM 或 `/opt/vllm`，Transformers 提示缺少 GDN/causal-conv fast path；
+  eager 正确性可用，但不是最终性能路线。
+- 完整证据见 [2026-08-26 PPU 首次真实基线、Profile 与 GEMV](experiments/2026-08-26-ppu-baseline-and-gemv.md)。
 
 ## 尚未完成
 
-- PPU 真实 Qwen3.5-2B 模型部署、Profile 和优化闭环。
+- 获取主办方 PPU-vLLM/Qwen3.5/GDN fast path，并与 eager 做同口径对照。
+- 根据 PPU profile 实现并验证 GDN/causal-conv/elementwise 融合候选。
 - 量化/权重变换的正式允许范围确认。
 - 初赛技术报告已形成可持续更新的初稿，源码候选包可一键生成；仍缺 PPU 实测章节、最终复现说明和按主办方格式定稿。
 
 ## 当前风险
 
-6GB 显存可以承载当前 BF16 单样本路径，但余量有限。更长输入、更高分辨率、编译缓存或并发请求仍可能 OOM。Qwen3.5 的线性注意力和因果卷积当前使用 PyTorch fallback，缺少 fast-path 扩展；本机 Windows 环境不盲装未经验证的 CUDA 扩展。Profiler 表明 decode 侧 BF16 GEMV 是第一热点，后续优先研究 decode、融合和 PPU 目标 kernel。CPU offload 结果不得与纯 GPU 或 PPU 性能直接比较。
+RTX 4050 的 6GB 显存仍只适合作为历史单样本环境；更长输入、更高分辨率、编译缓存
+或并发请求可能 OOM。PPU 显存充足，但当前 Transformers eager 的线性注意力和
+因果卷积缺少 fast path，16-token profile 暴露 37,293 次 launch 和大量临时分配。
+下一步应优先取得官方 PPU-vLLM/FLA 路径或融合 recurrent GDN state update，不能再把
+CUDA 上“GEMV 是第一热点”的结论直接套到 PPU。CPU offload、冷 RTC 和稳态 PPU
+结果不得混算。

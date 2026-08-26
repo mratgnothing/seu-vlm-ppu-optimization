@@ -3,7 +3,7 @@
 > 本目录用于在迁移到 Linux 或更换开发环境后，保留当前项目背景、技术判断、
 > 协作约定、学习路径和外部资料入口。
 >
-> 更新时间：2026-08-12
+> 更新时间：2026-08-26
 > 当前本地分支：`5070ti`  
 > 仓库：`seu-vlm-ppu-optimization`
 
@@ -48,30 +48,29 @@
 - 英文 O1 相对 O0：TTFT 提升 10.22%，Throughput 提升 6.37%；
 - CUDA Profile 显示 GEMV/GEMM 占 self CUDA time 的 86.18%；
 - PPU SDK、驱动、HGGC 和官方 vectorAdd 基础链路已验证；
-- 已准备三组 Qwen3.5-2B BF16 GEMV 参考微基准；
+- Qwen3.5-2B 已在隔离 PPU-ZW810E 上完成真实图文生成，全部参数驻留 PPU；
+- 中文前 20 条 PPU 稳态 Accuracy 85%，平均 TTFT 约 118.5 ms、吞吐约
+  48.85 token/s；
+- PPU Profile 已确认 eager 路径存在大量小 kernel、分配和 launch；
+- 三组 HGGC GEMV 优化核相对 reference 快 1.88--2.08 倍，但仍慢于 `torch.mv`；
 - 已具备分块 Accuracy、结果审计、源码白名单打包和技术报告骨架。
 
 ### 尚未完成
 
-- Qwen3.5-2B 在目标 PPU 上的真实加载与推理；
-- PPU Accuracy、TTFT 和 Throughput 基线；
-- PPU 模型级 Profile；
 - GDN、causal-conv1d 和矩阵算子的 PPU fast path；
 - PPU 上经过验证的量化、融合或调度优化；
 - 最终 PPU 优化闭环和正式复现报告。
 
 ### 当前关键阻塞
 
-共享 PPU 节点的定制 vLLM 停留在 0.8.5，当前调查发现：
+- 当前隔离实例没有 vLLM 或 `/opt/vllm`，Transformers 使用 GDN/causal-conv
+  PyTorch fallback；
+- 16-token profile 中有 37,293 次 kernel launch，CPU 调度/临时分配显著；
+- 主办方 v1.2、比赛 PPU-vLLM、量化边界和最终复现镜像仍未锁定；
+- 当前 HGGC GEMV 没有超过运行时 `torch.mv`，不应为了“用了自定义算子”强行接入。
 
-- 未注册 `Qwen3_5ForConditionalGeneration`；
-- 缺少 Qwen3.5 Gated Delta Network（GDN）实现；
-- 虽有 PPU FlashAttention、矩阵、causal-conv1d 和量化路径，但尚未组成
-  Qwen3.5-2B 的完整可运行链路；
-- 共享节点缺少可直接使用的 PyTorch、Transformers 和 vLLM Python 环境。
-
-只有在目标 PPU 上运行真实模型并产生可复现的 Accuracy、TTFT 和 Throughput，
-才能写“PPU 部署完成”。vectorAdd 或微基准通过不等于模型部署完成。
+PPU 首次闭环的完整证据、失败根因和待决策路线见
+`docs/experiments/2026-08-26-ppu-baseline-and-gemv.md`。
 
 ## 3. PPU 是什么
 
@@ -108,7 +107,7 @@ Qwen3.5-2B
 - 独立 Conda 环境：`G:\seu-AI\.conda-envs\seu-vlm-5070ti`；
 - Python 3.12.13、PyTorch 2.13.0+cu130、Transformers 5.14.1；
 - CUDA runtime 13.0、BF16 可用；
-- 31 项无模型测试通过；
+- 42 项无模型测试通过；
 - 锁定 revision 的 Qwen3.5-2B 已完成完整性校验并在 `cuda:0` 真实加载，模型报告
   内存占用约 4.12 GiB；当前缺少可选 fast-path 依赖，性能测试前需单独处理；
 - 未修改 Conda `base`；
@@ -342,8 +341,11 @@ scripts/run_ppu_first_validation.sh \
   --model-path /path/to/Qwen3.5-2B
 ```
 
-默认只读预检。只有在主办方批准的个性化隔离节点才加入
-`--run-microbench`；脚本会先做单次冒烟，再运行三组 BF16 GEMV，并把证据写入
+默认只读预检，并生成 `runtime.json` 与中文 `runtime-summary.md`。只有在主办方批准
+的个性化隔离节点，才按顺序显式加入 `--run-device-smoke`、
+`--run-microbench`、`--run-model-load` 和 `--run-single-sample`。完整参数、Qwen3.5
+结构指纹、可能问题与 SSH 接通后的分级步骤见
+[`docs/ppu-first-validation.md`](../docs/ppu-first-validation.md)。证据默认写入 Git 忽略的
 `artifacts/ppu-first-validation/`。
 
 然后按以下顺序验收：
@@ -518,16 +520,16 @@ PDF 论文用于理解方法，不等于比赛允许直接使用这些权重格�
 - `benchmark_public.py`：公开评测入口；
 - `ppu/microbench/qwen35_bf16_gemv.hg`：PPU GEMV 入门实现；
 - `scripts/check_ppu_runtime.py`：PPU 环境预检。
+- `scripts/diagnose_qwen35_ppu.py`：原生崩溃模块边界定位；
+- `scripts/profile_qwen35_ppu.py`：真实图文短生成算子级 profile；
+- `docs/experiments/2026-08-26-ppu-baseline-and-gemv.md`：首次 PPU 闭环证据。
 
 ## 15. 下一步行动清单
 
-1. 在本地/WSL 安装依赖并恢复全部单元测试；
-2. 迁移到 Linux 后复查路径、换行、脚本权限和依赖；
-3. 向主办方确认隔离 PPU、镜像、上传方式和量化/微调规则；
-4. 在 PPU 先运行环境预检；
-5. 编译并验证现有 BF16 GEMV 微基准；
-6. 建立 Qwen3.5-2B PPU 单样本 BF16 基线；
-7. 取得真实 PPU Profile；
-8. 根据热点选择 GEMV、causal-conv1d 或 GDN 中的一个单变量实验；
-9. 每轮保存代码提交、配置、日志、原始聚合结果和 Accuracy 护栏；
-10. 有效修改暂留 `5070ti`，未经明确决定不合并到 `main`。
+1. 向主办方索取 v1.2、比赛 PPU-vLLM 和 Qwen3.5/GDN fast path 说明；
+2. 确认 `/usr/local/PPU_SDK/rtccache` 在最终实例是否可写、可持久化；
+3. 在取得官方 fast path 前，优先研究 GDN/causal-conv/elementwise 融合，暂停
+   单独替换 GEMV；
+4. 每轮固定前 20 条做 O1 三次复测，保存答案/token/Accuracy 护栏；
+5. 量化只在规则和 PPU kernel 支持明确后进入实验；
+6. 有效修改暂留 `5070ti`，未经明确决定不合并到 `main`。

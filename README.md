@@ -7,7 +7,7 @@
 - 已导入 `dndx_participant-v1.1` 的公开评测入口和初始 wrapper。
 - 本地开发环境锁定为 Python 3.12、PyTorch 2.13.0+cu130、Transformers 5.14.1。
 - `5070ti` 分支已在 RTX 5070 Ti Laptop 12GB 上建立独立 Conda 环境：
-  Python 3.12.13、CUDA 13.0、BF16 可用，31 项无模型测试通过；原 RTX 4050
+  Python 3.12.13、CUDA 13.0、BF16 可用，42 项无模型测试通过；原 RTX 4050
   性能结果仍作为历史基线，不与新机器混用。
 - 锁定 revision 的 Qwen3.5-2B 已在该环境通过完整性校验和纯 GPU 加载冒烟：
   617 个参数张量均位于 `cuda:0`，模型内存占用约 4.12 GiB。
@@ -17,16 +17,23 @@
 - 英文三次复测的 TTFT/吞吐中位提升为 10.22%/6.37%，中英文答案、token 数和 Accuracy 均无变化。
 - 中英文比例分层 200 条 Accuracy 分别为 84.5%（169/200）和 82.5%（165/200），20 个类别全部覆盖。
 - 中英文完整公开集 4029 条 Accuracy 分别为 83.94%（3382/4029）和 79.75%（3213/4029），题号集合、答案域和分块完整性审计全部通过。
-- PPU SDK、编译链和官方 vectorAdd 已通过；Qwen3.5-2B 的 PPU 真实部署仍待目标资源开放后完成。
+- 已在隔离 PPU-ZW810E 上跑通 Qwen3.5-2B 真实多模态推理：617 个参数张量全部
+  驻留 PPU，无 CPU/meta/disk offload；中文前 20 条稳态 Accuracy 85%，平均 TTFT
+  约 118.5 ms，吞吐约 48.85 token/s。
+- PPU profile 表明 eager 路径存在 37,293 次 kernel launch/16-token 和大量
+  elementwise、reduce、copy、临时分配；当前首要瓶颈是缺少融合/fast path。
 - `dummy` 后端只用于接口冒烟；不得将其结果视为真实模型部署或比赛成绩。
 
 正式性能提升来自公开集固定前 20 条的三次工程复测；完整公开集当前用于 Accuracy
 验证。所有本地结果均不代表主办方私有评测成绩。可公开的聚合结果见
 [results/README.md](results/README.md)。
 
-PPU 侧已完成 SDK、预置 vLLM 源码和 Qwen3.5 架构缺口核验。详见 [PPU 兼容性矩阵](docs/ppu-compatibility-matrix.md) 和 [需要向主办方确认的问题](docs/questions-for-organizer.md)。
+PPU 侧已完成 SDK、真实模型闭环、20 条稳态基线、算子级 profile 和 HGGC GEMV
+迭代。详见 [PPU 首次真实实验](docs/experiments/2026-08-26-ppu-baseline-and-gemv.md)、
+[PPU 兼容性矩阵](docs/ppu-compatibility-matrix.md) 和 [需要向主办方确认的问题](docs/questions-for-organizer.md)。
 Qwen3.5-2B 的 GDN、MLP、全注意力与视觉层尺寸见 [关键算子与 PPU kernel 目标](docs/qwen35-kernel-targets.md)。
-针对三组关键解码尺寸，已准备 [PPU BF16 GEMV 微基准](ppu/microbench/README.md)；它必须在主办方提供的隔离资源中编译验证，目前不计作 PPU 优化结果。
+三组关键解码尺寸的 [PPU BF16 GEMV 微基准](ppu/microbench/README.md) 已在隔离
+PPU 实测：优化核比 reference 快 1.88--2.08 倍，但仍慢于 `torch.mv`，当前不接入模型。
 
 ## PPU 服务器首次验证
 
@@ -40,20 +47,35 @@ scripts/run_ppu_first_validation.sh \
 ```
 
 输出默认保存在忽略目录 `artifacts/ppu-first-validation/`，包括环境清单、
-`runtime.json`、PPU-SMI 快照和两条部署路线的阻塞项。默认不会编译或运行比赛
-kernel；仅在主办方批准的个性化隔离节点显式加入 `--run-microbench`：
+`runtime.json`、`runtime-summary.md`、PPU-SMI 快照、Qwen3.5 结构指纹、PPU-vLLM
+源码能力和两条部署路线的阻塞项。默认不会执行 PPU 张量、编译 kernel、加载完整
+模型或运行样本。
+
+在主办方批准的个性化隔离节点，按风险逐级显式加入：
+
+- `--run-device-smoke`：BF16 `32x32` PPU PyTorch 小张量；
+- `--verify-model-hash`：读取约 4.6 GB 权重并核对 SHA-256；
+- `--run-microbench`：编译并运行三组 HGGC BF16 GEMV；
+- `--run-model-load`：完整加载并拒绝 CPU/meta/disk offload；
+- `--run-single-sample --dataset-path PATH`：强制真实 Transformers 后端运行一条公开样本。
+
+例如完成设备、kernel 和模型加载验证：
 
 ```bash
 scripts/run_ppu_first_validation.sh \
   --model-path /path/to/Qwen3.5-2B \
+  --run-device-smoke \
   --run-microbench \
+  --run-model-load \
   --device 0 \
   --warmup 10 \
   --iterations 100
 ```
 
 脚本会先做一次 `warmup=0, iterations=1` 的单尺寸冒烟，再运行三组 Qwen3.5
-BF16 GEMV。共享节点仍遵守“不上传、不运行本目录”的既有边界。
+BF16 GEMV。完整分级步骤、结构指纹和故障定位见
+[PPU + Qwen3.5 首次上机验证手册](docs/ppu-first-validation.md)。共享节点仍遵守
+“不上传、不运行本目录”的既有边界。
 
 两位成员的职责、四周里程碑和当前交接点见 [两人协作与一个月推进计划](docs/team-plan.md)。
 已验证内容已同步整理到 [初赛技术报告初稿](docs/preliminary-technical-report.md)，未在 PPU 实测的部分均保留显式边界。
