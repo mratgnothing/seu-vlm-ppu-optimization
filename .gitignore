@@ -50,6 +50,7 @@ results/raw/
 results/summary.csv
 logs/
 ppu/microbench/build/
+ppu/custom_ops/build/
 .playwright-cli/
 *.log
 tmp/

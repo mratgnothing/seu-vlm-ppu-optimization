@@ -1,0 +1,341 @@
+"""Thin ctypes integration for the fixed Qwen3.5-2B PPU decode GDN kernel."""
+
+from __future__ import annotations
+
+import ctypes
+import os
+from pathlib import Path
+from typing import Callable
+
+import torch
+
+
+HEADS = 16
+HEAD_DIM = 128
+CONV_CHANNELS = 6144
+CONV_WIDTH = 4
+HIDDEN_SIZE = 2048
+GATED_NORM_WIDTH = 128
+
+
+class PPUGDNLibrary:
+    def __init__(
+        self,
+        library_path: str | os.PathLike[str] | None = None,
+        *,
+        tiles_per_head: int = 4,
+        conv_threads: int = 96,
+        rmsnorm_threads: int = 512,
+        gated_rmsnorm_threads: int = 128,
+    ) -> None:
+        if library_path is None:
+            library_path = Path(__file__).with_name("build") / "libseu_ppu_gdn.so"
+        self.path = Path(library_path).resolve()
+        if tiles_per_head not in (1, 2, 4):
+            raise ValueError("tiles_per_head must be 1, 2, or 4")
+        self.tiles_per_head = tiles_per_head
+        if conv_threads <= 0 or conv_threads > 1024 or conv_threads % 32:
+            raise ValueError("conv_threads must be a multiple of 32 through 1024")
+        self.conv_threads = conv_threads
+        if rmsnorm_threads <= 0 or rmsnorm_threads > 1024 or rmsnorm_threads % 32:
+            raise ValueError("rmsnorm_threads must be a multiple of 32 through 1024")
+        self.rmsnorm_threads = rmsnorm_threads
+        if (
+            gated_rmsnorm_threads <= 0
+            or gated_rmsnorm_threads > 1024
+            or gated_rmsnorm_threads % 32
+        ):
+            raise ValueError(
+                "gated_rmsnorm_threads must be a multiple of 32 through 1024"
+            )
+        self.gated_rmsnorm_threads = gated_rmsnorm_threads
+        self.library = ctypes.CDLL(str(self.path))
+        self.launch = self.library.seu_ppu_gdn_recurrent_decode_bf16
+        self.launch.argtypes = [
+            ctypes.c_void_p,
+            ctypes.c_void_p,
+            ctypes.c_void_p,
+            ctypes.c_void_p,
+            ctypes.c_void_p,
+            ctypes.c_void_p,
+            ctypes.c_void_p,
+            ctypes.c_int,
+            ctypes.c_int64,
+            ctypes.c_int64,
+            ctypes.c_int64,
+            ctypes.c_int64,
+            ctypes.c_int64,
+            ctypes.c_int,
+            ctypes.c_void_p,
+        ]
+        self.launch.restype = ctypes.c_int
+        self.conv_launch = self.library.seu_ppu_causal_conv1d_decode_bf16
+        self.conv_launch.argtypes = [
+            ctypes.c_void_p,
+            ctypes.c_void_p,
+            ctypes.c_void_p,
+            ctypes.c_void_p,
+            ctypes.c_void_p,
+            ctypes.c_int,
+            ctypes.c_int64,
+            ctypes.c_int64,
+            ctypes.c_int,
+            ctypes.c_void_p,
+        ]
+        self.conv_launch.restype = ctypes.c_int
+        self.rmsnorm_launch = self.library.seu_ppu_rmsnorm_decode_bf16
+        self.rmsnorm_launch.argtypes = [
+            ctypes.c_void_p,
+            ctypes.c_void_p,
+            ctypes.c_void_p,
+            ctypes.c_int,
+            ctypes.c_int64,
+            ctypes.c_float,
+            ctypes.c_int,
+            ctypes.c_void_p,
+        ]
+        self.rmsnorm_launch.restype = ctypes.c_int
+        self.gated_rmsnorm_launch = self.library.seu_ppu_gated_rmsnorm_decode_bf16
+        self.gated_rmsnorm_launch.argtypes = [
+            ctypes.c_void_p,
+            ctypes.c_void_p,
+            ctypes.c_void_p,
+            ctypes.c_void_p,
+            ctypes.c_int,
+            ctypes.c_int64,
+            ctypes.c_int64,
+            ctypes.c_float,
+            ctypes.c_int,
+            ctypes.c_void_p,
+        ]
+        self.gated_rmsnorm_launch.restype = ctypes.c_int
+
+    def recurrent_decode(
+        self,
+        query: torch.Tensor,
+        key: torch.Tensor,
+        value: torch.Tensor,
+        g: torch.Tensor,
+        beta: torch.Tensor,
+        state: torch.Tensor,
+    ) -> torch.Tensor:
+        _validate_inputs(query, key, value, g, beta, state)
+        batch_size = query.shape[0]
+        output = torch.empty(
+            (batch_size, 1, HEADS, HEAD_DIM),
+            dtype=torch.bfloat16,
+            device=query.device,
+        )
+        stream = torch.cuda.current_stream(query.device).cuda_stream
+        status = self.launch(
+            query.data_ptr(),
+            key.data_ptr(),
+            value.data_ptr(),
+            g.data_ptr(),
+            beta.data_ptr(),
+            state.data_ptr(),
+            output.data_ptr(),
+            batch_size,
+            query.stride(0),
+            key.stride(0),
+            value.stride(0),
+            g.stride(0),
+            beta.stride(0),
+            self.tiles_per_head,
+            stream,
+        )
+        if status != 0:
+            raise RuntimeError(f"PPU GDN launch failed with HGGC status {status}")
+        return output
+
+    def causal_conv1d_decode(
+        self,
+        hidden_states: torch.Tensor,
+        conv_state: torch.Tensor,
+        weight: torch.Tensor,
+        bias: torch.Tensor | None = None,
+        activation: str | None = None,
+    ) -> torch.Tensor:
+        _validate_conv_inputs(hidden_states, conv_state, weight, bias, activation)
+        output = torch.empty_like(hidden_states)
+        stream = torch.cuda.current_stream(hidden_states.device).cuda_stream
+        status = self.conv_launch(
+            hidden_states.data_ptr(),
+            conv_state.data_ptr(),
+            weight.data_ptr(),
+            bias.data_ptr() if bias is not None else None,
+            output.data_ptr(),
+            hidden_states.shape[0],
+            hidden_states.stride(0),
+            conv_state.stride(0),
+            self.conv_threads,
+            stream,
+        )
+        if status != 0:
+            raise RuntimeError(f"PPU causal-conv launch failed with HGGC status {status}")
+        return output
+
+    def rmsnorm_decode(
+        self,
+        input_tensor: torch.Tensor,
+        weight: torch.Tensor,
+        epsilon: float,
+    ) -> torch.Tensor:
+        _validate_rmsnorm_inputs(input_tensor, weight)
+        output = torch.empty_like(input_tensor)
+        rows = input_tensor.numel() // HIDDEN_SIZE
+        stream = torch.cuda.current_stream(input_tensor.device).cuda_stream
+        status = self.rmsnorm_launch(
+            input_tensor.data_ptr(),
+            weight.data_ptr(),
+            output.data_ptr(),
+            rows,
+            input_tensor.stride(-2),
+            epsilon,
+            self.rmsnorm_threads,
+            stream,
+        )
+        if status != 0:
+            raise RuntimeError(f"PPU RMSNorm launch failed with HGGC status {status}")
+        return output
+
+    def gated_rmsnorm_decode(
+        self,
+        hidden_states: torch.Tensor,
+        gate: torch.Tensor,
+        weight: torch.Tensor,
+        epsilon: float,
+    ) -> torch.Tensor:
+        _validate_gated_rmsnorm_inputs(hidden_states, gate, weight)
+        output = torch.empty_like(hidden_states)
+        rows = hidden_states.numel() // GATED_NORM_WIDTH
+        stream = torch.cuda.current_stream(hidden_states.device).cuda_stream
+        status = self.gated_rmsnorm_launch(
+            hidden_states.data_ptr(),
+            gate.data_ptr(),
+            weight.data_ptr(),
+            output.data_ptr(),
+            rows,
+            hidden_states.stride(-2),
+            gate.stride(-2),
+            epsilon,
+            self.gated_rmsnorm_threads,
+            stream,
+        )
+        if status != 0:
+            raise RuntimeError(
+                f"PPU gated RMSNorm launch failed with HGGC status {status}"
+            )
+        return output
+
+    def transformers_callable(self) -> Callable[..., tuple[torch.Tensor, torch.Tensor | None]]:
+        def fused_recurrent_gated_delta_rule(
+            query: torch.Tensor,
+            key: torch.Tensor,
+            value: torch.Tensor,
+            g: torch.Tensor,
+            beta: torch.Tensor,
+            initial_state: torch.Tensor,
+            output_final_state: bool,
+            use_qk_l2norm_in_kernel: bool = False,
+        ) -> tuple[torch.Tensor, torch.Tensor | None]:
+            if not use_qk_l2norm_in_kernel:
+                raise ValueError("PPU GDN requires use_qk_l2norm_in_kernel=True")
+            if initial_state is None:
+                initial_state = torch.zeros(
+                    query.shape[0], HEADS, HEAD_DIM, HEAD_DIM,
+                    dtype=torch.float32, device=query.device,
+                )
+            output = self.recurrent_decode(query, key, value, g, beta, initial_state)
+            return output, initial_state if output_final_state else None
+
+        return fused_recurrent_gated_delta_rule
+
+
+def _validate_inputs(
+    query: torch.Tensor,
+    key: torch.Tensor,
+    value: torch.Tensor,
+    g: torch.Tensor,
+    beta: torch.Tensor,
+    state: torch.Tensor,
+) -> None:
+    tensors = (query, key, value, g, beta, state)
+    if any(tensor.device.type != "cuda" for tensor in tensors):
+        raise ValueError("all PPU GDN tensors must use the CUDA compatibility device")
+    expected_vectors = (query.shape[0], 1, HEADS, HEAD_DIM)
+    if query.shape != expected_vectors or key.shape != expected_vectors or value.shape != expected_vectors:
+        raise ValueError(f"expected q/k/v shape {expected_vectors}")
+    if query.dtype != torch.bfloat16 or key.dtype != torch.bfloat16 or value.dtype != torch.bfloat16:
+        raise TypeError("q/k/v must be torch.bfloat16")
+    if g.shape != (query.shape[0], 1, HEADS) or beta.shape != (query.shape[0], 1, HEADS):
+        raise ValueError("g/beta must have shape [batch, 1, 16]")
+    if g.dtype != torch.float32 or beta.dtype != torch.bfloat16:
+        raise TypeError("g must be torch.float32 and beta must be torch.bfloat16")
+    if state.shape != (query.shape[0], HEADS, HEAD_DIM, HEAD_DIM):
+        raise ValueError("state must have shape [batch, 16, 128, 128]")
+    if state.dtype != torch.float32 or not state.is_contiguous():
+        raise TypeError("state must be contiguous torch.float32")
+    for name, tensor in (("query", query), ("key", key), ("value", value)):
+        if tensor.stride(-1) != 1 or tensor.stride(-2) != HEAD_DIM:
+            raise ValueError(f"{name} heads must be contiguous")
+    if g.stride(-1) != 1 or beta.stride(-1) != 1:
+        raise ValueError("g/beta heads must be contiguous")
+
+
+def _validate_conv_inputs(
+    hidden_states: torch.Tensor,
+    conv_state: torch.Tensor,
+    weight: torch.Tensor,
+    bias: torch.Tensor | None,
+    activation: str | None,
+) -> None:
+    tensors = (hidden_states, conv_state, weight) + (() if bias is None else (bias,))
+    if any(tensor.device.type != "cuda" for tensor in tensors):
+        raise ValueError("all causal-conv tensors must use the CUDA compatibility device")
+    if hidden_states.ndim != 3 or hidden_states.shape[1:] != (CONV_CHANNELS, 1):
+        raise ValueError("hidden_states must have shape [batch, 6144, 1]")
+    if conv_state.shape != (hidden_states.shape[0], CONV_CHANNELS, CONV_WIDTH):
+        raise ValueError("conv_state must have shape [batch, 6144, 4]")
+    if weight.shape != (CONV_CHANNELS, CONV_WIDTH):
+        raise ValueError("weight must have shape [6144, 4]")
+    if bias is not None and bias.shape != (CONV_CHANNELS,):
+        raise ValueError("bias must have shape [6144]")
+    if any(tensor.dtype != torch.bfloat16 for tensor in tensors):
+        raise TypeError("causal-conv tensors must be torch.bfloat16")
+    if not conv_state.is_contiguous() or not weight.is_contiguous():
+        raise ValueError("conv_state and weight must be contiguous")
+    if hidden_states.stride(1) != 1:
+        raise ValueError("hidden_states channels must be contiguous for seq_len=1")
+    if activation not in (None, "silu", "swish"):
+        raise ValueError("only SiLU causal-conv activation is supported")
+
+
+def _validate_rmsnorm_inputs(input_tensor: torch.Tensor, weight: torch.Tensor) -> None:
+    if input_tensor.device.type != "cuda" or weight.device.type != "cuda":
+        raise ValueError("RMSNorm input/weight must use the CUDA compatibility device")
+    if input_tensor.ndim < 2 or input_tensor.shape[-1] != HIDDEN_SIZE:
+        raise ValueError("RMSNorm input last dimension must be 2048")
+    if input_tensor.dtype != torch.bfloat16 or weight.dtype != torch.bfloat16:
+        raise TypeError("RMSNorm input/weight must be torch.bfloat16")
+    if weight.shape != (HIDDEN_SIZE,) or not weight.is_contiguous():
+        raise ValueError("RMSNorm weight must be contiguous shape [2048]")
+    if input_tensor.stride(-1) != 1:
+        raise ValueError("RMSNorm input last dimension must be contiguous")
+
+
+def _validate_gated_rmsnorm_inputs(
+    hidden_states: torch.Tensor,
+    gate: torch.Tensor,
+    weight: torch.Tensor,
+) -> None:
+    if any(tensor.device.type != "cuda" for tensor in (hidden_states, gate, weight)):
+        raise ValueError("gated RMSNorm tensors must use the CUDA compatibility device")
+    if hidden_states.shape != gate.shape or hidden_states.shape[-1] != GATED_NORM_WIDTH:
+        raise ValueError("hidden_states/gate must share shape [rows, 128]")
+    if any(tensor.dtype != torch.bfloat16 for tensor in (hidden_states, gate, weight)):
+        raise TypeError("gated RMSNorm tensors must be torch.bfloat16")
+    if weight.shape != (GATED_NORM_WIDTH,) or not weight.is_contiguous():
+        raise ValueError("gated RMSNorm weight must be contiguous shape [128]")
+    if hidden_states.stride(-1) != 1 or gate.stride(-1) != 1:
+        raise ValueError("gated RMSNorm rows must be contiguous")

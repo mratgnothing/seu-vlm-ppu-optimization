@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import os
 import re
+import sys
 import threading
 import time
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 
@@ -176,6 +178,10 @@ class VLMModel:
         )
 
     def _load_transformers_backend(self) -> None:
+        default_ppu_sdk = Path("/usr/local/PPU_SDK")
+        if default_ppu_sdk.is_dir():
+            os.environ.setdefault("PPU_SDK", str(default_ppu_sdk))
+            os.environ.setdefault("PPU_HOME", str(default_ppu_sdk))
         import torch
         from transformers import AutoModelForImageTextToText, AutoProcessor
 
@@ -193,6 +199,106 @@ class VLMModel:
             device_map=self.device,
         ).eval()
         self._tokenizer = getattr(self._processor, "tokenizer", None)
+        self._ppu_gdn_patched_modules = 0
+        gdn_library_path = os.getenv("SEU_PPU_GDN_LIBRARY")
+        if gdn_library_path:
+            custom_op_dir = Path(
+                os.getenv(
+                    "SEU_PPU_GDN_PYTHON_DIR",
+                    str(Path(__file__).resolve().parent / "ppu" / "custom_ops"),
+                )
+            ).resolve()
+            if str(custom_op_dir) not in sys.path:
+                sys.path.insert(0, str(custom_op_dir))
+            from ppu_gdn import PPUGDNLibrary
+
+            tiles_per_head = int(os.getenv("SEU_PPU_GDN_TILES", "4"))
+            self._ppu_gdn_library = PPUGDNLibrary(
+                gdn_library_path,
+                tiles_per_head=tiles_per_head,
+                conv_threads=int(os.getenv("SEU_PPU_CONV_THREADS", "96")),
+                rmsnorm_threads=int(os.getenv("SEU_PPU_RMSNORM_THREADS", "512")),
+                gated_rmsnorm_threads=int(
+                    os.getenv("SEU_PPU_GATED_RMSNORM_THREADS", "128")
+                ),
+            )
+            fused_callable = self._ppu_gdn_library.transformers_callable()
+            fuse_causal_conv = os.getenv("SEU_PPU_CONV_ENABLE", "0") == "1"
+            self._ppu_conv_patched_modules = 0
+            for module in self._model.modules():
+                if type(module).__name__ == "Qwen3_5GatedDeltaNet":
+                    module.recurrent_gated_delta_rule = fused_callable
+                    self._ppu_gdn_patched_modules += 1
+                    if fuse_causal_conv:
+                        module.causal_conv1d_update = (
+                            self._ppu_gdn_library.causal_conv1d_decode
+                        )
+                        self._ppu_conv_patched_modules += 1
+            if self._ppu_gdn_patched_modules != 18:
+                raise RuntimeError(
+                    "SEU PPU GDN integration expected 18 Qwen3.5 modules, "
+                    f"patched {self._ppu_gdn_patched_modules}"
+                )
+            self._ppu_rmsnorm_patched_modules = 0
+            if os.getenv("SEU_PPU_RMSNORM_ENABLE", "0") == "1":
+                for module_name, module in self._model.named_modules():
+                    if (
+                        type(module).__name__ != "Qwen3_5RMSNorm"
+                        or not module_name.startswith("model.language_model")
+                        or module.weight.numel() != 2048
+                    ):
+                        continue
+                    eager_forward = module.forward
+
+                    def decode_rmsnorm(x, *, _module=module, _eager=eager_forward):
+                        if x.ndim >= 2 and x.shape[-2] == 1 and x.shape[-1] == 2048:
+                            return self._ppu_gdn_library.rmsnorm_decode(
+                                x, _module.weight, _module.eps
+                            )
+                        return _eager(x)
+
+                    module.forward = decode_rmsnorm
+                    self._ppu_rmsnorm_patched_modules += 1
+                if self._ppu_rmsnorm_patched_modules != 49:
+                    raise RuntimeError(
+                        "SEU PPU RMSNorm integration expected 49 Qwen3.5 modules, "
+                        f"patched {self._ppu_rmsnorm_patched_modules}"
+                    )
+            self._ppu_gated_rmsnorm_patched_modules = 0
+            if os.getenv("SEU_PPU_GATED_RMSNORM_ENABLE", "0") == "1":
+                for module in self._model.modules():
+                    if type(module).__name__ != "Qwen3_5RMSNormGated":
+                        continue
+                    eager_forward = module.forward
+
+                    def decode_gated_rmsnorm(
+                        hidden_states,
+                        gate=None,
+                        *,
+                        _module=module,
+                        _eager=eager_forward,
+                    ):
+                        if (
+                            gate is not None
+                            and hidden_states.ndim == 2
+                            and hidden_states.shape == (16, 128)
+                            and gate.shape == hidden_states.shape
+                        ):
+                            return self._ppu_gdn_library.gated_rmsnorm_decode(
+                                hidden_states,
+                                gate,
+                                _module.weight,
+                                _module.variance_epsilon,
+                            )
+                        return _eager(hidden_states, gate)
+
+                    module.forward = decode_gated_rmsnorm
+                    self._ppu_gated_rmsnorm_patched_modules += 1
+                if self._ppu_gated_rmsnorm_patched_modules != 18:
+                    raise RuntimeError(
+                        "SEU PPU gated RMSNorm expected 18 modules, "
+                        f"patched {self._ppu_gated_rmsnorm_patched_modules}"
+                    )
 
     def _load_dummy_backend(self, reason: str) -> None:
         self._dummy_reason = reason
@@ -304,6 +410,16 @@ class VLMModel:
                 ),
                 "optimization_profile": self.optimization_profile,
                 "ttft_measurement": "first_generated_token_put",
+                "ppu_gdn_patched_modules": self._ppu_gdn_patched_modules,
+                "ppu_conv_patched_modules": getattr(
+                    self, "_ppu_conv_patched_modules", 0
+                ),
+                "ppu_rmsnorm_patched_modules": getattr(
+                    self, "_ppu_rmsnorm_patched_modules", 0
+                ),
+                "ppu_gated_rmsnorm_patched_modules": getattr(
+                    self, "_ppu_gated_rmsnorm_patched_modules", 0
+                ),
             },
         )
 

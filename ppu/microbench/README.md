@@ -49,6 +49,24 @@ PPU_SDK_ROOT=/path/to/PPU_SDK ./build.sh
 `-Wl,-rpath,/usr/local/PPU_SDK/lib`。
 当前镜像还需要链接 `libhggcrt1.so`；可用 `HGGC_RUNTIME_LIBRARY` 覆盖库名。
 
+## recurrent GDN 微基准
+
+`qwen35_gdn_recurrent.hg` 锁定 Qwen3.5-2B decode 的 `16×128×128` FP32 state，
+`build_gdn.sh` 生成独立正确性/计时程序；`torch_gdn_recurrent_baseline.py` 提供
+同公式 PyTorch 对照并可读取 HGGC dump 做逐元素比较：
+
+```bash
+./build_gdn.sh
+./build/qwen35_gdn_recurrent \
+  --threads 128 --warmup 50 --iters 500 --dump-prefix /tmp/gdn
+python torch_gdn_recurrent_baseline.py \
+  --warmup 50 --iters 500 --hggc-dump-prefix /tmp/gdn
+```
+
+首版单 block/head 融合核最佳约 `0.03279 ms`，PyTorch eager 为
+`0.151--0.157 ms`。生产接入版进一步复刻 BF16 L2Norm 舍入点并使用 4 tiles/head，
+见 [ppu/custom_ops/README.md](../custom_ops/README.md)。
+
 ## 运行
 
 ```bash

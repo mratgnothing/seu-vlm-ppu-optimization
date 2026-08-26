@@ -5,7 +5,19 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from pathlib import Path
+import sys
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+CUSTOM_OP_DIR = REPO_ROOT / "ppu" / "custom_ops"
+DEFAULT_PPU_SDK = Path("/usr/local/PPU_SDK")
+if DEFAULT_PPU_SDK.is_dir():
+    os.environ.setdefault("PPU_SDK", str(DEFAULT_PPU_SDK))
+    os.environ.setdefault("PPU_HOME", str(DEFAULT_PPU_SDK))
+for path in (REPO_ROOT, CUSTOM_OP_DIR):
+    if str(path) not in sys.path:
+        sys.path.insert(0, str(path))
 
 import torch
 from transformers import AutoModelForImageTextToText, AutoProcessor
@@ -22,6 +34,18 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--warmup-new-tokens", type=int, default=2)
     parser.add_argument("--row-limit", type=int, default=50)
     parser.add_argument("--device", default="auto")
+    parser.add_argument(
+        "--gdn-library",
+        type=Path,
+        help="patch all 18 decode GDN modules with this PPU shared library",
+    )
+    parser.add_argument("--gdn-tiles", type=int, choices=(1, 2, 4), default=4)
+    parser.add_argument("--fuse-conv", action="store_true")
+    parser.add_argument("--conv-threads", type=int, default=96)
+    parser.add_argument("--fuse-rmsnorm", action="store_true")
+    parser.add_argument("--rmsnorm-threads", type=int, default=512)
+    parser.add_argument("--fuse-gated-rmsnorm", action="store_true")
+    parser.add_argument("--gated-rmsnorm-threads", type=int, default=128)
     return parser.parse_args()
 
 
@@ -42,6 +66,84 @@ def main() -> int:
         dtype=torch.bfloat16,
         device_map=args.device,
     ).eval()
+    patched_gdn_modules = 0
+    if args.gdn_library:
+        from ppu_gdn import PPUGDNLibrary
+
+        library = PPUGDNLibrary(
+            args.gdn_library,
+            tiles_per_head=args.gdn_tiles,
+            conv_threads=args.conv_threads,
+            rmsnorm_threads=args.rmsnorm_threads,
+            gated_rmsnorm_threads=args.gated_rmsnorm_threads,
+        )
+        fused_callable = library.transformers_callable()
+        for module in model.modules():
+            if type(module).__name__ == "Qwen3_5GatedDeltaNet":
+                module.recurrent_gated_delta_rule = fused_callable
+                if args.fuse_conv:
+                    module.causal_conv1d_update = library.causal_conv1d_decode
+                patched_gdn_modules += 1
+        if patched_gdn_modules != 18:
+            raise RuntimeError(
+                f"expected 18 Qwen3.5 GDN modules, patched {patched_gdn_modules}"
+            )
+        patched_rmsnorm_modules = 0
+        if args.fuse_rmsnorm:
+            for module_name, module in model.named_modules():
+                if (
+                    type(module).__name__ != "Qwen3_5RMSNorm"
+                    or not module_name.startswith("model.language_model")
+                    or module.weight.numel() != 2048
+                ):
+                    continue
+                eager_forward = module.forward
+
+                def decode_rmsnorm(x, *, _module=module, _eager=eager_forward):
+                    if x.ndim >= 2 and x.shape[-2] == 1 and x.shape[-1] == 2048:
+                        return library.rmsnorm_decode(x, _module.weight, _module.eps)
+                    return _eager(x)
+
+                module.forward = decode_rmsnorm
+                patched_rmsnorm_modules += 1
+            if patched_rmsnorm_modules != 49:
+                raise RuntimeError(
+                    f"expected 49 Qwen3.5 RMSNorm modules, patched {patched_rmsnorm_modules}"
+                )
+        patched_gated_rmsnorm_modules = 0
+        if args.fuse_gated_rmsnorm:
+            for module in model.modules():
+                if type(module).__name__ != "Qwen3_5RMSNormGated":
+                    continue
+                eager_forward = module.forward
+
+                def decode_gated_rmsnorm(
+                    hidden_states, gate=None, *, _module=module, _eager=eager_forward
+                ):
+                    if (
+                        gate is not None
+                        and hidden_states.ndim == 2
+                        and hidden_states.shape == (16, 128)
+                        and gate.shape == hidden_states.shape
+                    ):
+                        return library.gated_rmsnorm_decode(
+                            hidden_states,
+                            gate,
+                            _module.weight,
+                            _module.variance_epsilon,
+                        )
+                    return _eager(hidden_states, gate)
+
+                module.forward = decode_gated_rmsnorm
+                patched_gated_rmsnorm_modules += 1
+            if patched_gated_rmsnorm_modules != 18:
+                raise RuntimeError(
+                    "expected 18 Qwen3.5 gated RMSNorm modules, "
+                    f"patched {patched_gated_rmsnorm_modules}"
+                )
+    else:
+        patched_rmsnorm_modules = 0
+        patched_gated_rmsnorm_modules = 0
     messages = [{
         "role": "user",
         "content": [
@@ -105,6 +207,13 @@ def main() -> int:
         "warmup_new_tokens": args.warmup_new_tokens,
         "torch_version": torch.__version__,
         "device_name": torch.cuda.get_device_name(0),
+        "patched_gdn_modules": patched_gdn_modules,
+        "gdn_tiles_per_head": args.gdn_tiles if args.gdn_library else None,
+        "fused_causal_conv_modules": (
+            patched_gdn_modules if args.gdn_library and args.fuse_conv else 0
+        ),
+        "fused_rmsnorm_modules": patched_rmsnorm_modules,
+        "fused_gated_rmsnorm_modules": patched_gated_rmsnorm_modules,
         "trace_path": str(trace_path.resolve()),
     }
     (args.output_dir / "summary.json").write_text(

@@ -22,6 +22,10 @@
   约 118.5 ms，吞吐约 48.85 token/s。
 - PPU profile 表明 eager 路径存在 37,293 次 kernel launch/16-token 和大量
   elementwise、reduce、copy、临时分配；当前首要瓶颈是缺少融合/fast path。
+- 已实装并上机验证 recurrent GDN、causal-conv、RMSNorm、gated RMSNorm 四枚
+  HGGC decode 融合核。固定中文前 20 条 all-four 候选从 49.737 提高到
+  81.307 token/s（+63.47%），TTFT 基本不变，Accuracy 仍为 85%、20/20 答案一致；
+  但有 5/20 生成长度变化，因此 norm 融合仍为显式 opt-in，待完整集验证。
 - `dummy` 后端只用于接口冒烟；不得将其结果视为真实模型部署或比赛成绩。
 
 正式性能提升来自公开集固定前 20 条的三次工程复测；完整公开集当前用于 Accuracy
@@ -30,6 +34,8 @@
 
 PPU 侧已完成 SDK、真实模型闭环、20 条稳态基线、算子级 profile 和 HGGC GEMV
 迭代。详见 [PPU 首次真实实验](docs/experiments/2026-08-26-ppu-baseline-and-gemv.md)、
+[PPU decode 融合实验](docs/experiments/2026-08-26-ppu-fused-decode-kernels.md)、
+[PPU decode 融合算子与问题记录](ppu/custom_ops/README.md)、
 [PPU 兼容性矩阵](docs/ppu-compatibility-matrix.md) 和 [需要向主办方确认的问题](docs/questions-for-organizer.md)。
 Qwen3.5-2B 的 GDN、MLP、全注意力与视觉层尺寸见 [关键算子与 PPU kernel 目标](docs/qwen35-kernel-targets.md)。
 三组关键解码尺寸的 [PPU BF16 GEMV 微基准](ppu/microbench/README.md) 已在隔离
@@ -92,6 +98,8 @@ BF16 GEMV。完整分级步骤、结构指纹和故障定位见
 ├─ data/                     # 本地数据说明，数据文件不入库
 ├─ docs/                     # 规则、协作和实验记录
 ├─ models/                   # 本地模型说明，权重不入库
+├─ ppu/custom_ops/           # PPU decode 融合核、ctypes 接入与 smoke
+├─ ppu/microbench/           # HGGC GEMV/GDN 微基准
 ├─ results/                  # 可公开的小型汇总，原始结果不入库
 ├─ scripts/                  # 运行脚本
 └─ tests/                    # 无模型依赖的接口测试

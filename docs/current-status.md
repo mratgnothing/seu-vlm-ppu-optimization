@@ -27,7 +27,7 @@
 - Transformers 5.14.1
 - NVIDIA GeForce RTX 5070 Ti Laptop GPU，约 11.94 GiB 显存
 - CUDA runtime 13.0，驱动 591.97，BF16 可用
-- 42 项无模型测试通过
+- 44 项无模型测试通过
 - Qwen3.5-2B 锁定 revision 已通过完整性校验和真实加载冒烟；617 个参数张量均在
   `cuda:0`，模型报告内存占用 4,426,483,648 bytes（约 4.12 GiB）
 - 当前 Transformers 未安装可选的 fast-path 依赖，加载时会回退到 PyTorch 实现；
@@ -85,14 +85,28 @@
   launch、8,832 次 `empty_strided`；热点是 eager 小算子/调度/分配而非单个 GEMV。
 - HGGC `warp_vec2` 相对 reference 快 1.88--2.08 倍，但三个形状仍比 `torch.mv`
   慢 16.7%--62.6%，因此暂不接入模型。
+- 已实现并接入四枚 HGGC decode 融合核：18 层 recurrent GDN、18 层 causal-conv、
+  49 个 2048 维 RMSNorm、18 个 128 维 gated RMSNorm；默认均需显式环境变量启用。
+- 同机固定中文前 20 条：eager 为 118.493 ms / 49.737 token/s / 85%；GDN+conv
+  为 117.262 ms / 63.911 token/s / 85%；all-four 为 119.677 ms /
+  81.307 token/s / 85%，all-four 吞吐提升 63.47%。
+- 20/20 解析答案与正确性一致，但 GDN+conv 有 3 条、all-four 有 5 条生成 token 数
+  变化；因此 all-four 尚未通过完整公开集精度门禁，不能直接作为最终提交配置。
+- 完整 all-four 16-token profile 的 self CPU/PPU 为 514.366/131.899 ms；其中
+  18/18/49/18 个模块均已挂载，下一热点为运行时 GEMV/GEMM 和剩余
+  elementwise/cat/reduce，而不是 causal-conv。
 - 当前没有 vLLM 或 `/opt/vllm`，Transformers 提示缺少 GDN/causal-conv fast path；
   eager 正确性可用，但不是最终性能路线。
-- 完整证据见 [2026-08-26 PPU 首次真实基线、Profile 与 GEMV](experiments/2026-08-26-ppu-baseline-and-gemv.md)。
+- 完整证据见 [PPU 首次真实基线、Profile 与 GEMV](experiments/2026-08-26-ppu-baseline-and-gemv.md)
+  和 [PPU decode 融合算子迭代](experiments/2026-08-26-ppu-fused-decode-kernels.md)。
 
 ## 尚未完成
 
 - 获取主办方 PPU-vLLM/Qwen3.5/GDN fast path，并与 eager 做同口径对照。
-- 根据 PPU profile 实现并验证 GDN/causal-conv/elementwise 融合候选。
+- 在完整公开集验证 GDN+conv 与 all-four 的 Accuracy、答案和生成长度漂移，再决定
+  最终默认开关。
+- 对 all-four 后的 GEMV/GEMM、remaining elementwise/cat/reduce 重新排优先级；
+  当前通用 HGGC GEMV 慢于 `torch.mv`，不直接接入。
 - 量化/权重变换的正式允许范围确认。
 - 初赛技术报告已形成可持续更新的初稿，源码候选包可一键生成；仍缺 PPU 实测章节、最终复现说明和按主办方格式定稿。
 
@@ -100,7 +114,7 @@
 
 RTX 4050 的 6GB 显存仍只适合作为历史单样本环境；更长输入、更高分辨率、编译缓存
 或并发请求可能 OOM。PPU 显存充足，但当前 Transformers eager 的线性注意力和
-因果卷积缺少 fast path，16-token profile 暴露 37,293 次 launch 和大量临时分配。
-下一步应优先取得官方 PPU-vLLM/FLA 路径或融合 recurrent GDN state update，不能再把
-CUDA 上“GEMV 是第一热点”的结论直接套到 PPU。CPU offload、冷 RTC 和稳态 PPU
-结果不得混算。
+因果卷积原始 fast path 缺失的问题已由仓库融合候选缓解；all-four 小样本吞吐提高
+63.47%，但 5/20 生成长度漂移说明 reduction 数值顺序仍是精度风险。下一步优先跑
+完整公开集并获取官方 PPU-vLLM/FLA 对照，不能只凭 20 条 Accuracy 宣称无损。
+CPU offload、冷 RTC、profiler 插桩和稳态 PPU 结果不得混算。
