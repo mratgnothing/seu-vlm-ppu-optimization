@@ -201,6 +201,8 @@ class VLMModel:
         self._tokenizer = getattr(self._processor, "tokenizer", None)
         self._ppu_gdn_patched_modules = 0
         self._ppu_packed_gdn_projection_modules = 0
+        self._ppu_gdn_projection_backend = "disabled"
+        self._ppu_gdn_projection_groups = "disabled"
         gdn_library_path = os.getenv("SEU_PPU_GDN_LIBRARY")
         if gdn_library_path:
             custom_op_dir = Path(
@@ -335,7 +337,31 @@ class VLMModel:
                         f"patched {self._ppu_packed_mlp_modules}"
                     )
                 torch.cuda.empty_cache()
-            if os.getenv("SEU_PPU_PACK_GDN_PROJECTIONS_ENABLE", "0") == "1":
+            pack_gdn_projections = (
+                os.getenv("SEU_PPU_PACK_GDN_PROJECTIONS_ENABLE", "0") == "1"
+            )
+            acblas_gdn_build_dir = os.getenv("SEU_PPU_ACBLAS_GDN_BUILD_DIR")
+            if pack_gdn_projections and acblas_gdn_build_dir:
+                raise RuntimeError(
+                    "SEU PPU GDN projection backends are mutually exclusive"
+                )
+            if acblas_gdn_build_dir:
+                from ppu_acblas_gdn_projection import (
+                    PPUACBLASGDNProjectionExtension,
+                )
+
+                extension = PPUACBLASGDNProjectionExtension(
+                    acblas_gdn_build_dir,
+                    algorithm=int(os.getenv("SEU_PPU_ACBLAS_GDN_ALGORITHM", "-1")),
+                )
+                for module in self._model.modules():
+                    if type(module).__name__ != "Qwen3_5GatedDeltaNet":
+                        continue
+                    extension.pack_module(module)
+                    self._ppu_packed_gdn_projection_modules += 1
+                self._ppu_gdn_projection_backend = "acblas-grouped"
+                self._ppu_gdn_projection_groups = "4"
+            elif pack_gdn_projections:
                 from ppu_gdn_projection_pack import (
                     pack_qwen35_gdn_input_projections,
                 )
@@ -353,6 +379,11 @@ class VLMModel:
                         module, group_sizes=group_sizes
                     )
                     self._ppu_packed_gdn_projection_modules += 1
+                self._ppu_gdn_projection_backend = "torch-packed"
+                self._ppu_gdn_projection_groups = ",".join(
+                    str(value) for value in group_sizes
+                )
+            if pack_gdn_projections or acblas_gdn_build_dir:
                 if self._ppu_packed_gdn_projection_modules != 18:
                     raise RuntimeError(
                         "SEU PPU packed GDN projections expected 18 modules, "
@@ -489,8 +520,11 @@ class VLMModel:
                 "ppu_packed_gdn_projection_modules": getattr(
                     self, "_ppu_packed_gdn_projection_modules", 0
                 ),
-                "ppu_packed_gdn_projection_groups": os.getenv(
-                    "SEU_PPU_PACK_GDN_PROJECTIONS_GROUPS", "4"
+                "ppu_packed_gdn_projection_groups": getattr(
+                    self, "_ppu_gdn_projection_groups", "disabled"
+                ),
+                "ppu_gdn_projection_backend": getattr(
+                    self, "_ppu_gdn_projection_backend", "disabled"
                 ),
             },
         )

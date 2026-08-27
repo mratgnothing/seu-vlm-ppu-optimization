@@ -27,6 +27,12 @@ def parse_args() -> argparse.Namespace:
         default="4",
         help="Comma-separated consecutive projection groups, for example 2,1,1",
     )
+    parser.add_argument(
+        "--projection-backend",
+        choices=("torch-packed", "acblas-grouped"),
+        default="torch-packed",
+    )
+    parser.add_argument("--acblas-build-dir", type=Path)
     return parser.parse_args()
 
 
@@ -68,10 +74,7 @@ def main() -> int:
         settle_runtime,
     )
     from evaluation_wrapper import VLMModel
-    from ppu_gdn_projection_pack import (
-        pack_qwen35_gdn_input_projections,
-        set_packed_qwen35_gdn_input_projections,
-    )
+    from ppu_gdn_projection_pack import set_packed_qwen35_gdn_input_projections
 
     all_samples = load_mmbench_tsv(
         args.dataset_path,
@@ -85,10 +88,27 @@ def main() -> int:
     config = fixed_generation_config()
     config.max_new_tokens = args.max_new_tokens
     packed_modules = []
+    if args.projection_backend == "acblas-grouped":
+        if args.acblas_build_dir is None:
+            raise ValueError("--acblas-build-dir is required for acblas-grouped")
+        if group_sizes != (4,):
+            raise ValueError("acblas-grouped implements the complete four-way group")
+        from ppu_acblas_gdn_projection import PPUACBLASGDNProjectionExtension
+
+        projection_packer = PPUACBLASGDNProjectionExtension(
+            args.acblas_build_dir
+        ).pack_module
+    else:
+        from ppu_gdn_projection_pack import pack_qwen35_gdn_input_projections
+
+        def projection_packer(module):
+            return pack_qwen35_gdn_input_projections(
+                module, group_sizes=group_sizes
+            )
     for module in model._model.modules():
         if type(module).__name__ != "Qwen3_5GatedDeltaNet":
             continue
-        pack_qwen35_gdn_input_projections(module, group_sizes=group_sizes)
+        projection_packer(module)
         packed_modules.append(module)
     if len(packed_modules) != 18:
         raise RuntimeError(f"expected 18 packed GDN modules, got {len(packed_modules)}")
@@ -159,6 +179,7 @@ def main() -> int:
         "packed_gdn_modules": len(packed_modules),
         "packed_weight_shape_per_module": [8224, 2048],
         "projection_group_sizes": group_sizes,
+        "projection_backend": args.projection_backend,
         "baseline": {
             "avg_ttft_ms": mean_metric(baseline_records, "ttft_ms"),
             "avg_throughput_tokens_per_sec": mean_metric(

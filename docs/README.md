@@ -1,6 +1,6 @@
 # 项目导航与进度总览
 
-更新时间：2026-08-26
+更新时间：2026-08-27
 
 本页是人类成员和 Agent 的统一入口。需要快速接手时，先看“当前结论”和“模块进度”，
 再按表格中的证据文档深入。
@@ -30,7 +30,7 @@
 | 输出解析鲁棒性 | 已完成 | Markdown 选项、截断结论规范化和整块复测 | 继续记录新格式边界，禁止按题号修补 | [英文全量修复记录](experiments/2026-07-26-en-full-n4029.md) |
 | CUDA 热点定位 | 已完成 | GEMV/GEMM 占 self CUDA time 86.18%，显存峰值已记录 | 映射到 PPU kernel/profile | [CUDA Profile](experiments/2026-07-24-o2-cuda-profile.md) |
 | PPU 工具链 | 已完成首轮闭环 | SDK、驱动、HGGC、定制 PyTorch、模型驻留、真实样本与 20 条基线 | 获取比赛 PPU-vLLM/v1.2，固定最终镜像 | [首次实验](experiments/2026-08-26-ppu-baseline-and-gemv.md)、[首次上机手册](ppu-first-validation.md) |
-| PPU 关键算子 | 五类核与两类图融合已验证 | GDN/conv/norm/qk-RoPE、packed MLP；packed-GDN CN20 +3.55% 但 19/20 exact；acBLAS 定性为负实验 | 完整公开集与官方私有门限；实现数值稳定的 multi-output GEMV | [融合实验](experiments/2026-08-26-ppu-fused-decode-kernels.md)、[packed MLP](experiments/2026-08-27-ppu-packed-mlp.md)、[packed GDN](experiments/2026-08-27-ppu-packed-gdn-projections.md)、[acBLAS](experiments/2026-08-27-ppu-acblas-gemv.md) |
+| PPU 关键算子 | 五类核与图融合已验证 | GDN/conv/norm/qk-RoPE、packed MLP；packed-GDN CN20 +3.55% 但 19/20 exact；grouped-acBLAS GDN 两轮 20/20 exact、+1.87%/+3.91% 中位 | 完整公开集与官方私有门限；实现真正减少 launch 的数值稳定 multi-output GEMV | [融合实验](experiments/2026-08-26-ppu-fused-decode-kernels.md)、[packed MLP](experiments/2026-08-27-ppu-packed-mlp.md)、[packed GDN](experiments/2026-08-27-ppu-packed-gdn-projections.md)、[acBLAS](experiments/2026-08-27-ppu-acblas-gemv.md) |
 | 技术报告 | 初稿完成 | 方法、指标、结果和真实性边界已整理 | 补 PPU 真实实验、最终复现命令 | [初赛技术报告](preliminary-technical-report.md) |
 | 源码交付 | 候选包可用 | 白名单打包、敏感扫描、可复现 ZIP | 按主办方最终目录要求定稿 | [根目录 README](../README.md) |
 

@@ -1,6 +1,6 @@
 # 当前状态
 
-更新时间：2026-08-26
+更新时间：2026-08-27
 
 ## 已确认
 
@@ -114,6 +114,11 @@
   一致，唯一差异为同答案多 1 token，所以保持默认关闭。
 - `(2,1,1)` 精确分组恢复 CN20 20/20 全文一致，但成对中位 -1.16%，证明收益主要
   来自将四次提交压成一次，而非权重连续化本身。
+- 结构专用 grouped acBLAS GDN 在一次 C++ extension 入口中保留四个原形状 GEMV。
+  CN20 两轮平均吞吐为 96.409→98.028 和 95.634→99.601 token/s，成对中位
+  +1.87%/+3.91%，16/20 和 17/20 获胜；Accuracy 均为 85%，两轮均 20/20 全文
+  一致。固定 128-token 六对成对中位 +1.21%，但仅 3/6 获胜，故作为默认关闭的
+  精度优先候选继续扩大验证。
 - 当前没有 vLLM 或 `/opt/vllm`，Transformers 提示缺少 GDN/causal-conv fast path；
   eager 正确性可用，但不是最终性能路线。
 - 完整证据见 [PPU 首次真实基线、Profile 与 GEMV](experiments/2026-08-26-ppu-baseline-and-gemv.md)、
@@ -127,8 +132,8 @@
 - 获取主办方 PPU-vLLM/Qwen3.5/GDN fast path，并与 eager 做同口径对照。
 - 在完整公开集验证 GDN+conv、all-four、packed-MLP 与 packed-GDN 的 Accuracy、答案和生成长度漂移，再决定
   最终默认开关。
-- 为 GDN 四路投影实现保持原累加顺序的 HGGC multi-output GEMV，或获取厂商
-  grouped-GEMV 接口；继续按 profile 排 remaining elementwise/cat/reduce。
+- 获取厂商 grouped/batched-GEMV 接口，或实现能保持原数值路径并减少设备 launch
+  的 HGGC multi-output GEMV；继续按 profile 排 remaining elementwise/cat/reduce。
 - 量化/权重变换的正式允许范围确认。
 - 初赛技术报告已形成可持续更新的初稿，源码候选包可一键生成；仍缺 PPU 实测章节、最终复现说明和按主办方格式定稿。
 
@@ -137,7 +142,8 @@
 RTX 4050 的 6GB 显存仍只适合作为历史单样本环境；更长输入、更高分辨率、编译缓存
 或并发请求可能 OOM。PPU 显存充足，但当前 Transformers eager 的线性注意力和
 因果卷积原始 fast path 缺失的问题已由仓库融合候选缓解；packed-GDN 激进候选的
-CN20 平均吞吐约 98.430 token/s，但它新增 1/20 文本漂移，all-five 也已有 5/20
+CN20 平均吞吐约 98.430 token/s，但它新增 1/20 文本漂移；grouped-acBLAS GDN
+两轮保持 20/20 exact，但固定长重复的胜率仍不稳定；all-five 也已有 5/20
 生成长度漂移，说明 reduction 数值顺序仍是精度风险。下一步优先跑
 完整公开集并获取官方 PPU-vLLM/FLA 对照，不能只凭 20 条 Accuracy 宣称无损。
 CPU offload、冷 RTC、profiler 插桩和稳态 PPU 结果不得混算。

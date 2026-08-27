@@ -28,10 +28,13 @@ neg/mul/add/cat。
 `down_proj`。prefill 仍调用原始 forward，gate/up Parameter 只是 packed storage 的
 两个 view，不常驻第二份 1.2 GiB 权重。
 
-另有两条图/运行时实验路径。`ppu_gdn_projection_pack.py` 把 GDN 的 qkv/z/b/a 四个
+另有三条图/运行时实验路径。`ppu_gdn_projection_pack.py` 把 GDN 的 qkv/z/b/a 四个
 同输入 decode 投影合为一次；四份 Parameter 共享 `[8224,2048]` storage，prefill
-回退。注册式 PyTorch/acBLAS 路径替换 102 个 bias-free decode Linear，并用 C ABI
-隔离 Torch/CUDA 与 PPU 半精度头；它保留作负实验，未接入正式 wrapper。
+回退。`ppu_acblas_gdn_projection.py` 则只合并 Python/ATen/pybind 调度，在一个 C++
+入口内仍按原顺序执行四个原形状 acBLAS GEMV，以保留 BF16 数值路径。通用注册式
+PyTorch/acBLAS 路径替换 102 个 bias-free decode Linear，并用 C ABI 隔离
+Torch/CUDA 与 PPU 半精度头；通用替换保留作负实验，结构专用 grouped GDN 作为
+默认关闭的精度优先候选接入 wrapper。
 
 ## 构建和单算子验收
 
@@ -53,6 +56,9 @@ python build_acblas_linear_extension.py
 python smoke_acblas_linear_module.py \
   --build-dir build/acblas_linear_extension \
   --input-features 2048 --output-features 2048
+python smoke_acblas_gdn_projection.py \
+  --build-dir build/acblas_linear_extension \
+  --warmup 32 --iters 400
 ```
 
 每个 smoke 都先与当前 Transformers eager 逐元素比较，再计时；数值失败时返回非零。
@@ -99,9 +105,20 @@ export SEU_PPU_PACK_GDN_PROJECTIONS_ENABLE=1
 export SEU_PPU_PACK_GDN_PROJECTIONS_GROUPS=4
 ```
 
+若优先保持原四个 GEMV 的逐位数值路径，不要设置上面两个 packed-GDN 变量，改用：
+
+```bash
+export SEU_PPU_ACBLAS_GDN_BUILD_DIR="$PWD/ppu/custom_ops/build/acblas_linear_extension"
+# 可选；默认 -1 让 SDK 选择算法。
+export SEU_PPU_ACBLAS_GDN_ALGORITHM=-1
+```
+
+两种 GDN projection backend 互斥；同时设置时 wrapper 会立即报错。
+
 随后照常运行 `benchmark_public.py`。`GenerationResult.meta` 会记录实际挂载的
 GDN/conv/RMSNorm/gated-RMSNorm/qk-RoPE/packed-MLP/packed-GDN 模块数，预期分别为
-`18/18/49/18/6/24/18`。
+`18/18/49/18/6/24/18`。grouped-acBLAS 正式单样本冒烟已得到这组完整计数，且
+`ppu_gdn_projection_backend` 为 `acblas-grouped`、公开校验无错误。
 
 固定中文前 20 条、同一实例/模型/seed、2 条预热的实测：
 
@@ -116,6 +133,8 @@ GDN/conv/RMSNorm/gated-RMSNorm/qk-RoPE/packed-MLP/packed-GDN 模块数，预期�
 | all-five + packed-MLP r1 | 119.401 | 96.506 | 85% | +94.04% |
 | all-five + packed-MLP r2 | 115.916 | 96.715 | 85% | +94.46% |
 | all-five + packed-MLP + packed-GDN，CN20 paired | 122.652 | 98.430 | 85% | +97.90% |
+| all-five + packed-MLP + grouped-acBLAS GDN r1 | - | 98.028 | 85% | +97.10% |
+| all-five + packed-MLP + grouped-acBLAS GDN r2 | - | 99.601 | 85% | +100.26% |
 
 20 条中各路径的解析答案和正确性均一致。GDN-only 有 3 条 token 数变化，
 all-four 有 5 条；因此这些结果证明小样本无 Accuracy 回退，不等于已经证明完整公开集
@@ -148,6 +167,16 @@ PPU GEMV 后端会拆分大矩阵，收益来自减少 ATen 调度和改善大�
 85%，但只有 19/20 完整文本一致。固定 128-token 四对 4/4 获胜且全文一致。`(2,1,1)`
 精确分组恢复 20/20 exact，却降到成对中位 `0.9884x`。
 
+结构专用 grouped-acBLAS GDN 保留原 qkv/z/b/a 四个 GEMV，只把四次主机入口合为
+一次。CN20 两轮平均吞吐分别为 `96.409→98.028` 和 `95.634→99.601 token/s`，
+成对中位为 `1.0187x/1.0391x`，16/20 和 17/20 条获胜，Accuracy 均为 85%，
+且两轮都是 20/20 全文一致。固定 128-token 六对成对中位 `1.0121x`，但只有 3/6
+获胜，因此仍需扩大验证，不能直接成为默认配置。
+
+对应 profile 中 `aten::linear/mm` 均从 `2730/2632` 降至 `1650/1552`，即各减少
+`18×4×15=1080` 次；`gemvt_op` 和 `cudaLaunchKernel` 仍为 `1906/16973`。这证明
+收益来自主机调度、mutex/handle/stream 设置合并，而不是减少设备 GEMV。
+
 acBLAS profile 虽恰好减少 `102×15=1530` 次 `aten::linear/mm`，最终固定 128-token
 八对的成对中位只有 `0.9997x`、4/8 获胜。它证明 dispatcher 被绕过，但不构成整模
 wall-clock 优化。
@@ -164,7 +193,7 @@ wall-clock 优化。
 | profiler 中自定义 GDN 为约 53 us，事件微基准约 31 us | profiler 插桩本身有开销 | 跨版本只比较同口径 | 端到端结论使用无 profiler 的 benchmark |
 | 线程内异常会让 streamer 等待 | 生成工作线程异常时没有结束标记 | 所有 shape/dtype/模块数先做 smoke 门禁 | 后续给 wrapper 增加异常向主线程传播和 streamer 关闭 |
 | GDN/RMSNorm 极小归约差异被自回归放大 | FP32 reduction 顺序不保证 bit-exact | norm 保持显式 opt-in；20 条逐答案对比 | 跑完整公开集、官方 Accuracy 门限和多类别漂移报告后再决定提交配置 |
-| Torch CUDA 头与 PPU HGGC 头重复定义 half/BF16 | 两套兼容头不能进入同一 C++ 翻译单元 | Torch extension 与 acBLAS bridge 通过窄 C ABI 隔离，显式传当前 stream | 仅保留负实验；runtime 更新后再复测 |
+| Torch CUDA 头与 PPU HGGC 头重复定义 half/BF16 | 两套兼容头不能进入同一 C++ 翻译单元 | Torch extension 与 acBLAS bridge 通过窄 C ABI 隔离，显式传当前 stream | 通用 102-Linear 替换保留负实验；结构专用 grouped GDN 继续扩大验证 |
 | packed-GDN CN20 有 1/20 多生成 1 token | 合并 GEMV 改变 BF16 数值路径，触发停止边界 | 默认关闭；记录完整文本哈希并做连续分组消融 | 写保持原累加顺序的 fused multi-output GEMV |
 | `$ORIGIN` 被 Ninja 当变量吞掉 | PyTorch extension 的 Ninja 生成层处理 `$` | 构建时写入确定的绝对 build rpath | 打包阶段改用转义后的相对 rpath 或 wheel 修复工具 |
 | 首次 packed-MLP A/B 在 `empty_cache` 报 `torch` 未定义 | 验证脚本新增调用但漏导入 torch | 补 `import torch`，语法和单测后重传 | CI 保持脚本 import/`--help` 冒烟 |
@@ -178,10 +207,12 @@ wall-clock 优化。
 
 - GDN + causal-conv 是较保守的默认候选：20 条 Accuracy 不变，causal-conv 本身
   bit-exact；GDN 仍有 3/20 生成长度漂移。
-- all-five + packed-MLP + packed-GDN 是当前最高吞吐候选：同模型 CN20 paired 相对
+- all-five + packed-MLP + packed-GDN 是激进性能候选：同模型 CN20 paired 相对
   eager 约 +97.90%，相对 packed 基线成对中位 +3.55%；但它新增 1/20 文本漂移，
   只能作为默认关闭的激进候选。
-- acBLAS 和 `(2,1,1)` 精确 packed-GDN 均未通过性能门槛，不进入提交配置。
+- grouped-acBLAS GDN 是当前精度优先候选：CN20 两轮均 20/20 exact、方向一致，
+  但固定长只有 3/6 获胜，保持默认关闭并等待完整集与更多固定长重复。
+- 通用 102-Linear acBLAS 和 `(2,1,1)` 精确 packed-GDN 均未通过性能门槛。
 - 这些 kernel 锁定 Qwen3.5-2B 当前维度、BF16、batch=1 decode 主路径；shape/dtype
   不匹配会失败或回退，不能静默套到其他模型。
 - 下一热点已转为运行时 GEMV/GEMM、剩余 elementwise/cat/reduce；仓库已有 HGGC

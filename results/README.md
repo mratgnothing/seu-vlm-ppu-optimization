@@ -66,3 +66,27 @@ CN20 成对中位 `1.0164x`、12/20 获胜。两组均保持完整文本一致�
 只融合 qkv+z 的 `(2,1,1)` 分组可恢复 CN20 20/20 全文一致，但成对中位
 `0.9884x`，不具备性能价值：
 [`ppu-packed-gdn-exact-cn20-20260827.json`](ppu-packed-gdn-exact-cn20-20260827.json)。
+
+## PPU grouped acBLAS GDN 投影
+
+结构专用 grouped acBLAS 在一次 PyTorch C++ extension 入口内仍按原顺序提交
+qkv/z/b/a 四个原形状 GEMV，避免一次 8224 行 GEMV 带来的 BF16 数值路径变化。
+固定 128-token 六对成对中位 `1.0121x`、3/6 获胜且全文一致。CN20 两轮分别为：
+
+- `96.409→98.028 tokens/s`，成对中位 `1.0187x`，16/20 获胜；
+- `95.634→99.601 tokens/s`，成对中位 `1.0391x`，17/20 获胜。
+
+两轮 Accuracy 均为 85%，并且都是 20/20 全文一致。Profile 中
+`aten::linear/mm` 各减少 1080 次，但 `gemvt_op` 和 `cudaLaunchKernel` 数不变，
+证明收益来自主机调度合并。当前仍是默认关闭的精度优先候选：
+
+- [`ppu-acblas-grouped-gdn-ab128-20260827.json`](ppu-acblas-grouped-gdn-ab128-20260827.json)
+- [`ppu-acblas-grouped-gdn-cn20-r1-20260827.json`](ppu-acblas-grouped-gdn-cn20-r1-20260827.json)
+- [`ppu-acblas-grouped-gdn-cn20-r2-20260827.json`](ppu-acblas-grouped-gdn-cn20-r2-20260827.json)
+- [`ppu-acblas-grouped-gdn-profile-ab-20260827.json`](ppu-acblas-grouped-gdn-profile-ab-20260827.json)
+- [`ppu-acblas-grouped-gdn-profile-baseline-summary-20260827.json`](ppu-acblas-grouped-gdn-profile-baseline-summary-20260827.json)
+- [`ppu-acblas-grouped-gdn-profile-candidate-summary-20260827.json`](ppu-acblas-grouped-gdn-profile-candidate-summary-20260827.json)
+- [`ppu-acblas-grouped-gdn-formal-wrapper-smoke-20260827.json`](ppu-acblas-grouped-gdn-formal-wrapper-smoke-20260827.json)
+
+正式 wrapper 冒烟记录真实 Transformers backend、空校验错误，以及
+`18/18/49/18/6/24/18` 的完整模块挂载计数；其冷启动时间不用于性能比较。

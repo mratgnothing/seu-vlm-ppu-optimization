@@ -109,6 +109,9 @@ class PPUMicrobenchContractTest(unittest.TestCase):
         packed_gdn = (
             ROOT / "ppu" / "custom_ops" / "ppu_gdn_projection_pack.py"
         ).read_text(encoding="utf-8")
+        acblas_grouped_gdn = (
+            ROOT / "ppu" / "custom_ops" / "ppu_acblas_gdn_projection.py"
+        ).read_text(encoding="utf-8")
         packed_gdn_benchmark = (
             ROOT / "scripts" / "benchmark_ppu_packed_gdn_multisample_ab.py"
         ).read_text(encoding="utf-8")
@@ -132,7 +135,10 @@ class PPUMicrobenchContractTest(unittest.TestCase):
         self.assertIn("expected 24 Qwen3.5 MLP modules", benchmark)
         self.assertIn("batch=1 single-token decode", linear_wrapper)
         self.assertIn("seu_acblas_linear_bf16", linear_extension)
+        self.assertIn("seu_acblas_gdn_projections_bf16", linear_extension)
         self.assertIn("acblasGemvEx", acblas_bridge)
+        self.assertIn("seu_acblas_gdn_projections_bf16", acblas_bridge)
+        self.assertIn("kOutputOffsets[] = {0, 6144, 8192, 8208}", acblas_bridge)
         self.assertIn("std::lock_guard<std::mutex>", acblas_bridge)
         self.assertIn("getCurrentCUDAStream", linear_extension)
         self.assertIn("Path(sys.executable).parent", extension_builder)
@@ -143,6 +149,10 @@ class PPUMicrobenchContractTest(unittest.TestCase):
         self.assertIn("_seu_gdn_input_weight", packed_gdn)
         self.assertIn("threading.local()", packed_gdn)
         self.assertIn("set_packed_qwen35_gdn_input_projections", packed_gdn)
+        self.assertIn("threading.local()", acblas_grouped_gdn)
+        self.assertIn("gdn_projections_bf16", acblas_grouped_gdn)
+        self.assertIn("_seu_acblas_gdn_weight", acblas_grouped_gdn)
+        self.assertIn("weights do not alias packed storage", acblas_grouped_gdn)
         self.assertIn("exact_output_pairs", packed_gdn_benchmark)
         self.assertIn("projection_group_sizes", packed_gdn_benchmark)
         for variable in (
@@ -154,8 +164,12 @@ class PPUMicrobenchContractTest(unittest.TestCase):
             "SEU_PPU_PACK_MLP_ENABLE",
             "SEU_PPU_PACK_GDN_PROJECTIONS_ENABLE",
             "SEU_PPU_PACK_GDN_PROJECTIONS_GROUPS",
+            "SEU_PPU_ACBLAS_GDN_BUILD_DIR",
+            "SEU_PPU_ACBLAS_GDN_ALGORITHM",
         ):
             self.assertIn(variable, integration)
+        self.assertIn("GDN projection backends are mutually exclusive", integration)
+        self.assertIn('self._ppu_gdn_projection_backend = "acblas-grouped"', integration)
 
 
 if __name__ == "__main__":

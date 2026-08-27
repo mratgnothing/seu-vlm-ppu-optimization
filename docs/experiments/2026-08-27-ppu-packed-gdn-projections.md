@@ -87,18 +87,79 @@ qkv+z，b/a 保持原调用：CN20 达到 20/20 全文一致，但平均吞吐
 存储或保留两到三次 Linear 不能兑现整模收益。精确分组原始结果：
 [`results/ppu-packed-gdn-exact-cn20-20260827.json`](../../results/ppu-packed-gdn-exact-cn20-20260827.json)。
 
+## 保持四路 GEMV 的 grouped acBLAS
+
+为同时保留逐位稳定性和减少主机调度，进一步实现了一个结构专用的 C++ extension：
+Python 只调用一次 `gdn_projections_bf16`，C ABI bridge 在同一个 mutex、acBLAS handle
+和当前 PyTorch stream 下，仍按 qkv、z、b、a 的原顺序提交四个 `acblasGemvEx`。
+权重仍共享 `[8224,2048]` storage，但没有把四个矩阵变成一个 8224 行 GEMV，因此
+数学形状、输出切片和 BF16 累加路径都保持不变。这是模型结构优化，不依赖公开集
+题目、标签或答案。
+
+随机 BF16 smoke 的 decode/prefill 均逐位一致，四投影耗时从 `0.039343 ms` 降至
+`0.030659 ms`，即 `1.2832x`。固定 128-token 六对结果为：
+
+| 路径 | 中位 token/s | 成对中位/均值 | 获胜对数 | 全文一致 |
+|---|---:|---:|---:|---:|
+| optimized baseline | 99.880 | - | - | - |
+| grouped acBLAS | 101.896 | `1.0121x/1.0122x` | 3/6 | 是 |
+
+CN20 在同一代码上独立运行两轮：
+
+| 轮次 | baseline token/s | grouped acBLAS token/s | 成对中位/均值 | 获胜 | Accuracy | 全文一致 |
+|---|---:|---:|---:|---:|---:|---:|
+| r1 | 96.409 | 98.028 | `1.0187x/1.0173x` | 16/20 | 85%/85% | 20/20 |
+| r2 | 95.634 | 99.601 | `1.0391x/1.0426x` | 17/20 | 85%/85% | 20/20 |
+
+两轮方向一致且所有文本逐字相同，说明它比“一次 8224 行 Linear”的激进路径更适合
+精度优先配置；但固定长六对只有 3/6 获胜，完整公开集和官方私有集仍是最终门禁。
+
+正式 `benchmark_public.py` 单样本冷启动冒烟也已通过：backend 为真实
+`transformers`，公开校验无错误，GDN/conv/RMSNorm/gated-RMSNorm/qk-RoPE/
+packed-MLP/grouped-GDN 挂载数依次为 `18/18/49/18/6/24/18`，结果元数据明确记录
+`ppu_gdn_projection_backend=acblas-grouped`。冷启动 TTFT 不进入性能统计。
+
+Profile 进一步区分了主机和设备侧变化：
+
+| 事件 | 基线 | grouped acBLAS | 差值 |
+|---|---:|---:|---:|
+| `aten::linear` | 2730 | 1650 | -1080 |
+| `aten::mm` | 2632 | 1552 | -1080 |
+| `gemvt_op` | 1906 | 1906 | 0 |
+| `cudaLaunchKernel` | 16973 | 16973 | 0 |
+
+`1080 = 18 layers × 4 calls × 15 decode steps`。设备仍执行同样的四路 GEMV 和同样
+数量的 kernel，收益来自把四次 Python/ATen/pybind 入口合并为一次，并复用一次
+mutex、handle 和 stream 设置。单次 profiler 计时受插桩和短样本噪声影响，不作为
+吞吐结论；性能只引用上面的无 profiler 成对 A/B。
+
+原始小型结果：
+
+- [`results/ppu-acblas-grouped-gdn-ab128-20260827.json`](../../results/ppu-acblas-grouped-gdn-ab128-20260827.json)
+- [`results/ppu-acblas-grouped-gdn-cn20-r1-20260827.json`](../../results/ppu-acblas-grouped-gdn-cn20-r1-20260827.json)
+- [`results/ppu-acblas-grouped-gdn-cn20-r2-20260827.json`](../../results/ppu-acblas-grouped-gdn-cn20-r2-20260827.json)
+- [`results/ppu-acblas-grouped-gdn-profile-ab-20260827.json`](../../results/ppu-acblas-grouped-gdn-profile-ab-20260827.json)
+- [`results/ppu-acblas-grouped-gdn-profile-baseline-summary-20260827.json`](../../results/ppu-acblas-grouped-gdn-profile-baseline-summary-20260827.json)
+- [`results/ppu-acblas-grouped-gdn-profile-candidate-summary-20260827.json`](../../results/ppu-acblas-grouped-gdn-profile-candidate-summary-20260827.json)
+- [`results/ppu-acblas-grouped-gdn-formal-wrapper-smoke-20260827.json`](../../results/ppu-acblas-grouped-gdn-formal-wrapper-smoke-20260827.json)
+
 ## 当前决策
 
-- `SEU_PPU_PACK_GDN_PROJECTIONS_ENABLE=1` 才启用，默认关闭；
-- `SEU_PPU_PACK_GDN_PROJECTIONS_GROUPS=4` 是高性能候选；可用 `2,1,1` 复现实验性
-  精确分组，但它没有性能价值；
+- 精度优先候选使用 `SEU_PPU_ACBLAS_GDN_BUILD_DIR=<extension-build-dir>`；它保持
+  四个原始 GEMV，CN20 两轮均 20/20 全文一致，但仍默认关闭；
+- 性能优先候选使用 `SEU_PPU_PACK_GDN_PROJECTIONS_ENABLE=1` 和
+  `SEU_PPU_PACK_GDN_PROJECTIONS_GROUPS=4`；它改变 GEMV 形状，CN20 为 19/20 exact；
+- 两个 backend 互斥，wrapper 会在同时配置时直接报错；
+- `2,1,1` 可复现实验性精确 Torch 分组，但没有性能价值；
 - 不能把 85% Accuracy 不变表述为严格无损；完整公开集和官方私有集仍是最终门禁；
-- 下一步应实现一个保持原四个输出累加顺序的 HGGC fused multi-output GEMV，或获得
-  厂商 grouped-GEMV 接口，再争取同时满足一次发射和逐位稳定。
+- 下一步应继续寻找厂商 grouped-GEMV/batched-GEMV 或 HGGC multi-output GEMV，
+  争取在保持原四路数值路径的同时真正减少设备 kernel launch。
 
 ## 复现入口
 
 - `ppu/custom_ops/ppu_gdn_projection_pack.py`：权重别名、分组 closure 与 prefill 回退；
+- `ppu/custom_ops/ppu_acblas_gdn_projection.py`：一次 pybind 入口、四路原形状 GEMV；
+- `ppu/custom_ops/smoke_acblas_gdn_projection.py`：随机 BF16 grouped acBLAS 门禁；
 - `ppu/custom_ops/smoke_packed_gdn_projections.py`：随机 BF16 数值/存储/耗时门禁；
 - `scripts/benchmark_ppu_packed_gdn_ab.py`：固定长解码与问题样本重复 AB/BA；
 - `scripts/benchmark_ppu_packed_gdn_multisample_ab.py`：CN20 逐样本成对门禁。

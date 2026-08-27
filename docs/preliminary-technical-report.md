@@ -20,9 +20,11 @@ Network（GDN）、MLP、全注意力和视觉主干尺寸，并为
 `N=6144,K=2048`、`N=2048,K=6144`、`N=2048,K=2048`
 三组核心矩阵准备 HGGC BF16 参考微基准。随后已在隔离 PPU-ZW810E 节点完成
 Qwen3.5-2B 全模型部署，并接入五类 HGGC decode 融合与 packed MLP。注册式
-acBLAS Linear 已完成但最终固定长解码无稳定收益，作为负实验保留。新增的 GDN
-四路输入投影打包在同模型 CN20 paired 验证中达到 98.430 token/s、85% Accuracy，
-但只有 19/20 完整文本一致，因此仍是默认关闭的候选，需完整公开集和私有集门禁。
+acBLAS Linear 通用替换已完成但最终固定长解码无稳定收益，作为负实验保留。新增的
+GDN 四路输入投影打包在同模型 CN20 paired 验证中达到 98.430 token/s、85%
+Accuracy，但只有 19/20 完整文本一致。进一步实现的结构专用 grouped acBLAS
+保留四个原形状 GEMV，CN20 两轮成对中位提升 1.87%/3.91%，Accuracy 均为 85%
+且 20/20 全文一致；两条路径都默认关闭，需完整公开集和私有集门禁。
 
 ## 1. 应用场景与目标
 
@@ -218,12 +220,20 @@ Torch extension + C-ABI acBLAS bridge 也完成了 ABI 隔离和 102 个 Linear 
 | all-five | 93.918 / 94.889 | 85% | +88.83% / +90.78% |
 | all-five + packed-MLP | 96.506 / 96.715 | 85% | +94.04% / +94.46% |
 | + packed GDN projections，paired | 98.430 | 85% | +97.90% |
+| + grouped-acBLAS GDN r1/r2 | 98.028 / 99.601 | 85% | +97.10% / +100.26% |
 
 最终线程隔离版 packed-GDN 的同模型逐样本 AB/BA 中，基线/候选为
 94.099/98.430 token/s，成对速度比中位数 1.0355x，20 条赢 15 条；Accuracy 都是
 85%，但 1 条文本多生成 1 个 token。固定 128-token 四对则 4/4 获胜且全文一致。
 候选由 Qwen3.5 图结构产生，公开
 数据只作回归门禁。acBLAS 最终固定 128-token 八对成对中位仅 0.9997x，未接入。
+
+grouped-acBLAS GDN 不是通用替换：它在一次 pybind/C++ 入口中依次执行 qkv、z、b、a
+四个原形状 `acblasGemvEx`。CN20 两轮由 96.409→98.028 和 95.634→99.601
+token/s，成对中位为 1.0187x/1.0391x，分别 16/20、17/20 获胜，并保持两轮
+20/20 全文一致。Profile 中 `aten::linear/mm` 各减少 1080 次，而设备侧
+`gemvt_op` 和 `cudaLaunchKernel` 数不变，说明收益来自主机调度与 handle/stream
+设置合并，不是减少数学计算。固定长六对只有 3/6 获胜，所以暂不默认启用。
 
 ### 7.3 当前边界
 
