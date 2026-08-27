@@ -86,3 +86,22 @@ python scripts/benchmark_ppu_gdn_ab.py \
 
 原始 JSON 与 trace 保存在隔离服务器 `/mnt/workspace/seu/results/`；模型、数据和大型
 trace 不进入 Git。
+
+## 后续候选：SwiGLU 激活与原地计算（未保留）
+
+packed projection 后，继续测试了两种与数据集无关的 MLP 激活优化：
+
+1. HGGC kernel 合并 `SiLU(gate) * up`。随机 BF16、真实 packed split stride 下
+   bit-exact，但 128/256/512 threads 分别只有 `0.670x/0.711x/0.882x`；完整
+   packed projection→activation→down projection 也只有 `0.966x`。6144 元素过小，
+   ctypes/HGGC 启动开销超过少一次 elementwise kernel 的收益，因此删除该 ABI。
+2. 在 packed gate view 上原地执行 SiLU 和乘法。完整单层路径 bit-exact，局部提升
+   约 5.74%；同进程五次整模型 packed/in-place 中位为 `99.367/101.023 token/s`
+   （+1.67%）。但固定 20 条两轮只从 `96.506/96.715` 变为
+   `96.619/96.870 token/s`（+0.12%/+0.16%）。profile 中 `empty_strided`、
+   `empty_like`、copy 和 `cudaLaunchKernel` 数均未下降，只是 360 次 `silu/mul`
+   变为 `silu_/mul_`。收益低于稳定保留门限，因此代码回退。
+
+这组负结果说明：对于 PPU 上很短的 decode elementwise，减少 Python 表达式或改成
+in-place 不等于减少设备工作；下一轮应优先研究 GEMV/GEMM 后端、权重布局和可用的
+融合 epilogue，而不是继续堆叠小型 ctypes kernel。

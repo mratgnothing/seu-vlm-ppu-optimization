@@ -39,3 +39,30 @@ O1 相对中文 O0 的正式中位提升为：TTFT 8.25%，吞吐 8.82%。
 性能表用于本地工程管线验证，不代表完整公开集速度或主办方私有评测成绩。完整集
 Accuracy 采用单次分块运行，不能替代三次性能统计。逐样本原始结果保留在本地忽略目录，
 不提交到仓库。
+
+## PPU 注册式 acBLAS Linear
+
+PPU-ZW810E 上，最终单 `.so` + 进程级 handle/mutex 版本虽然随机 BF16 模块级达到
+`1.08--1.17x`，但固定 128-token 八对 AB/BA 的成对中位仅 `0.9997x`、4/8 获胜；
+CN20 成对中位 `1.0164x`、12/20 获胜。两组均保持完整文本一致，但性能不能稳定
+复现，因此不接入正式 wrapper：
+
+- [`ppu-acblas-ab128-final-20260827.json`](ppu-acblas-ab128-final-20260827.json)
+- [`ppu-acblas-cn20-final-20260827.json`](ppu-acblas-cn20-final-20260827.json)
+
+## PPU Qwen3.5 GDN 输入投影打包
+
+最终线程隔离版的四投影一次完成在固定 128-token 四对中 4/4 获胜、全文一致，成对
+中位 `1.0182x`。CN20 平均吞吐 `94.099→98.430 tokens/s`、成对中位
+`1.0355x`、Accuracy 均为
+85%，但 19/20 全文一致，唯一差异为相同答案下多生成 1 token。因此它保持默认关闭：
+
+- [`ppu-packed-gdn-ab128-20260827.json`](ppu-packed-gdn-ab128-20260827.json)
+- [`ppu-packed-gdn-cn20-20260827.json`](ppu-packed-gdn-cn20-20260827.json)
+- [`ppu-packed-gdn-profile-ab-20260827.json`](ppu-packed-gdn-profile-ab-20260827.json)
+- [`ppu-packed-gdn-profile-baseline-summary-20260827.json`](ppu-packed-gdn-profile-baseline-summary-20260827.json)
+- [`ppu-packed-gdn-profile-candidate-summary-20260827.json`](ppu-packed-gdn-profile-candidate-summary-20260827.json)
+
+只融合 qkv+z 的 `(2,1,1)` 分组可恢复 CN20 20/20 全文一致，但成对中位
+`0.9884x`，不具备性能价值：
+[`ppu-packed-gdn-exact-cn20-20260827.json`](ppu-packed-gdn-exact-cn20-20260827.json)。

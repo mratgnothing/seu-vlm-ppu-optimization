@@ -116,3 +116,13 @@ python ../../scripts/summarize_ppu_gemv.py repeated.log
 
 生产优化可从向量化加载、warp 级归约、权重布局、多个输出行/块、bias/激活融合
 和 PPU 矩阵指令开始，但应由真实 profile 决定先后顺序。
+
+## acBLAS 固定形状调查
+
+SDK 的 `acblasGemvEx` 在 Qwen decode 主要形状上均与 `torch.mv` BF16 输出逐位一致。
+直接 Python/ctypes 接入会被 FFI、stream 查询和张量分配开销反超；最终通过
+Torch extension + C-ABI acBLAS bridge 隔离头文件并绕过 ATen dispatcher，挂载
+102 个热路径 Linear。最终单 `.so` + 进程级 handle/mutex 版本在固定 128-token
+八对 AB/BA 中成对中位仅 `0.9997x`、4/8 获胜，因此不接入整模正式路径。完整
+模块级收益、负实验数据、通用性边界和无数据集过拟合约束见
+[acBLAS GEMV 调查](../../docs/experiments/2026-08-27-ppu-acblas-gemv.md)。

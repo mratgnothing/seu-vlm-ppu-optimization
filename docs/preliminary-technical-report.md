@@ -18,10 +18,11 @@ CUDA profile 显示 GEMV/GEMM 占 self CUDA time 的 86.18%，其中 decode
 阶段 BF16 GEMV 是第一热点。项目已据此解析 Qwen3.5-2B 的 Gated Delta
 Network（GDN）、MLP、全注意力和视觉主干尺寸，并为
 `N=6144,K=2048`、`N=2048,K=6144`、`N=2048,K=2048`
-三组核心矩阵准备 HGGC BF16 参考微基准。当前共享 PPU 节点的 SDK 与基础
-kernel 链可用，但 Python 推理栈缺失，预置 PPU-vLLM 分支也尚未包含
-Qwen3.5 模型注册与 GDN 路径。因此 PPU 模型级部署和算子优化结果需要在主办方
-提供支持 Qwen3.5 的隔离镜像后完成。
+三组核心矩阵准备 HGGC BF16 参考微基准。随后已在隔离 PPU-ZW810E 节点完成
+Qwen3.5-2B 全模型部署，并接入五类 HGGC decode 融合与 packed MLP。注册式
+acBLAS Linear 已完成但最终固定长解码无稳定收益，作为负实验保留。新增的 GDN
+四路输入投影打包在同模型 CN20 paired 验证中达到 98.430 token/s、85% Accuracy，
+但只有 19/20 完整文本一致，因此仍是默认关闭的候选，需完整公开集和私有集门禁。
 
 ## 1. 应用场景与目标
 
@@ -189,37 +190,46 @@ width-4 causal conv 是 decode 优化重点。
 本机 6GB 显存余量有限，不在 Windows 上盲装未经验证的扩展或直接进行高风险全模型
 编译。
 
-## 7. PPU 现状与待验证方案
+## 7. PPU 实机部署与优化结果
 
 ### 7.1 已确认事实
 
-- 共享节点为 4 张 PPU-ZW810E，每张显存约 97.9GB。
-- PPU SDK 2.1、驱动 1.3.2、HGGC 13.0 可用。
-- 官方 `vectorAdd` 已完成编译和运行，基础 kernel 链通过。
-- 当前共享运行态没有 PyTorch、Transformers、vLLM 或 SGLang。
-- `/opt/vllm` 的 PPU 定制 0.8.5 源码包含 PPU 矩阵、FlashAttention、
-  causal-conv1d 和量化路径，但缺少 `Qwen3_5ForConditionalGeneration`
-  注册和 GDN 实现。
+- 隔离节点为 1 张 PPU-ZW810E，显存 98,304 MiB；SDK 2.1.1、HGGC 13.0 可用。
+- 独立 venv 复用 PPU PyTorch 2.11 和定制 Triton，并安装 Transformers 5.14.1；
+  没有替换系统环境。
+- Qwen3.5-2B 的 617 个参数张量全部驻留 `cuda:0`，无 CPU/meta/disk offload；
+  视觉编码、18 层 Gated DeltaNet、6 层全注意力和自回归解码均已闭环。
+- 当前没有可直接使用的 PPU-vLLM/Qwen3.5 fast path，生产验证以 Transformers
+  eager 加仓库显式 opt-in 算子为基线。
 
-上述结果只能证明 SDK 基础链路，不代表 Qwen3.5-2B 已在 PPU 部署。
+### 7.2 已实测优化
 
-### 7.2 已准备验证入口
+已接入 recurrent GDN、causal-conv、2048 维 RMSNorm、128 维 gated RMSNorm、
+q/k RMSNorm+partial RoPE 五类 HGGC decode 核；另以权重共享 view 合并 24 层
+MLP gate/up projection，并探索 GDN 每层四个同输入投影的 multi-output packing。
+Torch extension + C-ABI acBLAS bridge 也完成了 ABI 隔离和 102 个 Linear 的负实验。
 
-`ppu/microbench/qwen35_bf16_gemv.hg` 为三组关键尺寸提供正确性优先的
-BF16/FP32 累加参考实现，并输出平均延迟、GFLOP/s、有效带宽、误差和机器可解析
-JSON。获得隔离资源后，将按“编译—单次冒烟—memcheck—稳定计时—asys/acu
-profile—运行时算子对照”的顺序验证。
+固定中文前 20 条的关键结果为：
 
-后续生产优化候选包括：
+| 路径 | 平均 token/s | Accuracy | 相对 eager |
+|---|---:|---:|---:|
+| eager | 49.737 | 85% | - |
+| GDN + causal-conv | 63.911 | 85% | +28.50% |
+| all-five | 93.918 / 94.889 | 85% | +88.83% / +90.78% |
+| all-five + packed-MLP | 96.506 / 96.715 | 85% | +94.04% / +94.46% |
+| + packed GDN projections，paired | 98.430 | 85% | +97.90% |
 
-- BF16 向量化加载和 warp 级归约；
-- 针对 PPU 的权重布局与矩阵指令；
-- bias、RMSNorm、gate 和激活融合；
-- GDN recurrent update 与 causal-conv1d update 融合；
-- KV Cache/内存池与单请求调度；
-- 经规则允许且精度通过的 INT8/INT4/FP8 量化。
+最终线程隔离版 packed-GDN 的同模型逐样本 AB/BA 中，基线/候选为
+94.099/98.430 token/s，成对速度比中位数 1.0355x，20 条赢 15 条；Accuracy 都是
+85%，但 1 条文本多生成 1 个 token。固定 128-token 四对则 4/4 获胜且全文一致。
+候选由 Qwen3.5 图结构产生，公开
+数据只作回归门禁。acBLAS 最终固定 128-token 八对成对中位仅 0.9997x，未接入。
 
-这些候选必须由真实 PPU profile 决定，当前不报告未经实测的提升率。
+### 7.3 当前边界
+
+全部自定义路径默认关闭，只有显式环境变量才挂载。五类融合的 reduction 顺序使
+all-five 相对 eager 有 5/20 生成长度变化，packed-GDN 又相对 packed 基线新增 1/20
+文本漂移；虽未改变 CN20 Accuracy，但最终提交前仍需完整公开集和私有集门禁。
 
 ## 8. 可复现性
 
@@ -245,7 +255,8 @@ O1 已在本地固定中英文样本上取得稳定、无精度变化的 TTFT �
 79.75%，结果完整性均已独立审计。Profile 说明后续优化应集中于 decode
 GEMV/GEMM、GDN 和 causal conv，而非在缺少证据时广泛改动。
 
-当前最小外部依赖是主办方明确：
+当前最高性能候选已在 PPU 完成编译、模型 A/B、profile 和 CN20 精度闭环。剩余外部
+依赖是主办方明确：
 
 1. 支持 Qwen3.5-2B 的 PPU Python/vLLM 镜像及版本；
 2. GDN 和 causal-conv1d 的 PPU fast path；
@@ -253,7 +264,8 @@ GEMV/GEMM、GDN 和 causal conv，而非在缺少证据时广泛改动。
 4. 允许的量化格式、校准数据和层级混合精度范围；
 5. 初赛复现环境、依赖安装和启动命令限制。
 
-收到答复后即可选择 PPU 路线并进入真实模型功能闭环。
+收到答复后可固定最终镜像 ABI、完成完整集门禁，并决定是否把当前 extension 打包为
+wheel 或迁移到官方 PPU-vLLM custom-op 接口。
 
 ## 附录：证据索引
 

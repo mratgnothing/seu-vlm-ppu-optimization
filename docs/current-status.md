@@ -102,18 +102,33 @@
 - all-five profile 的 self CPU/PPU 为 409.545/121.871 ms；相对 all-four，
   `cudaLaunchKernel` 19,878→17,088、`aten::cat` 747→387、`empty_strided`
   5,472→4,932。新 q/k RMSNorm+RoPE 核 90 次合计约 0.216 ms。
+- 24 层 packed-MLP 把 gate/up 两次投影合并为一次且不复制常驻权重；CN20 两轮为
+  96.506/96.715 token/s、85%，相对 eager 提升 94.04%/94.46%。
+- 注册式 PyTorch/acBLAS extension 通过 C ABI 隔离 Torch/CUDA 与 HGGC 头，随机
+  BF16 模块级达到 1.08--1.17x，并在 profile 中恰好减少 1530=102×15 次
+  `aten::linear/mm`；但最终单 `.so` 版本固定 128-token 八对的成对中位仅
+  0.9997x、4/8 获胜，故定性为负实验，不接入 wrapper。
+- Qwen3.5 GDN 每层 qkv/z/b/a 四个同输入投影已实现共享 storage 的一次 Linear。
+  最终线程隔离版固定 128-token 四对全部获胜、全文一致、成对中位 +1.82%；CN20
+  平均吞吐 94.099→98.430 token/s、成对中位 +3.55%、Accuracy 均为 85%，但 19/20 全文
+  一致，唯一差异为同答案多 1 token，所以保持默认关闭。
+- `(2,1,1)` 精确分组恢复 CN20 20/20 全文一致，但成对中位 -1.16%，证明收益主要
+  来自将四次提交压成一次，而非权重连续化本身。
 - 当前没有 vLLM 或 `/opt/vllm`，Transformers 提示缺少 GDN/causal-conv fast path；
   eager 正确性可用，但不是最终性能路线。
-- 完整证据见 [PPU 首次真实基线、Profile 与 GEMV](experiments/2026-08-26-ppu-baseline-and-gemv.md)
-  和 [PPU decode 融合算子迭代](experiments/2026-08-26-ppu-fused-decode-kernels.md)。
+- 完整证据见 [PPU 首次真实基线、Profile 与 GEMV](experiments/2026-08-26-ppu-baseline-and-gemv.md)、
+  [PPU decode 融合算子迭代](experiments/2026-08-26-ppu-fused-decode-kernels.md)、
+  [packed MLP](experiments/2026-08-27-ppu-packed-mlp.md)、
+  [注册式 acBLAS Linear](experiments/2026-08-27-ppu-acblas-gemv.md) 和
+  [GDN 输入投影打包](experiments/2026-08-27-ppu-packed-gdn-projections.md)。
 
 ## 尚未完成
 
 - 获取主办方 PPU-vLLM/Qwen3.5/GDN fast path，并与 eager 做同口径对照。
-- 在完整公开集验证 GDN+conv、all-four 与 all-five 的 Accuracy、答案和生成长度漂移，再决定
+- 在完整公开集验证 GDN+conv、all-four、packed-MLP 与 packed-GDN 的 Accuracy、答案和生成长度漂移，再决定
   最终默认开关。
-- 对 all-five 后的 GEMV/GEMM、remaining elementwise/cat/reduce 重新排优先级；
-  当前通用 HGGC GEMV 慢于 `torch.mv`，不直接接入。
+- 为 GDN 四路投影实现保持原累加顺序的 HGGC multi-output GEMV，或获取厂商
+  grouped-GEMV 接口；继续按 profile 排 remaining elementwise/cat/reduce。
 - 量化/权重变换的正式允许范围确认。
 - 初赛技术报告已形成可持续更新的初稿，源码候选包可一键生成；仍缺 PPU 实测章节、最终复现说明和按主办方格式定稿。
 
@@ -121,7 +136,8 @@
 
 RTX 4050 的 6GB 显存仍只适合作为历史单样本环境；更长输入、更高分辨率、编译缓存
 或并发请求可能 OOM。PPU 显存充足，但当前 Transformers eager 的线性注意力和
-因果卷积原始 fast path 缺失的问题已由仓库融合候选缓解；all-five 小样本吞吐提高
-88.83%--90.78%，但 5/20 生成长度漂移说明 reduction 数值顺序仍是精度风险。下一步优先跑
+因果卷积原始 fast path 缺失的问题已由仓库融合候选缓解；packed-GDN 激进候选的
+CN20 平均吞吐约 98.430 token/s，但它新增 1/20 文本漂移，all-five 也已有 5/20
+生成长度漂移，说明 reduction 数值顺序仍是精度风险。下一步优先跑
 完整公开集并获取官方 PPU-vLLM/FLA 对照，不能只凭 20 条 Accuracy 宣称无损。
 CPU offload、冷 RTC、profiler 插桩和稳态 PPU 结果不得混算。

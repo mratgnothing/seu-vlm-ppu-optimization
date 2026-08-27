@@ -88,9 +88,30 @@ class PPUMicrobenchContractTest(unittest.TestCase):
         wrapper = (ROOT / "ppu" / "custom_ops" / "ppu_gdn.py").read_text(
             encoding="utf-8"
         )
+        linear_wrapper = (ROOT / "ppu" / "custom_ops" / "ppu_linear.py").read_text(
+            encoding="utf-8"
+        )
+        linear_extension = (
+            ROOT / "ppu" / "custom_ops" / "acblas_linear_extension.cpp"
+        ).read_text(encoding="utf-8")
+        acblas_bridge = (
+            ROOT / "ppu" / "custom_ops" / "acblas_linear_wrapper.cpp"
+        ).read_text(encoding="utf-8")
+        extension_builder = (
+            ROOT / "ppu" / "custom_ops" / "build_acblas_linear_extension.py"
+        ).read_text(encoding="utf-8")
         benchmark = (ROOT / "scripts" / "benchmark_ppu_gdn_ab.py").read_text(
             encoding="utf-8"
         )
+        acblas_benchmark = (
+            ROOT / "scripts" / "benchmark_ppu_acblas_multisample_ab.py"
+        ).read_text(encoding="utf-8")
+        packed_gdn = (
+            ROOT / "ppu" / "custom_ops" / "ppu_gdn_projection_pack.py"
+        ).read_text(encoding="utf-8")
+        packed_gdn_benchmark = (
+            ROOT / "scripts" / "benchmark_ppu_packed_gdn_multisample_ab.py"
+        ).read_text(encoding="utf-8")
         integration = (ROOT / "evaluation_wrapper.py").read_text(encoding="utf-8")
         self.assertIn("stream_handle", kernel)
         self.assertIn("round_to_bf16", kernel)
@@ -109,7 +130,21 @@ class PPUMicrobenchContractTest(unittest.TestCase):
         self.assertIn("expected 18 Qwen3.5 GDN modules", benchmark)
         self.assertIn("expected 49 Qwen3.5 RMSNorm modules", benchmark)
         self.assertIn("expected 24 Qwen3.5 MLP modules", benchmark)
+        self.assertIn("batch=1 single-token decode", linear_wrapper)
+        self.assertIn("seu_acblas_linear_bf16", linear_extension)
+        self.assertIn("acblasGemvEx", acblas_bridge)
+        self.assertIn("std::lock_guard<std::mutex>", acblas_bridge)
+        self.assertIn("getCurrentCUDAStream", linear_extension)
+        self.assertIn("Path(sys.executable).parent", extension_builder)
         self.assertIn("exact_output_match", benchmark)
+        self.assertIn('"2048x2048": 42', acblas_benchmark)
+        self.assertIn("exact_output_pairs", acblas_benchmark)
+        self.assertIn("group_sizes must be a positive partition", packed_gdn)
+        self.assertIn("_seu_gdn_input_weight", packed_gdn)
+        self.assertIn("threading.local()", packed_gdn)
+        self.assertIn("set_packed_qwen35_gdn_input_projections", packed_gdn)
+        self.assertIn("exact_output_pairs", packed_gdn_benchmark)
+        self.assertIn("projection_group_sizes", packed_gdn_benchmark)
         for variable in (
             "SEU_PPU_GDN_LIBRARY",
             "SEU_PPU_CONV_ENABLE",
@@ -117,6 +152,8 @@ class PPUMicrobenchContractTest(unittest.TestCase):
             "SEU_PPU_GATED_RMSNORM_ENABLE",
             "SEU_PPU_QK_ROPE_ENABLE",
             "SEU_PPU_PACK_MLP_ENABLE",
+            "SEU_PPU_PACK_GDN_PROJECTIONS_ENABLE",
+            "SEU_PPU_PACK_GDN_PROJECTIONS_GROUPS",
         ):
             self.assertIn(variable, integration)
 

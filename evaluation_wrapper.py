@@ -200,6 +200,7 @@ class VLMModel:
         ).eval()
         self._tokenizer = getattr(self._processor, "tokenizer", None)
         self._ppu_gdn_patched_modules = 0
+        self._ppu_packed_gdn_projection_modules = 0
         gdn_library_path = os.getenv("SEU_PPU_GDN_LIBRARY")
         if gdn_library_path:
             custom_op_dir = Path(
@@ -334,6 +335,30 @@ class VLMModel:
                         f"patched {self._ppu_packed_mlp_modules}"
                     )
                 torch.cuda.empty_cache()
+            if os.getenv("SEU_PPU_PACK_GDN_PROJECTIONS_ENABLE", "0") == "1":
+                from ppu_gdn_projection_pack import (
+                    pack_qwen35_gdn_input_projections,
+                )
+
+                group_sizes = tuple(
+                    int(value)
+                    for value in os.getenv(
+                        "SEU_PPU_PACK_GDN_PROJECTIONS_GROUPS", "4"
+                    ).split(",")
+                )
+                for module in self._model.modules():
+                    if type(module).__name__ != "Qwen3_5GatedDeltaNet":
+                        continue
+                    pack_qwen35_gdn_input_projections(
+                        module, group_sizes=group_sizes
+                    )
+                    self._ppu_packed_gdn_projection_modules += 1
+                if self._ppu_packed_gdn_projection_modules != 18:
+                    raise RuntimeError(
+                        "SEU PPU packed GDN projections expected 18 modules, "
+                        f"patched {self._ppu_packed_gdn_projection_modules}"
+                    )
+                torch.cuda.empty_cache()
 
     def _load_dummy_backend(self, reason: str) -> None:
         self._dummy_reason = reason
@@ -461,6 +486,12 @@ class VLMModel:
                 "ppu_packed_mlp_modules": getattr(
                     self, "_ppu_packed_mlp_modules", 0
                 ),
+                "ppu_packed_gdn_projection_modules": getattr(
+                    self, "_ppu_packed_gdn_projection_modules", 0
+                ),
+                "ppu_packed_gdn_projection_groups": os.getenv(
+                    "SEU_PPU_PACK_GDN_PROJECTIONS_GROUPS", "4"
+                ),
             },
         )
 
@@ -486,5 +517,9 @@ class VLMModel:
             token_count=token_count,
             ttft_seconds=max(end - start, 1e-4),
             elapsed_seconds=max(end - start, 2e-4),
-            meta={"backend": "dummy", "reason": getattr(self, "_dummy_reason", "n/a"), "prompt_chars": len(prompt)},
+            meta={
+                "backend": "dummy",
+                "reason": getattr(self, "_dummy_reason", "n/a"),
+                "prompt_chars": len(prompt),
+            },
         )

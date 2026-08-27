@@ -31,6 +31,15 @@
   HGGC kernel）。固定中文前 20 条两次为 96.506/96.715 token/s，Accuracy 仍为
   85%；两轮答案、正确性和 token 数逐条完全一致，相对 eager 吞吐提高约
   94.04%/94.46%。它没有扩大 all-five 已有的 5/20 token 数漂移。
+- 完成注册式 PyTorch/acBLAS decode Linear 调查。C ABI 隔离、随机 BF16 精度和模块级
+  `1.08--1.17x` 均通过，但最终单 `.so` + 进程级 handle 版本在固定 128-token 八对
+  AB/BA 中成对中位为 `0.9997x`、仅 4/8 获胜，因此不接入正式 wrapper；它作为
+  “算子微基准收益不等于整模收益”的负实验保留。
+- 新增 Qwen3.5 GDN 同输入投影打包实验：把每层 qkv/z/b/a 四次 decode Linear 合为
+  一次。最终线程隔离版固定 128-token 四对全部获胜且全文一致，成对中位
+  `1.0182x`；CN20 平均 `94.099→98.430 token/s`、成对中位 `1.0355x`、
+  Accuracy 均为 85%，但仅
+  19/20 全文一致（1 条多 1 token），所以当前仍是默认关闭的激进候选。
 - `dummy` 后端只用于接口冒烟；不得将其结果视为真实模型部署或比赛成绩。
 
 正式性能提升来自公开集固定前 20 条的三次工程复测；完整公开集当前用于 Accuracy
@@ -41,6 +50,8 @@ PPU 侧已完成 SDK、真实模型闭环、20 条稳态基线、算子级 profi
 迭代。详见 [PPU 首次真实实验](docs/experiments/2026-08-26-ppu-baseline-and-gemv.md)、
 [PPU decode 融合实验](docs/experiments/2026-08-26-ppu-fused-decode-kernels.md)、
 [PPU packed-MLP 实验](docs/experiments/2026-08-27-ppu-packed-mlp.md)、
+[PPU acBLAS GEMV 调查](docs/experiments/2026-08-27-ppu-acblas-gemv.md)、
+[PPU GDN 输入投影打包](docs/experiments/2026-08-27-ppu-packed-gdn-projections.md)、
 [PPU decode 融合算子与问题记录](ppu/custom_ops/README.md)、
 [PPU 兼容性矩阵](docs/ppu-compatibility-matrix.md) 和 [需要向主办方确认的问题](docs/questions-for-organizer.md)。
 Qwen3.5-2B 的 GDN、MLP、全注意力与视觉层尺寸见 [关键算子与 PPU kernel 目标](docs/qwen35-kernel-targets.md)。
