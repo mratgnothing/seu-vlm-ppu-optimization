@@ -116,12 +116,16 @@ class PPUMicrobenchContractTest(unittest.TestCase):
             ROOT / "scripts" / "benchmark_ppu_packed_gdn_multisample_ab.py"
         ).read_text(encoding="utf-8")
         integration = (ROOT / "evaluation_wrapper.py").read_text(encoding="utf-8")
+        residual_smoke = (
+            ROOT / "ppu" / "custom_ops" / "smoke_residual_rmsnorm_integration.py"
+        ).read_text(encoding="utf-8")
         self.assertIn("stream_handle", kernel)
         self.assertIn("round_to_bf16", kernel)
         for symbol in (
             "seu_ppu_gdn_recurrent_decode_bf16",
             "seu_ppu_causal_conv1d_decode_bf16",
             "seu_ppu_rmsnorm_decode_bf16",
+            "seu_ppu_residual_rmsnorm_decode_bf16",
             "seu_ppu_gated_rmsnorm_decode_bf16",
             "seu_ppu_qk_rmsnorm_rope_decode_bf16",
         ):
@@ -141,6 +145,11 @@ class PPUMicrobenchContractTest(unittest.TestCase):
         self.assertIn("kOutputOffsets[] = {0, 6144, 8192, 8208}", acblas_bridge)
         self.assertIn("std::lock_guard<std::mutex>", acblas_bridge)
         self.assertIn("getCurrentCUDAStream", linear_extension)
+        self.assertIn("residual_rmsnorm_decode", wrapper)
+        self.assertIn("pack_qwen35_decoder_residual_rmsnorm", wrapper)
+        self.assertIn("next_norm=next_norm", integration)
+        self.assertIn("residual_exact", residual_smoke)
+        self.assertIn("normalized_exact", residual_smoke)
         self.assertIn("Path(sys.executable).parent", extension_builder)
         self.assertIn("exact_output_match", benchmark)
         self.assertIn('"2048x2048": 42', acblas_benchmark)
@@ -166,6 +175,7 @@ class PPUMicrobenchContractTest(unittest.TestCase):
             "SEU_PPU_PACK_GDN_PROJECTIONS_GROUPS",
             "SEU_PPU_ACBLAS_GDN_BUILD_DIR",
             "SEU_PPU_ACBLAS_GDN_ALGORITHM",
+            "SEU_PPU_RESIDUAL_RMSNORM_ENABLE",
         ):
             self.assertIn(variable, integration)
         self.assertIn("GDN projection backends are mutually exclusive", integration)

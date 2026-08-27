@@ -7,7 +7,7 @@
 - 已导入 `dndx_participant-v1.1` 的公开评测入口和初始 wrapper。
 - 本地开发环境锁定为 Python 3.12、PyTorch 2.13.0+cu130、Transformers 5.14.1。
 - `5070ti` 分支已在 RTX 5070 Ti Laptop 12GB 上建立独立 Conda 环境：
-  Python 3.12.13、CUDA 13.0、BF16 可用，44 项无模型测试通过；原 RTX 4050
+  Python 3.12.13、CUDA 13.0、BF16 可用，45 项无模型测试通过；原 RTX 4050
   性能结果仍作为历史基线，不与新机器混用。
 - 锁定 revision 的 Qwen3.5-2B 已在该环境通过完整性校验和纯 GPU 加载冒烟：
   617 个参数张量均位于 `cuda:0`，模型内存占用约 4.12 GiB。
@@ -45,6 +45,11 @@
   两轮平均吞吐分别为 `96.409→98.028` 和 `95.634→99.601 token/s`，成对中位
   `1.0187x/1.0391x`，两轮 Accuracy 均为 85% 且 20/20 全文一致。固定长六对仅
   3/6 获胜，因此它是默认关闭的精度优先候选，仍需完整集和更多重复门禁。
+- 新增 Qwen3.5 decoder 的 48-edge residual-add + RMSNorm 跨层融合。它保持 BF16
+  residual 舍入点和 FP32 norm reduction，并在 16-token profile 中精确消除 720 次
+  `[1,1,2048]` add 与 720 次 kernel launch。CN20 两轮由 `100.156→101.616`、
+  `98.576→101.507 token/s`，配对中位均约 `1.021x`、各 14/20 获胜，Accuracy
+  均为 85% 且两轮 20/20 全文一致。它同样默认关闭，待完整集门禁。
 - `dummy` 后端只用于接口冒烟；不得将其结果视为真实模型部署或比赛成绩。
 
 正式性能提升来自公开集固定前 20 条的三次工程复测；完整公开集当前用于 Accuracy
@@ -57,6 +62,7 @@ PPU 侧已完成 SDK、真实模型闭环、20 条稳态基线、算子级 profi
 [PPU packed-MLP 实验](docs/experiments/2026-08-27-ppu-packed-mlp.md)、
 [PPU acBLAS GEMV 调查](docs/experiments/2026-08-27-ppu-acblas-gemv.md)、
 [PPU GDN 输入投影打包](docs/experiments/2026-08-27-ppu-packed-gdn-projections.md)、
+[PPU residual-add + RMSNorm 跨层融合](docs/experiments/2026-08-27-ppu-residual-rmsnorm.md)、
 [PPU decode 融合算子与问题记录](ppu/custom_ops/README.md)、
 [PPU 兼容性矩阵](docs/ppu-compatibility-matrix.md) 和 [需要向主办方确认的问题](docs/questions-for-organizer.md)。
 Qwen3.5-2B 的 GDN、MLP、全注意力与视觉层尺寸见 [关键算子与 PPU kernel 目标](docs/qwen35-kernel-targets.md)。

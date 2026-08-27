@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import ctypes
 import os
+import threading
 from pathlib import Path
 from typing import Callable
 
@@ -100,6 +101,23 @@ class PPUGDNLibrary:
             ctypes.c_void_p,
         ]
         self.rmsnorm_launch.restype = ctypes.c_int
+        self.residual_rmsnorm_launch = getattr(
+            self.library, "seu_ppu_residual_rmsnorm_decode_bf16", None
+        )
+        if self.residual_rmsnorm_launch is not None:
+            self.residual_rmsnorm_launch.argtypes = [
+                ctypes.c_void_p,
+                ctypes.c_void_p,
+                ctypes.c_void_p,
+                ctypes.c_void_p,
+                ctypes.c_int,
+                ctypes.c_int64,
+                ctypes.c_int64,
+                ctypes.c_float,
+                ctypes.c_int,
+                ctypes.c_void_p,
+            ]
+            self.residual_rmsnorm_launch.restype = ctypes.c_int
         self.gated_rmsnorm_launch = self.library.seu_ppu_gated_rmsnorm_decode_bf16
         self.gated_rmsnorm_launch.argtypes = [
             ctypes.c_void_p,
@@ -255,6 +273,37 @@ class PPUGDNLibrary:
                 f"PPU gated RMSNorm launch failed with HGGC status {status}"
             )
         return output
+
+    def residual_rmsnorm_decode(
+        self,
+        residual: torch.Tensor,
+        update: torch.Tensor,
+        weight: torch.Tensor,
+        epsilon: float,
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        _validate_residual_rmsnorm_inputs(residual, update, weight)
+        if self.residual_rmsnorm_launch is None:
+            raise RuntimeError("PPU GDN library lacks residual RMSNorm symbol")
+        normalized_output = torch.empty_like(update)
+        rows = update.numel() // HIDDEN_SIZE
+        stream = torch.cuda.current_stream(update.device).cuda_stream
+        status = self.residual_rmsnorm_launch(
+            residual.data_ptr(),
+            update.data_ptr(),
+            weight.data_ptr(),
+            normalized_output.data_ptr(),
+            rows,
+            residual.stride(-2),
+            update.stride(-2),
+            epsilon,
+            self.rmsnorm_threads,
+            stream,
+        )
+        if status != 0:
+            raise RuntimeError(
+                f"PPU residual RMSNorm launch failed with HGGC status {status}"
+            )
+        return update, normalized_output
 
     def qk_rmsnorm_rope_decode(
         self,
@@ -415,6 +464,136 @@ class PPUGDNLibrary:
         return fused_attention_forward
 
 
+def pack_qwen35_decoder_residual_rmsnorm(
+    module,
+    library: PPUGDNLibrary,
+    *,
+    next_norm=None,
+) -> Callable:
+    """Fuse both decoder residual-add/RMSNorm edges for one-token decode."""
+    if type(module).__name__ != "Qwen3_5DecoderLayer":
+        raise TypeError("residual RMSNorm integration requires Qwen3_5DecoderLayer")
+    if module.hidden_size != HIDDEN_SIZE:
+        raise ValueError("residual RMSNorm requires hidden size 2048")
+    if module.block_type not in ("linear_attention", "full_attention"):
+        raise ValueError(f"unsupported decoder block type {module.block_type}")
+    if module.post_attention_layernorm.weight.shape != (HIDDEN_SIZE,):
+        raise ValueError("unexpected post-attention RMSNorm weight shape")
+    if (
+        module.post_attention_layernorm.weight.dtype != torch.bfloat16
+        or module.post_attention_layernorm.weight.device.type != "cuda"
+    ):
+        raise TypeError("residual RMSNorm requires BF16 PPU decoder weights")
+
+    original_forward = module.forward
+    next_norm_cache = None
+    if next_norm is not None:
+        if (
+            type(next_norm).__name__ != "Qwen3_5RMSNorm"
+            or next_norm.weight.shape != (HIDDEN_SIZE,)
+            or next_norm.weight.dtype != torch.bfloat16
+            or next_norm.weight.device.type != "cuda"
+        ):
+            raise TypeError("next RMSNorm must be a BF16 Qwen3.5 norm on PPU")
+        original_next_norm_forward = next_norm.forward
+        next_norm_cache = threading.local()
+
+        def cached_next_norm_forward(x: torch.Tensor) -> torch.Tensor:
+            if getattr(next_norm_cache, "input", None) is x:
+                output = next_norm_cache.output
+                next_norm_cache.__dict__.clear()
+                return output
+            next_norm_cache.__dict__.clear()
+            return original_next_norm_forward(x)
+
+        next_norm._seu_residual_rmsnorm_original_forward = (
+            original_next_norm_forward
+        )
+        next_norm._seu_residual_rmsnorm_cached_forward = cached_next_norm_forward
+        next_norm.forward = cached_next_norm_forward
+
+    def fused_decoder_forward(
+        hidden_states: torch.Tensor,
+        position_embeddings: tuple[torch.Tensor, torch.Tensor],
+        attention_mask: torch.Tensor | None = None,
+        position_ids: torch.LongTensor | None = None,
+        past_key_values=None,
+        **kwargs,
+    ) -> torch.Tensor:
+        # Decoder-layer construction and the PPU library validate hidden size,
+        # dtype and device once. Keep the per-token guard to a single shape read.
+        if hidden_states.shape[1] != 1:
+            return original_forward(
+                hidden_states=hidden_states,
+                position_embeddings=position_embeddings,
+                attention_mask=attention_mask,
+                position_ids=position_ids,
+                past_key_values=past_key_values,
+                **kwargs,
+            )
+
+        residual = hidden_states
+        hidden_states = module.input_layernorm(hidden_states)
+        if module.block_type == "linear_attention":
+            hidden_states = module.linear_attn(
+                hidden_states=hidden_states,
+                cache_params=past_key_values,
+                attention_mask=attention_mask,
+                **kwargs,
+            )
+        elif module.block_type == "full_attention":
+            hidden_states, _ = module.self_attn(
+                hidden_states=hidden_states,
+                attention_mask=attention_mask,
+                position_ids=position_ids,
+                past_key_values=past_key_values,
+                position_embeddings=position_embeddings,
+                **kwargs,
+            )
+        residual, hidden_states = library.residual_rmsnorm_decode(
+            residual,
+            hidden_states,
+            module.post_attention_layernorm.weight,
+            module.post_attention_layernorm.eps,
+        )
+        hidden_states = module.mlp(hidden_states)
+        if next_norm is not None:
+            next_residual, next_normalized = library.residual_rmsnorm_decode(
+                residual,
+                hidden_states,
+                next_norm.weight,
+                next_norm.eps,
+            )
+            next_norm_cache.input = next_residual
+            next_norm_cache.output = next_normalized
+            return next_residual
+        return residual + hidden_states
+
+    module._seu_residual_rmsnorm_original_forward = original_forward
+    module._seu_residual_rmsnorm_fused_forward = fused_decoder_forward
+    module._seu_residual_rmsnorm_next_norm = next_norm
+    module._seu_residual_rmsnorm_next_cache = next_norm_cache
+    module.forward = fused_decoder_forward
+    return fused_decoder_forward
+
+
+def set_qwen35_decoder_residual_rmsnorm(module, enabled: bool) -> None:
+    original = getattr(module, "_seu_residual_rmsnorm_original_forward", None)
+    fused = getattr(module, "_seu_residual_rmsnorm_fused_forward", None)
+    if original is None or fused is None:
+        raise RuntimeError("decoder residual RMSNorm has not been packed")
+    module.forward = fused if enabled else original
+    next_norm = getattr(module, "_seu_residual_rmsnorm_next_norm", None)
+    if next_norm is not None:
+        next_norm.forward = (
+            next_norm._seu_residual_rmsnorm_cached_forward
+            if enabled
+            else next_norm._seu_residual_rmsnorm_original_forward
+        )
+        cache = module._seu_residual_rmsnorm_next_cache
+        cache.__dict__.clear()
+
+
 def pack_qwen35_mlp_module(module) -> Callable[[torch.Tensor], torch.Tensor]:
     if type(module).__name__ != "Qwen3_5MLP":
         raise TypeError("packed MLP integration requires Qwen3_5MLP")
@@ -529,6 +708,19 @@ def _validate_rmsnorm_inputs(input_tensor: torch.Tensor, weight: torch.Tensor) -
         raise ValueError("RMSNorm weight must be contiguous shape [2048]")
     if input_tensor.stride(-1) != 1:
         raise ValueError("RMSNorm input last dimension must be contiguous")
+
+
+def _validate_residual_rmsnorm_inputs(
+    residual: torch.Tensor,
+    update: torch.Tensor,
+    weight: torch.Tensor,
+) -> None:
+    _validate_rmsnorm_inputs(residual, weight)
+    _validate_rmsnorm_inputs(update, weight)
+    if residual.shape != update.shape or residual.device != update.device:
+        raise ValueError("residual/update must share shape and PPU device")
+    if residual.data_ptr() == update.data_ptr():
+        raise ValueError("residual/update must not alias the same tensor")
 
 
 def _validate_gated_rmsnorm_inputs(

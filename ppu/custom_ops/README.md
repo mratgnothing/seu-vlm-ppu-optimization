@@ -11,6 +11,7 @@
 | recurrent GDN | q/k/v BF16 `[B,1,16,128]`，state FP32 `[B,16,128,128]` | 18/token |
 | causal-conv update | BF16 `[B,6144,1]`，state `[B,6144,4]`，SiLU | 18/token |
 | RMSNorm | BF16 `[B,1,2048]`，FP32 reduction | 49/token |
+| residual-add + RMSNorm | BF16 `[B,1,2048]` residual/branch，FP32 reduction | 48/token |
 | gated RMSNorm | BF16 `[16,128]` + gate，FP32 reduction/SiLU | 18/token |
 | q/k RMSNorm+RoPE | q `[B,1,8,256]`、k `[B,1,2,256]`、partial rotary 64 | 6/token |
 
@@ -21,6 +22,12 @@ mean、add、rsqrt、weight/gate/SiLU 与输出 cast。
 q/k 融合核在一个 256-thread block/head 内完成 RMSNorm、BF16 舍入、64 维
 partial RoPE 和目标布局写回，替代 full-attention decode 中的两次 norm 与多组
 neg/mul/add/cat。
+
+residual-RMSNorm 路径进一步利用 decoder 图中 48 条相邻的 `residual add -> norm`
+边：一个 kernel 先产生与 eager 相同 BF16 舍入点的 residual sum，再做 FP32
+RMS reduction 和 weight scaling。每层内部的 attention 边直接融合，MLP 边通过
+thread-local、输入对象身份校验的缓存连接下一层 input norm（最后一层连接 final
+norm）；prefill 和不匹配的 dtype/device/shape 均回退原 forward。
 
 此外，本目录提供一个不新增 HGGC kernel 的 packed-MLP decode 路径：24 个 MLP 的
 `gate_proj` 和 `up_proj` 权重拼成共享存储 `[12288, 2048]`，decode 时把两次
@@ -100,6 +107,8 @@ export SEU_PPU_GATED_RMSNORM_ENABLE=1
 export SEU_PPU_GATED_RMSNORM_THREADS=128
 export SEU_PPU_QK_ROPE_ENABLE=1
 export SEU_PPU_PACK_MLP_ENABLE=1
+# 跨层 residual-add + RMSNorm；仍需完整集精度门禁，默认关闭。
+export SEU_PPU_RESIDUAL_RMSNORM_ENABLE=1
 # 激进候选；CN20 有 1/20 完整文本漂移，默认必须保持关闭。
 export SEU_PPU_PACK_GDN_PROJECTIONS_ENABLE=1
 export SEU_PPU_PACK_GDN_PROJECTIONS_GROUPS=4
@@ -117,7 +126,8 @@ export SEU_PPU_ACBLAS_GDN_ALGORITHM=-1
 
 随后照常运行 `benchmark_public.py`。`GenerationResult.meta` 会记录实际挂载的
 GDN/conv/RMSNorm/gated-RMSNorm/qk-RoPE/packed-MLP/packed-GDN 模块数，预期分别为
-`18/18/49/18/6/24/18`。grouped-acBLAS 正式单样本冒烟已得到这组完整计数，且
+`18/18/49/18/6/24/18`。启用跨层融合时另应得到 24 个 decoder patch。
+grouped-acBLAS + residual-RMSNorm 正式单样本冒烟已得到完整计数，且
 `ppu_gdn_projection_backend` 为 `acblas-grouped`、公开校验无错误。
 
 固定中文前 20 条、同一实例/模型/seed、2 条预热的实测：
@@ -135,6 +145,8 @@ GDN/conv/RMSNorm/gated-RMSNorm/qk-RoPE/packed-MLP/packed-GDN 模块数，预期�
 | all-five + packed-MLP + packed-GDN，CN20 paired | 122.652 | 98.430 | 85% | +97.90% |
 | all-five + packed-MLP + grouped-acBLAS GDN r1 | - | 98.028 | 85% | +97.10% |
 | all-five + packed-MLP + grouped-acBLAS GDN r2 | - | 99.601 | 85% | +100.26% |
+| 上项 + 48-edge residual-RMSNorm r1 | 118.654 | 101.616 | 85% | +104.31% |
+| 上项 + 48-edge residual-RMSNorm r2 | 120.807 | 101.507 | 85% | +104.09% |
 
 20 条中各路径的解析答案和正确性均一致。GDN-only 有 3 条 token 数变化，
 all-four 有 5 条；因此这些结果证明小样本无 Accuracy 回退，不等于已经证明完整公开集

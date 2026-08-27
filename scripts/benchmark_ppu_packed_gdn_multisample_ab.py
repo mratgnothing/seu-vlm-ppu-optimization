@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Paired multi-sample A/B for packed Qwen3.5 GDN input projections."""
+"""Paired multi-sample A/B for GDN projection or residual-RMSNorm fusion."""
 
 from __future__ import annotations
 
@@ -33,6 +33,11 @@ def parse_args() -> argparse.Namespace:
         default="torch-packed",
     )
     parser.add_argument("--acblas-build-dir", type=Path)
+    parser.add_argument(
+        "--residual-rmsnorm-ab",
+        action="store_true",
+        help="Keep the selected GDN projection backend on and A/B residual RMSNorm",
+    )
     return parser.parse_args()
 
 
@@ -112,11 +117,43 @@ def main() -> int:
         packed_modules.append(module)
     if len(packed_modules) != 18:
         raise RuntimeError(f"expected 18 packed GDN modules, got {len(packed_modules)}")
+    residual_modules = []
+    if args.residual_rmsnorm_ab:
+        from ppu_gdn import (
+            pack_qwen35_decoder_residual_rmsnorm,
+            set_qwen35_decoder_residual_rmsnorm,
+        )
+
+        decoder_modules = [
+            module
+            for module in model._model.modules()
+            if type(module).__name__ == "Qwen3_5DecoderLayer"
+        ]
+        final_norm = model._model.model.language_model.norm
+        for index, module in enumerate(decoder_modules):
+            next_norm = (
+                decoder_modules[index + 1].input_layernorm
+                if index + 1 < len(decoder_modules)
+                else final_norm
+            )
+            pack_qwen35_decoder_residual_rmsnorm(
+                module, model._ppu_gdn_library, next_norm=next_norm
+            )
+            residual_modules.append(module)
+        if len(residual_modules) != 24:
+            raise RuntimeError(
+                f"expected 24 residual RMSNorm modules, got {len(residual_modules)}"
+            )
     torch.cuda.empty_cache()
 
     def set_enabled(enabled: bool) -> None:
         for module in packed_modules:
-            set_packed_qwen35_gdn_input_projections(module, enabled)
+            set_packed_qwen35_gdn_input_projections(
+                module, True if args.residual_rmsnorm_ab else enabled
+            )
+        if args.residual_rmsnorm_ab:
+            for module in residual_modules:
+                set_qwen35_decoder_residual_rmsnorm(module, enabled)
 
     def run_sample(sample, enabled: bool, pair_index: int) -> dict[str, object]:
         set_enabled(enabled)
@@ -133,7 +170,13 @@ def main() -> int:
             "sample_id": sample.sample_id,
             "pair_index": pair_index,
             "pair_order": "AB" if pair_index % 2 == 0 else "BA",
-            "mode": "packed_gdn" if enabled else "optimized_baseline",
+            "mode": (
+                "residual_rmsnorm"
+                if enabled and args.residual_rmsnorm_ab
+                else "packed_gdn"
+                if enabled
+                else "optimized_baseline"
+            ),
             "token_count": result.token_count,
             "ttft_ms": result.ttft_seconds * 1000.0,
             "elapsed_ms": result.elapsed_seconds * 1000.0,
@@ -149,7 +192,7 @@ def main() -> int:
     run_sample(samples[0], False, -1)
     run_sample(samples[0], True, -1)
     baseline_records: list[dict[str, object]] = []
-    packed_records: list[dict[str, object]] = []
+    candidate_records: list[dict[str, object]] = []
     pair_ratios: list[float] = []
     exact_pairs = 0
     for index, sample in enumerate(samples):
@@ -158,7 +201,7 @@ def main() -> int:
         for enabled in order:
             pair[enabled] = run_sample(sample, enabled, index)
         baseline_records.append(pair[False])
-        packed_records.append(pair[True])
+        candidate_records.append(pair[True])
         pair_ratios.append(
             float(pair[True]["throughput_tokens_per_sec"])
             / float(pair[False]["throughput_tokens_per_sec"])
@@ -171,7 +214,12 @@ def main() -> int:
     baseline_accuracy = statistics.fmean(
         bool(record["correct"]) for record in baseline_records
     )
-    packed_accuracy = statistics.fmean(bool(record["correct"]) for record in packed_records)
+    candidate_accuracy = statistics.fmean(
+        bool(record["correct"]) for record in candidate_records
+    )
+    candidate_label = (
+        "residual_rmsnorm" if args.residual_rmsnorm_ab else "packed_gdn"
+    )
     payload = {
         "sample_offset": args.sample_offset,
         "sample_count": len(samples),
@@ -180,6 +228,8 @@ def main() -> int:
         "packed_weight_shape_per_module": [8224, 2048],
         "projection_group_sizes": group_sizes,
         "projection_backend": args.projection_backend,
+        "ab_target": candidate_label,
+        "residual_rmsnorm_modules": len(residual_modules),
         "baseline": {
             "avg_ttft_ms": mean_metric(baseline_records, "ttft_ms"),
             "avg_throughput_tokens_per_sec": mean_metric(
@@ -188,13 +238,13 @@ def main() -> int:
             "accuracy": baseline_accuracy,
             "records": baseline_records,
         },
-        "packed_gdn": {
-            "avg_ttft_ms": mean_metric(packed_records, "ttft_ms"),
+        candidate_label: {
+            "avg_ttft_ms": mean_metric(candidate_records, "ttft_ms"),
             "avg_throughput_tokens_per_sec": mean_metric(
-                packed_records, "throughput_tokens_per_sec"
+                candidate_records, "throughput_tokens_per_sec"
             ),
-            "accuracy": packed_accuracy,
-            "records": packed_records,
+            "accuracy": candidate_accuracy,
+            "records": candidate_records,
         },
         "paired_decode": {
             "median_speedup": statistics.median(pair_ratios),
@@ -203,7 +253,9 @@ def main() -> int:
             "ratios": pair_ratios,
         },
         "exact_output_pairs": exact_pairs,
-        "passed": exact_pairs == len(samples) and baseline_accuracy == packed_accuracy,
+        "passed": (
+            exact_pairs == len(samples) and baseline_accuracy == candidate_accuracy
+        ),
     }
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(

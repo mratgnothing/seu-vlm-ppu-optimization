@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Paired A/B for packed Qwen3.5 GDN input projections on PPU."""
+"""Paired A/B for Qwen3.5 GDN projection or residual-RMSNorm fusion on PPU."""
 
 from __future__ import annotations
 
@@ -36,6 +36,11 @@ def parse_args() -> argparse.Namespace:
         default="torch-packed",
     )
     parser.add_argument("--acblas-build-dir", type=Path)
+    parser.add_argument(
+        "--residual-rmsnorm-ab",
+        action="store_true",
+        help="Keep the selected GDN projection backend on and A/B residual RMSNorm",
+    )
     return parser.parse_args()
 
 
@@ -127,11 +132,43 @@ def main() -> int:
         packed_modules.append(module)
     if len(packed_modules) != 18:
         raise RuntimeError(f"expected 18 packed GDN modules, got {len(packed_modules)}")
+    residual_modules = []
+    if args.residual_rmsnorm_ab:
+        from ppu_gdn import (
+            pack_qwen35_decoder_residual_rmsnorm,
+            set_qwen35_decoder_residual_rmsnorm,
+        )
+
+        decoder_modules = [
+            module
+            for module in model._model.modules()
+            if type(module).__name__ == "Qwen3_5DecoderLayer"
+        ]
+        final_norm = model._model.model.language_model.norm
+        for index, module in enumerate(decoder_modules):
+            next_norm = (
+                decoder_modules[index + 1].input_layernorm
+                if index + 1 < len(decoder_modules)
+                else final_norm
+            )
+            pack_qwen35_decoder_residual_rmsnorm(
+                module, model._ppu_gdn_library, next_norm=next_norm
+            )
+            residual_modules.append(module)
+        if len(residual_modules) != 24:
+            raise RuntimeError(
+                f"expected 24 residual RMSNorm modules, got {len(residual_modules)}"
+            )
     torch.cuda.empty_cache()
 
     def set_enabled(enabled: bool) -> None:
         for module in packed_modules:
-            set_packed_qwen35_gdn_input_projections(module, enabled)
+            set_packed_qwen35_gdn_input_projections(
+                module, True if args.residual_rmsnorm_ab else enabled
+            )
+        if args.residual_rmsnorm_ab:
+            for module in residual_modules:
+                set_qwen35_decoder_residual_rmsnorm(module, enabled)
 
     def run_once(enabled: bool, pair_index: int) -> dict[str, object]:
         set_enabled(enabled)
@@ -144,7 +181,13 @@ def main() -> int:
             sample_id=sample.sample_id,
         )
         return {
-            "mode": "packed_gdn" if enabled else "optimized_baseline",
+            "mode": (
+                "residual_rmsnorm"
+                if enabled and args.residual_rmsnorm_ab
+                else "packed_gdn"
+                if enabled
+                else "optimized_baseline"
+            ),
             "pair_index": pair_index,
             "pair_order": "AB" if pair_index % 2 == 0 else "BA",
             "token_count": result.token_count,
@@ -162,23 +205,26 @@ def main() -> int:
     run_once(False, -1)
     run_once(True, -1)
     baseline_records: list[dict[str, object]] = []
-    packed_records: list[dict[str, object]] = []
+    candidate_records: list[dict[str, object]] = []
     for pair_index in range(args.repeats):
         order = (False, True) if pair_index % 2 == 0 else (True, False)
         for enabled in order:
             record = run_once(enabled, pair_index)
-            (packed_records if enabled else baseline_records).append(record)
+            (candidate_records if enabled else baseline_records).append(record)
 
     baseline = summarize(baseline_records)
-    packed = summarize(packed_records)
+    candidate = summarize(candidate_records)
     pair_ratios = [
-        float(packed_records[index]["throughput_tokens_per_sec"])
+        float(candidate_records[index]["throughput_tokens_per_sec"])
         / float(baseline_records[index]["throughput_tokens_per_sec"])
         for index in range(args.repeats)
     ]
     baseline_hashes = {str(r["text_sha256"]) for r in baseline_records}
-    packed_hashes = {str(r["text_sha256"]) for r in packed_records}
-    exact = len(baseline_hashes) == 1 and baseline_hashes == packed_hashes
+    candidate_hashes = {str(r["text_sha256"]) for r in candidate_records}
+    exact = len(baseline_hashes) == 1 and baseline_hashes == candidate_hashes
+    candidate_label = (
+        "residual_rmsnorm" if args.residual_rmsnorm_ab else "packed_gdn"
+    )
     payload = {
         "sample_id": sample.sample_id,
         "max_new_tokens": args.max_new_tokens,
@@ -187,8 +233,9 @@ def main() -> int:
         "packed_weight_shape_per_module": [8224, 2048],
         "projection_group_sizes": group_sizes,
         "projection_backend": args.projection_backend,
+        "ab_target": candidate_label,
+        "residual_rmsnorm_modules": len(residual_modules),
         "baseline": baseline,
-        "packed_gdn": packed,
         "paired_decode": {
             "median_speedup": statistics.median(pair_ratios),
             "mean_speedup": statistics.fmean(pair_ratios),
@@ -198,6 +245,7 @@ def main() -> int:
         "exact_output_match": exact,
         "passed": exact,
     }
+    payload[candidate_label] = candidate
     if args.profile_output_dir:
         profile_dir = args.profile_output_dir.resolve()
         profile_dir.mkdir(parents=True, exist_ok=True)
@@ -256,12 +304,12 @@ def main() -> int:
             return output_ids, trace_path
 
         baseline_ids, baseline_trace = profile_mode(False, "baseline")
-        packed_ids, packed_trace = profile_mode(True, "packed-gdn")
-        profile_exact = torch.equal(baseline_ids, packed_ids)
+        candidate_ids, candidate_trace = profile_mode(True, candidate_label)
+        profile_exact = torch.equal(baseline_ids, candidate_ids)
         payload["profile"] = {
             "new_tokens": args.profile_new_tokens,
             "baseline_trace": str(baseline_trace),
-            "packed_gdn_trace": str(packed_trace),
+            "candidate_trace": str(candidate_trace),
             "exact_output_match": profile_exact,
         }
         payload["passed"] = bool(payload["passed"] and profile_exact)

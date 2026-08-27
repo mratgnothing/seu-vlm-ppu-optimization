@@ -24,7 +24,9 @@ acBLAS Linear 通用替换已完成但最终固定长解码无稳定收益，作
 GDN 四路输入投影打包在同模型 CN20 paired 验证中达到 98.430 token/s、85%
 Accuracy，但只有 19/20 完整文本一致。进一步实现的结构专用 grouped acBLAS
 保留四个原形状 GEMV，CN20 两轮成对中位提升 1.87%/3.91%，Accuracy 均为 85%
-且 20/20 全文一致；两条路径都默认关闭，需完整公开集和私有集门禁。
+且 20/20 全文一致。在此基础上，48-edge residual-add + RMSNorm 跨层融合又在
+16-token profile 中减少 720 次 kernel launch，CN20 两轮配对中位提升约 2.1%，
+均保持 20/20 全文一致；所有新增路径都默认关闭，需完整公开集和私有集门禁。
 
 ## 1. 应用场景与目标
 
@@ -221,6 +223,7 @@ Torch extension + C-ABI acBLAS bridge 也完成了 ABI 隔离和 102 个 Linear 
 | all-five + packed-MLP | 96.506 / 96.715 | 85% | +94.04% / +94.46% |
 | + packed GDN projections，paired | 98.430 | 85% | +97.90% |
 | + grouped-acBLAS GDN r1/r2 | 98.028 / 99.601 | 85% | +97.10% / +100.26% |
+| + 48-edge residual-RMSNorm r1/r2 | 101.616 / 101.507 | 85% | +104.31% / +104.09% |
 
 最终线程隔离版 packed-GDN 的同模型逐样本 AB/BA 中，基线/候选为
 94.099/98.430 token/s，成对速度比中位数 1.0355x，20 条赢 15 条；Accuracy 都是
@@ -234,6 +237,16 @@ token/s，成对中位为 1.0187x/1.0391x，分别 16/20、17/20 获胜，并保
 20/20 全文一致。Profile 中 `aten::linear/mm` 各减少 1080 次，而设备侧
 `gemvt_op` 和 `cudaLaunchKernel` 数不变，说明收益来自主机调度与 handle/stream
 设置合并，不是减少数学计算。固定长六对只有 3/6 获胜，所以暂不默认启用。
+
+Qwen3.5 每层 attention 和 MLP 后各有一条 `residual add -> RMSNorm` 相邻边，24 层
+共 48 条。新增 HGGC 核保持 residual 的 BF16 舍入点，在同一 kernel 内做 FP32
+平方和归约与 weight scaling；跨层 thread-local 缓存把 MLP residual 直接交给下一层
+input norm，最后一层连接 final norm。只融合层内 24 条边的第一版固定长中位为
+0.9821x，作为负实验保留；完整 48-edge 版固定长两轮中位为 1.0159x/1.0233x。
+CN20 两轮由 100.156→101.616 和 98.576→101.507 token/s，配对中位
+1.0213x/1.0206x，均 14/20 获胜、85% Accuracy、20/20 全文一致。Profile 中目标
+`aten::add` 720→0、`cudaLaunchKernel` 16973→16253；正式 wrapper smoke 也通过
+真实 PPU 后端和公开校验。
 
 ### 7.3 当前边界
 

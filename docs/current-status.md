@@ -27,7 +27,7 @@
 - Transformers 5.14.1
 - NVIDIA GeForce RTX 5070 Ti Laptop GPU，约 11.94 GiB 显存
 - CUDA runtime 13.0，驱动 591.97，BF16 可用
-- 44 项无模型测试通过
+- 45 项无模型测试通过
 - Qwen3.5-2B 锁定 revision 已通过完整性校验和真实加载冒烟；617 个参数张量均在
   `cuda:0`，模型报告内存占用 4,426,483,648 bytes（约 4.12 GiB）
 - 当前 Transformers 未安装可选的 fast-path 依赖，加载时会回退到 PyTorch 实现；
@@ -64,7 +64,7 @@
 - 英文完整公开集原始 Accuracy 79.72%（3212/4029），有 1 条截断输出未解析；通用结论规范化经完整 200 条异常分块复测后，仅恢复该样本，最终 Accuracy 79.75%（3213/4029），公开接口校验全部通过。
 - O2 单样本 CUDA profiler 已完成：GEMV/GEMM 占 self CUDA time 86.18%，elementwise/copy 调用数高。
 - Profiler 口径 peak allocated/reserved 为 4.19/4.21 GiB。
-- 原基线代码通过 25 项测试；当前 `5070ti` 工作分支扩展后通过 42 项测试。源码候选包生成器可自动排除模型、数据、原始结果、密钥与本地配置。
+- 原基线代码通过 25 项测试；当前 `5070ti` 工作分支扩展后通过 45 项测试。源码候选包生成器可自动排除模型、数据、原始结果、密钥与本地配置。
 - 当前正式性能数据使用首个生成 token 计时，只覆盖固定前 20 条；中英文 Accuracy 均已扩展到完整公开集。完整集单次运行只作为精度证据，不进入正式性能表，也不代表私有评测成绩。
 
 ## PPU 状态
@@ -119,13 +119,20 @@
   +1.87%/+3.91%，16/20 和 17/20 获胜；Accuracy 均为 85%，两轮均 20/20 全文
   一致。固定 128-token 六对成对中位 +1.21%，但仅 3/6 获胜，故作为默认关闭的
   精度优先候选继续扩大验证。
+- decoder 48 条 `residual add -> RMSNorm` 相邻边已用一个 HGGC kernel 融合；16-token
+  profile 中 `[1,1,2048]` add 720→0、`cudaLaunchKernel` 16973→16253。只融合
+  24 条层内边的首版固定长中位为 0.9821x，作为负实验保留；补齐跨层链后固定长
+  两轮中位为 1.0159x/1.0233x，CN20 两轮平均吞吐为 100.156→101.616 和
+  98.576→101.507 token/s，成对中位 1.0213x/1.0206x、均 14/20 获胜，Accuracy
+  均 85% 且 20/20 全文一致。正式 wrapper 真实 PPU smoke 通过，候选仍默认关闭。
 - 当前没有 vLLM 或 `/opt/vllm`，Transformers 提示缺少 GDN/causal-conv fast path；
   eager 正确性可用，但不是最终性能路线。
 - 完整证据见 [PPU 首次真实基线、Profile 与 GEMV](experiments/2026-08-26-ppu-baseline-and-gemv.md)、
   [PPU decode 融合算子迭代](experiments/2026-08-26-ppu-fused-decode-kernels.md)、
   [packed MLP](experiments/2026-08-27-ppu-packed-mlp.md)、
   [注册式 acBLAS Linear](experiments/2026-08-27-ppu-acblas-gemv.md) 和
-  [GDN 输入投影打包](experiments/2026-08-27-ppu-packed-gdn-projections.md)。
+  [GDN 输入投影打包](experiments/2026-08-27-ppu-packed-gdn-projections.md)、
+  [residual-add + RMSNorm](experiments/2026-08-27-ppu-residual-rmsnorm.md)。
 
 ## 尚未完成
 
@@ -143,7 +150,8 @@ RTX 4050 的 6GB 显存仍只适合作为历史单样本环境；更长输入、
 或并发请求可能 OOM。PPU 显存充足，但当前 Transformers eager 的线性注意力和
 因果卷积原始 fast path 缺失的问题已由仓库融合候选缓解；packed-GDN 激进候选的
 CN20 平均吞吐约 98.430 token/s，但它新增 1/20 文本漂移；grouped-acBLAS GDN
-两轮保持 20/20 exact，但固定长重复的胜率仍不稳定；all-five 也已有 5/20
+  两轮保持 20/20 exact，但固定长重复的胜率仍不稳定；residual-RMSNorm 虽在两轮
+  CN20 都保持 20/20 exact，仍未通过完整集；all-five 也已有 5/20
 生成长度漂移，说明 reduction 数值顺序仍是精度风险。下一步优先跑
 完整公开集并获取官方 PPU-vLLM/FLA 对照，不能只凭 20 条 Accuracy 宣称无损。
 CPU offload、冷 RTC、profiler 插桩和稳态 PPU 结果不得混算。

@@ -86,7 +86,36 @@ qkv/z/b/a 四个原形状 GEMV，避免一次 8224 行 GEMV 带来的 BF16 数�
 - [`ppu-acblas-grouped-gdn-profile-ab-20260827.json`](ppu-acblas-grouped-gdn-profile-ab-20260827.json)
 - [`ppu-acblas-grouped-gdn-profile-baseline-summary-20260827.json`](ppu-acblas-grouped-gdn-profile-baseline-summary-20260827.json)
 - [`ppu-acblas-grouped-gdn-profile-candidate-summary-20260827.json`](ppu-acblas-grouped-gdn-profile-candidate-summary-20260827.json)
+- [`ppu-acblas-grouped-gdn-profile-candidate-shapes-20260827.json`](ppu-acblas-grouped-gdn-profile-candidate-shapes-20260827.json)
 - [`ppu-acblas-grouped-gdn-formal-wrapper-smoke-20260827.json`](ppu-acblas-grouped-gdn-formal-wrapper-smoke-20260827.json)
 
 正式 wrapper 冒烟记录真实 Transformers backend、空校验错误，以及
 `18/18/49/18/6/24/18` 的完整模块挂载计数；其冷启动时间不用于性能比较。
+
+## PPU residual-add + RMSNorm 跨层融合
+
+只融合每层内部 24 条边的首版是重要负实验：固定 128-token 六对成对中位
+`0.9821x`、仅 1/6 获胜，虽全文一致但没有性能价值。补齐 MLP residual 到下一层
+input norm/最终 norm 后覆盖 48 条边，固定长两轮成对中位为 `1.0159x/1.0233x`，
+均 4/6 获胜且全文一致。CN20 两轮分别为：
+
+- `100.156→101.616 tokens/s`，成对中位 `1.0213x`，14/20 获胜；
+- `98.576→101.507 tokens/s`，成对中位 `1.0206x`，14/20 获胜。
+
+两轮 Accuracy 均为 85%，完整文本均 20/20 一致。16-token profile 中目标形状
+`aten::add` 720→0，`cudaLaunchKernel` 16973→16253，证明 48 个边/15 个 decode
+step 共减少 720 次设备 launch。正式 wrapper smoke 为真实 Transformers/PPU 后端、
+公开校验无错误；冷启动和 profiler 插桩时延不进入性能比较。
+
+- [`ppu-residual-rmsnorm-ab128-20260827.json`](ppu-residual-rmsnorm-ab128-20260827.json)（24-edge 负实验）
+- [`ppu-residual-rmsnorm-ab128-chain48-r3-20260827.json`](ppu-residual-rmsnorm-ab128-chain48-r3-20260827.json)
+- [`ppu-residual-rmsnorm-ab128-chain48-r4-20260827.json`](ppu-residual-rmsnorm-ab128-chain48-r4-20260827.json)
+- [`ppu-residual-rmsnorm-cn20-chain48-r1-20260827.json`](ppu-residual-rmsnorm-cn20-chain48-r1-20260827.json)
+- [`ppu-residual-rmsnorm-cn20-chain48-r2-20260827.json`](ppu-residual-rmsnorm-cn20-chain48-r2-20260827.json)
+- [`ppu-residual-rmsnorm-profile-chain48-ab-20260827.json`](ppu-residual-rmsnorm-profile-chain48-ab-20260827.json)
+- [`ppu-residual-rmsnorm-profile-chain48-baseline-summary-20260827.json`](ppu-residual-rmsnorm-profile-chain48-baseline-summary-20260827.json)
+- [`ppu-residual-rmsnorm-profile-chain48-candidate-summary-20260827.json`](ppu-residual-rmsnorm-profile-chain48-candidate-summary-20260827.json)
+- [`ppu-residual-rmsnorm-formal-wrapper-chain48-smoke-20260827.json`](ppu-residual-rmsnorm-formal-wrapper-chain48-smoke-20260827.json)
+
+首版 24-edge profile 的 AB/summary JSON 也保留在同目录，用于解释为何必须补齐跨层
+链；它们不能与最终 48-edge profile 混用。

@@ -201,6 +201,7 @@ class VLMModel:
         self._tokenizer = getattr(self._processor, "tokenizer", None)
         self._ppu_gdn_patched_modules = 0
         self._ppu_packed_gdn_projection_modules = 0
+        self._ppu_residual_rmsnorm_modules = 0
         self._ppu_gdn_projection_backend = "disabled"
         self._ppu_gdn_projection_groups = "disabled"
         gdn_library_path = os.getenv("SEU_PPU_GDN_LIBRARY")
@@ -213,7 +214,11 @@ class VLMModel:
             ).resolve()
             if str(custom_op_dir) not in sys.path:
                 sys.path.insert(0, str(custom_op_dir))
-            from ppu_gdn import PPUGDNLibrary, pack_qwen35_mlp_module
+            from ppu_gdn import (
+                PPUGDNLibrary,
+                pack_qwen35_decoder_residual_rmsnorm,
+                pack_qwen35_mlp_module,
+            )
 
             tiles_per_head = int(os.getenv("SEU_PPU_GDN_TILES", "4"))
             self._ppu_gdn_library = PPUGDNLibrary(
@@ -390,6 +395,30 @@ class VLMModel:
                         f"patched {self._ppu_packed_gdn_projection_modules}"
                     )
                 torch.cuda.empty_cache()
+            if os.getenv("SEU_PPU_RESIDUAL_RMSNORM_ENABLE", "0") == "1":
+                decoder_modules = [
+                    module
+                    for module in self._model.modules()
+                    if type(module).__name__ == "Qwen3_5DecoderLayer"
+                ]
+                final_norm = self._model.model.language_model.norm
+                for index, module in enumerate(decoder_modules):
+                    next_norm = (
+                        decoder_modules[index + 1].input_layernorm
+                        if index + 1 < len(decoder_modules)
+                        else final_norm
+                    )
+                    pack_qwen35_decoder_residual_rmsnorm(
+                        module,
+                        self._ppu_gdn_library,
+                        next_norm=next_norm,
+                    )
+                    self._ppu_residual_rmsnorm_modules += 1
+                if self._ppu_residual_rmsnorm_modules != 24:
+                    raise RuntimeError(
+                        "SEU PPU residual RMSNorm expected 24 decoder layers, "
+                        f"patched {self._ppu_residual_rmsnorm_modules}"
+                    )
 
     def _load_dummy_backend(self, reason: str) -> None:
         self._dummy_reason = reason
@@ -525,6 +554,9 @@ class VLMModel:
                 ),
                 "ppu_gdn_projection_backend": getattr(
                     self, "_ppu_gdn_projection_backend", "disabled"
+                ),
+                "ppu_residual_rmsnorm_modules": getattr(
+                    self, "_ppu_residual_rmsnorm_modules", 0
                 ),
             },
         )

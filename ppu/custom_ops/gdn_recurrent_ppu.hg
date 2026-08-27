@@ -221,6 +221,43 @@ __global__ void rmsnorm_decode_kernel(
   }
 }
 
+__global__ void residual_rmsnorm_decode_kernel(
+    const __ppu_bfloat16* residual,
+    __ppu_bfloat16* update,
+    const __ppu_bfloat16* weight,
+    __ppu_bfloat16* normalized_output,
+    int rows,
+    int64_t residual_row_stride,
+    int64_t update_row_stride,
+    float epsilon) {
+  const int row = blockIdx.x;
+  const int thread = threadIdx.x;
+  if (row >= rows) return;
+  const int64_t residual_offset =
+      static_cast<int64_t>(row) * residual_row_stride;
+  const int64_t update_offset = static_cast<int64_t>(row) * update_row_stride;
+  float square_sum = 0.0F;
+  for (int index = thread; index < kHiddenSize; index += blockDim.x) {
+    const float added = round_to_bf16(
+        __bfloat162float(residual[residual_offset + index]) +
+        __bfloat162float(update[update_offset + index]));
+    update[update_offset + index] = __float2bfloat16_rn(added);
+    square_sum += added * added;
+  }
+  square_sum = block_sum(square_sum);
+  __shared__ float inv_rms;
+  if (thread == 0) {
+    inv_rms = rsqrtf(square_sum / static_cast<float>(kHiddenSize) + epsilon);
+  }
+  __syncthreads();
+  for (int index = thread; index < kHiddenSize; index += blockDim.x) {
+    const float value = __bfloat162float(update[update_offset + index]);
+    const float scale = 1.0F + __bfloat162float(weight[index]);
+    normalized_output[static_cast<int64_t>(row) * kHiddenSize + index] =
+        __float2bfloat16_rn(value * inv_rms * scale);
+  }
+}
+
 __global__ void gated_rmsnorm_decode_kernel(
     const __ppu_bfloat16* hidden_states,
     const __ppu_bfloat16* gate,
@@ -434,6 +471,33 @@ extern "C" int seu_ppu_rmsnorm_decode_bf16(
       reinterpret_cast<__ppu_bfloat16*>(output),
       rows,
       row_stride,
+      epsilon);
+  return static_cast<int>(hggcGetLastError());
+}
+
+extern "C" int seu_ppu_residual_rmsnorm_decode_bf16(
+    const uint16_t* residual,
+    uint16_t* update,
+    const uint16_t* weight,
+    uint16_t* normalized_output,
+    int rows,
+    int64_t residual_row_stride,
+    int64_t update_row_stride,
+    float epsilon,
+    int threads,
+    void* stream_handle) {
+  if (rows <= 0 || threads <= 0 || threads > 1024 || threads % 32 != 0) {
+    return static_cast<int>(hggcErrorInvalidValue);
+  }
+  const hggcStream_t stream = reinterpret_cast<hggcStream_t>(stream_handle);
+  residual_rmsnorm_decode_kernel<<<rows, threads, 0, stream>>>(
+      reinterpret_cast<const __ppu_bfloat16*>(residual),
+      reinterpret_cast<__ppu_bfloat16*>(update),
+      reinterpret_cast<const __ppu_bfloat16*>(weight),
+      reinterpret_cast<__ppu_bfloat16*>(normalized_output),
+      rows,
+      residual_row_stride,
+      update_row_stride,
       epsilon);
   return static_cast<int>(hggcGetLastError());
 }

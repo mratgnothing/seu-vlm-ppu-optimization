@@ -1,0 +1,70 @@
+{
+  "sample_id": "3000984",
+  "max_new_tokens": 16,
+  "force_max_new_tokens": true,
+  "packed_gdn_modules": 18,
+  "packed_weight_shape_per_module": [
+    8224,
+    2048
+  ],
+  "projection_group_sizes": [
+    4
+  ],
+  "projection_backend": "acblas-grouped",
+  "ab_target": "residual_rmsnorm",
+  "residual_rmsnorm_modules": 24,
+  "baseline": {
+    "repeats": 1,
+    "median_ttft_ms": 112.6522699923953,
+    "median_elapsed_ms": 261.4350779913366,
+    "median_throughput_tokens_per_sec": 100.81809989838838,
+    "records": [
+      {
+        "mode": "optimized_baseline",
+        "pair_index": 0,
+        "pair_order": "AB",
+        "token_count": 16,
+        "ttft_ms": 112.6522699923953,
+        "elapsed_ms": 261.4350779913366,
+        "throughput_tokens_per_sec": 100.81809989838838,
+        "answer": "A",
+        "text_sha256": "42add02c9bf626601a28c4993373b2d8f9a4531ed26ee90f5c386762f75d2069"
+      }
+    ]
+  },
+  "paired_decode": {
+    "median_speedup": 0.8954691704030603,
+    "mean_speedup": 0.8954691704030603,
+    "wins": 0,
+    "ratios": [
+      0.8954691704030603
+    ]
+  },
+  "exact_output_match": true,
+  "passed": true,
+  "residual_rmsnorm": {
+    "repeats": 1,
+    "median_ttft_ms": 116.52256001252681,
+    "median_elapsed_ms": 282.6732360117603,
+    "median_throughput_tokens_per_sec": 90.2795002776227,
+    "records": [
+      {
+        "mode": "residual_rmsnorm",
+        "pair_index": 0,
+        "pair_order": "AB",
+        "token_count": 16,
+        "ttft_ms": 116.52256001252681,
+        "elapsed_ms": 282.6732360117603,
+        "throughput_tokens_per_sec": 90.2795002776227,
+        "answer": "A",
+        "text_sha256": "42add02c9bf626601a28c4993373b2d8f9a4531ed26ee90f5c386762f75d2069"
+      }
+    ]
+  },
+  "profile": {
+    "new_tokens": 16,
+    "baseline_trace": "results/residual-rmsnorm-profile-chain48/baseline-trace.json",
+    "candidate_trace": "results/residual-rmsnorm-profile-chain48/residual_rmsnorm-trace.json",
+    "exact_output_match": true
+  }
+}
