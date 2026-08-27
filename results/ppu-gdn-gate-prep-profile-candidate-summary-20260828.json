@@ -1,0 +1,5829 @@
+{
+  "tracked_events": {
+    "aten::_to_copy": {
+      "count": 674,
+      "duration_ms": 12.457063
+    },
+    "aten::add": {
+      "count": 1696,
+      "duration_ms": 18.353857
+    },
+    "aten::cat": {
+      "count": 387,
+      "duration_ms": 6.093463
+    },
+    "aten::clone": {
+      "count": 2569,
+      "duration_ms": 40.855592
+    },
+    "aten::copy_": {
+      "count": 4883,
+      "duration_ms": 35.912734
+    },
+    "aten::empty_like": {
+      "count": 3982,
+      "duration_ms": 28.241016
+    },
+    "aten::empty_strided": {
+      "count": 4391,
+      "duration_ms": 24.653268
+    },
+    "aten::linear": {
+      "count": 1650,
+      "duration_ms": 56.82035
+    },
+    "aten::matmul": {
+      "count": 1982,
+      "duration_ms": 59.302908
+    },
+    "aten::mm": {
+      "count": 1552,
+      "duration_ms": 34.767399
+    },
+    "aten::mul": {
+      "count": 2422,
+      "duration_ms": 26.317954
+    },
+    "aten::sum": {
+      "count": 1207,
+      "duration_ms": 19.055724
+    },
+    "aten::to": {
+      "count": 931,
+      "duration_ms": 13.38158
+    },
+    "cudaLaunchKernel": {
+      "count": 14363,
+      "duration_ms": 45.489071
+    }
+  },
+  "aten_mm_shapes": [
+    {
+      "input_dims": "[[1,2048],[2048,2048]]",
+      "count": 360,
+      "duration_ms": 8.366801
+    },
+    {
+      "input_dims": "[[1,2048],[2048,12288]]",
+      "count": 360,
+      "duration_ms": 7.070542
+    },
+    {
+      "input_dims": "[[1,6144],[6144,2048]]",
+      "count": 360,
+      "duration_ms": 7.001
+    },
+    {
+      "input_dims": "[[1,2048],[2048,512]]",
+      "count": 180,
+      "duration_ms": 3.426954
+    },
+    {
+      "input_dims": "[[1,2048],[2048,4096]]",
+      "count": 90,
+      "duration_ms": 1.866025
+    },
+    {
+      "input_dims": "[[226,2048],[2048,6144]]",
+      "count": 66,
+      "duration_ms": 2.103197
+    },
+    {
+      "input_dims": "[[226,2048],[2048,2048]]",
+      "count": 42,
+      "duration_ms": 1.941506
+    },
+    {
+      "input_dims": "[[226,2048],[2048,16]]",
+      "count": 36,
+      "duration_ms": 1.187211
+    },
+    {
+      "input_dims": "[[226,6144],[6144,2048]]",
+      "count": 24,
+      "duration_ms": 0.777792
+    },
+    {
+      "input_dims": "[[1,2048],[2048,248320]]",
+      "count": 16,
+      "duration_ms": 0.389896
+    },
+    {
+      "input_dims": "[[226,2048],[2048,512]]",
+      "count": 12,
+      "duration_ms": 0.44648
+    },
+    {
+      "input_dims": "[[226,2048],[2048,4096]]",
+      "count": 6,
+      "duration_ms": 0.189995
+    }
+  ],
+  "operator_shapes": {
+    "aten::_to_copy": [
+      {
+        "input_dims": "[[1,226,2048],[],[],[],[],[],[]]",
+        "count": 98,
+        "duration_ms": 1.620445
+      },
+      {
+        "input_dims": "[[576,16,64],[],[],[],[],[],[]]",
+        "count": 96,
+        "duration_ms": 1.775484
+      },
+      {
+        "input_dims": "[[1],[],[],[],[],[],[]]",
+        "count": 77,
+        "duration_ms": 1.979732
+      },
+      {
+        "input_dims": "[[3616,128],[],[],[],[],[],[]]",
+        "count": 72,
+        "duration_ms": 1.221985
+      },
+      {
+        "input_dims": "[[1,16,226,128],[],[],[],[],[],[]]",
+        "count": 54,
+        "duration_ms": 0.851884
+      },
+      {
+        "input_dims": "[[2048],[],[],[],[],[],[]]",
+        "count": 49,
+        "duration_ms": 0.864031
+      },
+      {
+        "input_dims": "[[1,1,64],[],[],[],[],[],[]]",
+        "count": 30,
+        "duration_ms": 0.459711
+      },
+      {
+        "input_dims": "[[16],[],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.325475
+      },
+      {
+        "input_dims": "[[1,226,16],[],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.269648
+      },
+      {
+        "input_dims": "[[1,16,226],[],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.263911
+      },
+      {
+        "input_dims": "[[1,226,16,128],[],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.365077
+      },
+      {
+        "input_dims": "[[1,248320],[],[],[],[],[],[]]",
+        "count": 16,
+        "duration_ms": 0.409266
+      },
+      {
+        "input_dims": "[[3,1,1,1],[],[],[],[],[],[]]",
+        "count": 15,
+        "duration_ms": 0.313289
+      },
+      {
+        "input_dims": "[[1,226,8,256],[],[],[],[],[],[]]",
+        "count": 12,
+        "duration_ms": 0.22545
+      },
+      {
+        "input_dims": "[[256],[],[],[],[],[],[]]",
+        "count": 12,
+        "duration_ms": 0.183736
+      },
+      {
+        "input_dims": "[[1,226,2,256],[],[],[],[],[],[]]",
+        "count": 12,
+        "duration_ms": 0.259944
+      },
+      {
+        "input_dims": "[[0],[],[],[],[],[],[]]",
+        "count": 12,
+        "duration_ms": 0.114026
+      },
+      {
+        "input_dims": "[[226],[],[],[],[],[],[]]",
+        "count": 4,
+        "duration_ms": 0.092402
+      },
+      {
+        "input_dims": "[[1,226],[],[],[],[],[],[]]",
+        "count": 4,
+        "duration_ms": 0.073661
+      },
+      {
+        "input_dims": "[[1,3],[],[],[],[],[],[]]",
+        "count": 2,
+        "duration_ms": 0.049692
+      },
+      {
+        "input_dims": "[[1,226,64],[],[],[],[],[],[]]",
+        "count": 2,
+        "duration_ms": 0.031352
+      },
+      {
+        "input_dims": "[[1,227],[],[],[],[],[],[]]",
+        "count": 2,
+        "duration_ms": 0.037377
+      },
+      {
+        "input_dims": "[[1,228],[],[],[],[],[],[]]",
+        "count": 2,
+        "duration_ms": 0.04344
+      },
+      {
+        "input_dims": "[[1,229],[],[],[],[],[],[]]",
+        "count": 2,
+        "duration_ms": 0.038981
+      },
+      {
+        "input_dims": "[[1,230],[],[],[],[],[],[]]",
+        "count": 2,
+        "duration_ms": 0.047338
+      },
+      {
+        "input_dims": "[[1,231],[],[],[],[],[],[]]",
+        "count": 2,
+        "duration_ms": 0.037651
+      },
+      {
+        "input_dims": "[[1,232],[],[],[],[],[],[]]",
+        "count": 2,
+        "duration_ms": 0.040861
+      },
+      {
+        "input_dims": "[[1,233],[],[],[],[],[],[]]",
+        "count": 2,
+        "duration_ms": 0.041623
+      },
+      {
+        "input_dims": "[[1,234],[],[],[],[],[],[]]",
+        "count": 2,
+        "duration_ms": 0.036121
+      },
+      {
+        "input_dims": "[[1,235],[],[],[],[],[],[]]",
+        "count": 2,
+        "duration_ms": 0.037773
+      },
+      {
+        "input_dims": "[[1,236],[],[],[],[],[],[]]",
+        "count": 2,
+        "duration_ms": 0.043033
+      },
+      {
+        "input_dims": "[[1,237],[],[],[],[],[],[]]",
+        "count": 2,
+        "duration_ms": 0.038036
+      },
+      {
+        "input_dims": "[[1,238],[],[],[],[],[],[]]",
+        "count": 2,
+        "duration_ms": 0.0357
+      },
+      {
+        "input_dims": "[[1,239],[],[],[],[],[],[]]",
+        "count": 2,
+        "duration_ms": 0.044876
+      },
+      {
+        "input_dims": "[[1,240],[],[],[],[],[],[]]",
+        "count": 2,
+        "duration_ms": 0.036384
+      },
+      {
+        "input_dims": "[[1,241],[],[],[],[],[],[]]",
+        "count": 2,
+        "duration_ms": 0.037338
+      },
+      {
+        "input_dims": "[[576,1536],[],[],[],[],[],[]]",
+        "count": 1,
+        "duration_ms": 0.019688
+      },
+      {
+        "input_dims": "[[18],[],[],[],[],[],[]]",
+        "count": 1,
+        "duration_ms": 0.033717
+      },
+      {
+        "input_dims": "[[32],[],[],[],[],[],[]]",
+        "count": 1,
+        "duration_ms": 0.01409
+      },
+      {
+        "input_dims": "[[576,1024],[],[],[],[],[],[]]",
+        "count": 1,
+        "duration_ms": 0.019021
+      },
+      {
+        "input_dims": "[[3,1,1,226],[],[],[],[],[],[]]",
+        "count": 1,
+        "duration_ms": 0.023814
+      }
+    ],
+    "aten::add": [
+      {
+        "input_dims": "[[1,16,64,128],[1,16,64,128],[]]",
+        "count": 72,
+        "duration_ms": 0.766244
+      },
+      {
+        "input_dims": "[[1,16,128,128],[1,16,128,128],[]]",
+        "count": 72,
+        "duration_ms": 0.928707
+      },
+      {
+        "input_dims": "[[576,1024],[576,1024],[]]",
+        "count": 49,
+        "duration_ms": 0.674779
+      },
+      {
+        "input_dims": "[[1,226,1],[],[]]",
+        "count": 49,
+        "duration_ms": 0.637251
+      },
+      {
+        "input_dims": "[[2048],[],[]]",
+        "count": 49,
+        "duration_ms": 0.530109
+      },
+      {
+        "input_dims": "[[576,16,64],[576,16,64],[]]",
+        "count": 48,
+        "duration_ms": 0.520156
+      },
+      {
+        "input_dims": "[[1,226,2048],[1,226,2048],[]]",
+        "count": 48,
+        "duration_ms": 0.673615
+      },
+      {
+        "input_dims": "[[1,226,16,1],[],[]]",
+        "count": 36,
+        "duration_ms": 0.460058
+      },
+      {
+        "input_dims": "[[1,226,16],[16],[]]",
+        "count": 18,
+        "duration_ms": 0.310509
+      },
+      {
+        "input_dims": "[[1,16,4,1],[1,16,4,1],[]]",
+        "count": 18,
+        "duration_ms": 0.23209
+      },
+      {
+        "input_dims": "[[1,16,4,2],[1,16,4,2],[]]",
+        "count": 18,
+        "duration_ms": 0.176481
+      },
+      {
+        "input_dims": "[[1,16,4,3],[1,16,4,3],[]]",
+        "count": 18,
+        "duration_ms": 0.182679
+      },
+      {
+        "input_dims": "[[1,16,4,4],[1,16,4,4],[]]",
+        "count": 18,
+        "duration_ms": 0.191724
+      },
+      {
+        "input_dims": "[[1,16,4,5],[1,16,4,5],[]]",
+        "count": 18,
+        "duration_ms": 0.164464
+      },
+      {
+        "input_dims": "[[1,16,4,6],[1,16,4,6],[]]",
+        "count": 18,
+        "duration_ms": 0.164651
+      },
+      {
+        "input_dims": "[[1,16,4,7],[1,16,4,7],[]]",
+        "count": 18,
+        "duration_ms": 0.174837
+      },
+      {
+        "input_dims": "[[1,16,4,8],[1,16,4,8],[]]",
+        "count": 18,
+        "duration_ms": 0.180249
+      },
+      {
+        "input_dims": "[[1,16,4,9],[1,16,4,9],[]]",
+        "count": 18,
+        "duration_ms": 0.186745
+      },
+      {
+        "input_dims": "[[1,16,4,10],[1,16,4,10],[]]",
+        "count": 18,
+        "duration_ms": 0.171387
+      },
+      {
+        "input_dims": "[[1,16,4,11],[1,16,4,11],[]]",
+        "count": 18,
+        "duration_ms": 0.19075
+      },
+      {
+        "input_dims": "[[1,16,4,12],[1,16,4,12],[]]",
+        "count": 18,
+        "duration_ms": 0.17262
+      },
+      {
+        "input_dims": "[[1,16,4,13],[1,16,4,13],[]]",
+        "count": 18,
+        "duration_ms": 0.190095
+      },
+      {
+        "input_dims": "[[1,16,4,14],[1,16,4,14],[]]",
+        "count": 18,
+        "duration_ms": 0.163815
+      },
+      {
+        "input_dims": "[[1,16,4,15],[1,16,4,15],[]]",
+        "count": 18,
+        "duration_ms": 0.174658
+      },
+      {
+        "input_dims": "[[1,16,4,16],[1,16,4,16],[]]",
+        "count": 18,
+        "duration_ms": 0.16655
+      },
+      {
+        "input_dims": "[[1,16,4,17],[1,16,4,17],[]]",
+        "count": 18,
+        "duration_ms": 0.174958
+      },
+      {
+        "input_dims": "[[1,16,4,18],[1,16,4,18],[]]",
+        "count": 18,
+        "duration_ms": 0.183038
+      },
+      {
+        "input_dims": "[[1,16,4,19],[1,16,4,19],[]]",
+        "count": 18,
+        "duration_ms": 0.171425
+      },
+      {
+        "input_dims": "[[1,16,4,20],[1,16,4,20],[]]",
+        "count": 18,
+        "duration_ms": 0.184231
+      },
+      {
+        "input_dims": "[[1,16,4,21],[1,16,4,21],[]]",
+        "count": 18,
+        "duration_ms": 0.184321
+      },
+      {
+        "input_dims": "[[1,16,4,22],[1,16,4,22],[]]",
+        "count": 18,
+        "duration_ms": 0.182756
+      },
+      {
+        "input_dims": "[[1,16,4,23],[1,16,4,23],[]]",
+        "count": 18,
+        "duration_ms": 0.173031
+      },
+      {
+        "input_dims": "[[1,16,4,24],[1,16,4,24],[]]",
+        "count": 18,
+        "duration_ms": 0.164604
+      },
+      {
+        "input_dims": "[[1,16,4,25],[1,16,4,25],[]]",
+        "count": 18,
+        "duration_ms": 0.167139
+      },
+      {
+        "input_dims": "[[1,16,4,26],[1,16,4,26],[]]",
+        "count": 18,
+        "duration_ms": 0.16848
+      },
+      {
+        "input_dims": "[[1,16,4,27],[1,16,4,27],[]]",
+        "count": 18,
+        "duration_ms": 0.185975
+      },
+      {
+        "input_dims": "[[1,16,4,28],[1,16,4,28],[]]",
+        "count": 18,
+        "duration_ms": 0.175651
+      },
+      {
+        "input_dims": "[[1,16,4,29],[1,16,4,29],[]]",
+        "count": 18,
+        "duration_ms": 0.17963
+      },
+      {
+        "input_dims": "[[1,16,4,30],[1,16,4,30],[]]",
+        "count": 18,
+        "duration_ms": 0.162769
+      },
+      {
+        "input_dims": "[[1,16,4,31],[1,16,4,31],[]]",
+        "count": 18,
+        "duration_ms": 0.164481
+      },
+      {
+        "input_dims": "[[1,16,4,32],[1,16,4,32],[]]",
+        "count": 18,
+        "duration_ms": 0.165416
+      },
+      {
+        "input_dims": "[[1,16,4,33],[1,16,4,33],[]]",
+        "count": 18,
+        "duration_ms": 0.165395
+      },
+      {
+        "input_dims": "[[1,16,4,34],[1,16,4,34],[]]",
+        "count": 18,
+        "duration_ms": 0.168475
+      },
+      {
+        "input_dims": "[[1,16,4,35],[1,16,4,35],[]]",
+        "count": 18,
+        "duration_ms": 0.169715
+      },
+      {
+        "input_dims": "[[1,16,4,36],[1,16,4,36],[]]",
+        "count": 18,
+        "duration_ms": 0.186913
+      },
+      {
+        "input_dims": "[[1,16,4,37],[1,16,4,37],[]]",
+        "count": 18,
+        "duration_ms": 0.181757
+      },
+      {
+        "input_dims": "[[1,16,4,38],[1,16,4,38],[]]",
+        "count": 18,
+        "duration_ms": 0.163848
+      },
+      {
+        "input_dims": "[[1,16,4,39],[1,16,4,39],[]]",
+        "count": 18,
+        "duration_ms": 0.173141
+      },
+      {
+        "input_dims": "[[1,16,4,40],[1,16,4,40],[]]",
+        "count": 18,
+        "duration_ms": 0.169753
+      },
+      {
+        "input_dims": "[[1,16,4,41],[1,16,4,41],[]]",
+        "count": 18,
+        "duration_ms": 0.173751
+      },
+      {
+        "input_dims": "[[1,16,4,42],[1,16,4,42],[]]",
+        "count": 18,
+        "duration_ms": 0.168118
+      },
+      {
+        "input_dims": "[[1,16,4,43],[1,16,4,43],[]]",
+        "count": 18,
+        "duration_ms": 0.168217
+      },
+      {
+        "input_dims": "[[1,16,4,44],[1,16,4,44],[]]",
+        "count": 18,
+        "duration_ms": 0.16988
+      },
+      {
+        "input_dims": "[[1,16,4,45],[1,16,4,45],[]]",
+        "count": 18,
+        "duration_ms": 0.173547
+      },
+      {
+        "input_dims": "[[1,16,4,46],[1,16,4,46],[]]",
+        "count": 18,
+        "duration_ms": 0.17238
+      },
+      {
+        "input_dims": "[[1,16,4,47],[1,16,4,47],[]]",
+        "count": 18,
+        "duration_ms": 0.179117
+      },
+      {
+        "input_dims": "[[1,16,4,48],[1,16,4,48],[]]",
+        "count": 18,
+        "duration_ms": 0.170397
+      },
+      {
+        "input_dims": "[[1,16,4,49],[1,16,4,49],[]]",
+        "count": 18,
+        "duration_ms": 0.174663
+      },
+      {
+        "input_dims": "[[1,16,4,50],[1,16,4,50],[]]",
+        "count": 18,
+        "duration_ms": 0.180833
+      },
+      {
+        "input_dims": "[[1,16,4,51],[1,16,4,51],[]]",
+        "count": 18,
+        "duration_ms": 0.173861
+      },
+      {
+        "input_dims": "[[1,16,4,52],[1,16,4,52],[]]",
+        "count": 18,
+        "duration_ms": 0.16932
+      },
+      {
+        "input_dims": "[[1,16,4,53],[1,16,4,53],[]]",
+        "count": 18,
+        "duration_ms": 0.170428
+      },
+      {
+        "input_dims": "[[1,16,4,54],[1,16,4,54],[]]",
+        "count": 18,
+        "duration_ms": 0.162477
+      },
+      {
+        "input_dims": "[[1,16,4,55],[1,16,4,55],[]]",
+        "count": 18,
+        "duration_ms": 0.181338
+      },
+      {
+        "input_dims": "[[1,16,4,56],[1,16,4,56],[]]",
+        "count": 18,
+        "duration_ms": 0.168092
+      },
+      {
+        "input_dims": "[[1,16,4,57],[1,16,4,57],[]]",
+        "count": 18,
+        "duration_ms": 0.175971
+      },
+      {
+        "input_dims": "[[1,16,4,58],[1,16,4,58],[]]",
+        "count": 18,
+        "duration_ms": 0.176258
+      },
+      {
+        "input_dims": "[[1,16,4,59],[1,16,4,59],[]]",
+        "count": 18,
+        "duration_ms": 0.208234
+      },
+      {
+        "input_dims": "[[1,16,4,60],[1,16,4,60],[]]",
+        "count": 18,
+        "duration_ms": 0.187207
+      },
+      {
+        "input_dims": "[[1,16,4,61],[1,16,4,61],[]]",
+        "count": 18,
+        "duration_ms": 0.179595
+      },
+      {
+        "input_dims": "[[1,16,4,62],[1,16,4,62],[]]",
+        "count": 18,
+        "duration_ms": 0.171867
+      },
+      {
+        "input_dims": "[[1,16,4,63],[1,16,4,63],[]]",
+        "count": 18,
+        "duration_ms": 0.190517
+      },
+      {
+        "input_dims": "[[1,16,4,64,64],[64,64],[]]",
+        "count": 18,
+        "duration_ms": 0.25607
+      },
+      {
+        "input_dims": "[[3616,1],[],[]]",
+        "count": 18,
+        "duration_ms": 0.301412
+      },
+      {
+        "input_dims": "[[1,1,1],[4,1,1],[]]",
+        "count": 16,
+        "duration_ms": 0.354461
+      },
+      {
+        "input_dims": "[[4,1,1],[],[]]",
+        "count": 16,
+        "duration_ms": 0.228961
+      },
+      {
+        "input_dims": "[[256],[],[]]",
+        "count": 12,
+        "duration_ms": 0.140009
+      },
+      {
+        "input_dims": "[[1,226,8,1],[],[]]",
+        "count": 6,
+        "duration_ms": 0.067557
+      },
+      {
+        "input_dims": "[[1,226,2,1],[],[]]",
+        "count": 6,
+        "duration_ms": 0.072205
+      },
+      {
+        "input_dims": "[[1,8,226,64],[1,8,226,64],[]]",
+        "count": 6,
+        "duration_ms": 0.080521
+      },
+      {
+        "input_dims": "[[1,2,226,64],[1,2,226,64],[]]",
+        "count": 6,
+        "duration_ms": 0.061276
+      },
+      {
+        "input_dims": "[[18,1],[1,32],[]]",
+        "count": 4,
+        "duration_ms": 0.049102
+      },
+      {
+        "input_dims": "[[],[],[]]",
+        "count": 2,
+        "duration_ms": 0.020324
+      },
+      {
+        "input_dims": "[[1],[],[]]",
+        "count": 2,
+        "duration_ms": 0.012989
+      },
+      {
+        "input_dims": "[[2],[],[]]",
+        "count": 2,
+        "duration_ms": 0.010412
+      },
+      {
+        "input_dims": "[[3,4],[],[]]",
+        "count": 1,
+        "duration_ms": 0.01863
+      },
+      {
+        "input_dims": "[[9],[],[]]",
+        "count": 1,
+        "duration_ms": 0.012083
+      },
+      {
+        "input_dims": "[[16],[],[]]",
+        "count": 1,
+        "duration_ms": 0.011052
+      },
+      {
+        "input_dims": "[[3,78],[],[]]",
+        "count": 1,
+        "duration_ms": 0.013897
+      },
+      {
+        "input_dims": "[[18],[],[]]",
+        "count": 1,
+        "duration_ms": 0.021183
+      },
+      {
+        "input_dims": "[[32],[],[]]",
+        "count": 1,
+        "duration_ms": 0.01001
+      },
+      {
+        "input_dims": "[[9,2,1,1],[1,1,16,2],[]]",
+        "count": 1,
+        "duration_ms": 0.01351
+      }
+    ],
+    "aten::cat": [
+      {
+        "input_dims": "[[[576,16,32],[576,16,32]],[]]",
+        "count": 48,
+        "duration_ms": 0.692099
+      },
+      {
+        "input_dims": "[[[1,576,16,64]],[]]",
+        "count": 24,
+        "duration_ms": 0.534214
+      },
+      {
+        "input_dims": "[[[1,1,32],[1,1,32]],[]]",
+        "count": 15,
+        "duration_ms": 0.280539
+      },
+      {
+        "input_dims": "[[[0],[1,2,226,256]],[]]",
+        "count": 12,
+        "duration_ms": 0.145163
+      },
+      {
+        "input_dims": "[[[1,2,226,256],[1,2,1,256]],[]]",
+        "count": 12,
+        "duration_ms": 0.189163
+      },
+      {
+        "input_dims": "[[[1,2,227,256],[1,2,1,256]],[]]",
+        "count": 12,
+        "duration_ms": 0.191538
+      },
+      {
+        "input_dims": "[[[1,2,228,256],[1,2,1,256]],[]]",
+        "count": 12,
+        "duration_ms": 0.18719
+      },
+      {
+        "input_dims": "[[[1,2,229,256],[1,2,1,256]],[]]",
+        "count": 12,
+        "duration_ms": 0.197631
+      },
+      {
+        "input_dims": "[[[1,2,230,256],[1,2,1,256]],[]]",
+        "count": 12,
+        "duration_ms": 0.200268
+      },
+      {
+        "input_dims": "[[[1,2,231,256],[1,2,1,256]],[]]",
+        "count": 12,
+        "duration_ms": 0.184812
+      },
+      {
+        "input_dims": "[[[1,2,232,256],[1,2,1,256]],[]]",
+        "count": 12,
+        "duration_ms": 0.222606
+      },
+      {
+        "input_dims": "[[[1,2,233,256],[1,2,1,256]],[]]",
+        "count": 12,
+        "duration_ms": 0.196953
+      },
+      {
+        "input_dims": "[[[1,2,234,256],[1,2,1,256]],[]]",
+        "count": 12,
+        "duration_ms": 0.182681
+      },
+      {
+        "input_dims": "[[[1,2,235,256],[1,2,1,256]],[]]",
+        "count": 12,
+        "duration_ms": 0.183163
+      },
+      {
+        "input_dims": "[[[1,2,236,256],[1,2,1,256]],[]]",
+        "count": 12,
+        "duration_ms": 0.201525
+      },
+      {
+        "input_dims": "[[[1,2,237,256],[1,2,1,256]],[]]",
+        "count": 12,
+        "duration_ms": 0.178629
+      },
+      {
+        "input_dims": "[[[1,2,238,256],[1,2,1,256]],[]]",
+        "count": 12,
+        "duration_ms": 0.182952
+      },
+      {
+        "input_dims": "[[[1,2,239,256],[1,2,1,256]],[]]",
+        "count": 12,
+        "duration_ms": 0.207729
+      },
+      {
+        "input_dims": "[[[1,2,240,256],[1,2,1,256]],[]]",
+        "count": 12,
+        "duration_ms": 0.183406
+      },
+      {
+        "input_dims": "[[[576]],[]]",
+        "count": 8,
+        "duration_ms": 0.136127
+      },
+      {
+        "input_dims": "[[[1,8,226,32],[1,8,226,32]],[]]",
+        "count": 6,
+        "duration_ms": 0.106882
+      },
+      {
+        "input_dims": "[[[1,2,226,32],[1,2,226,32]],[]]",
+        "count": 6,
+        "duration_ms": 0.070827
+      },
+      {
+        "input_dims": "[[[1,8,226,64],[1,8,226,192]],[]]",
+        "count": 6,
+        "duration_ms": 0.064496
+      },
+      {
+        "input_dims": "[[[1,2,226,64],[1,2,226,192]],[]]",
+        "count": 6,
+        "duration_ms": 0.064616
+      },
+      {
+        "input_dims": "[[[1,226],[1,1]],[]]",
+        "count": 3,
+        "duration_ms": 0.058798
+      },
+      {
+        "input_dims": "[[[1,227],[1,1]],[]]",
+        "count": 3,
+        "duration_ms": 0.0422
+      },
+      {
+        "input_dims": "[[[1,228],[1,1]],[]]",
+        "count": 3,
+        "duration_ms": 0.038827
+      },
+      {
+        "input_dims": "[[[1,229],[1,1]],[]]",
+        "count": 3,
+        "duration_ms": 0.040194
+      },
+      {
+        "input_dims": "[[[1,230],[1,1]],[]]",
+        "count": 3,
+        "duration_ms": 0.038209
+      },
+      {
+        "input_dims": "[[[1,231],[1,1]],[]]",
+        "count": 3,
+        "duration_ms": 0.044142
+      },
+      {
+        "input_dims": "[[[1,232],[1,1]],[]]",
+        "count": 3,
+        "duration_ms": 0.038491
+      },
+      {
+        "input_dims": "[[[1,233],[1,1]],[]]",
+        "count": 3,
+        "duration_ms": 0.040284
+      },
+      {
+        "input_dims": "[[[1,234],[1,1]],[]]",
+        "count": 3,
+        "duration_ms": 0.037193
+      },
+      {
+        "input_dims": "[[[1,235],[1,1]],[]]",
+        "count": 3,
+        "duration_ms": 0.043444
+      },
+      {
+        "input_dims": "[[[1,236],[1,1]],[]]",
+        "count": 3,
+        "duration_ms": 0.038549
+      },
+      {
+        "input_dims": "[[[1,237],[1,1]],[]]",
+        "count": 3,
+        "duration_ms": 0.039983
+      },
+      {
+        "input_dims": "[[[1,238],[1,1]],[]]",
+        "count": 3,
+        "duration_ms": 0.037488
+      },
+      {
+        "input_dims": "[[[1,239],[1,1]],[]]",
+        "count": 3,
+        "duration_ms": 0.039777
+      },
+      {
+        "input_dims": "[[[1,240],[1,1]],[]]",
+        "count": 3,
+        "duration_ms": 0.041929
+      },
+      {
+        "input_dims": "[[[1,241],[1,1]],[]]",
+        "count": 3,
+        "duration_ms": 0.039827
+      },
+      {
+        "input_dims": "[[[576],[576],[576],[576]],[]]",
+        "count": 2,
+        "duration_ms": 0.027719
+      },
+      {
+        "input_dims": "[[[1,9,16],[1,9,16],[1,9,16]],[]]",
+        "count": 1,
+        "duration_ms": 0.021832
+      },
+      {
+        "input_dims": "[[[3,4],[3,144],[3,78]],[]]",
+        "count": 1,
+        "duration_ms": 0.018537
+      },
+      {
+        "input_dims": "[[[1,1,226],[3,1,226]],[]]",
+        "count": 1,
+        "duration_ms": 0.02331
+      },
+      {
+        "input_dims": "[[[1,1],[1,1]],[]]",
+        "count": 1,
+        "duration_ms": 0.01484
+      },
+      {
+        "input_dims": "[[[576,1],[576,1]],[]]",
+        "count": 1,
+        "duration_ms": 0.014568
+      },
+      {
+        "input_dims": "[[[2,1],[2,1]],[]]",
+        "count": 1,
+        "duration_ms": 0.009377
+      },
+      {
+        "input_dims": "[[[576,2]],[]]",
+        "count": 1,
+        "duration_ms": 0.01714
+      },
+      {
+        "input_dims": "[[[576,32],[576,32]],[]]",
+        "count": 1,
+        "duration_ms": 0.022047
+      },
+      {
+        "input_dims": "[[[144,2048]],[]]",
+        "count": 1,
+        "duration_ms": 0.025336
+      },
+      {
+        "input_dims": "[[[1,226,32],[1,226,32]],[]]",
+        "count": 1,
+        "duration_ms": 0.019935
+      },
+      {
+        "input_dims": "[[[4,1,226],[4,1,1]],[]]",
+        "count": 1,
+        "duration_ms": 0.014228
+      },
+      {
+        "input_dims": "[[[4,1,227],[4,1,1]],[]]",
+        "count": 1,
+        "duration_ms": 0.015444
+      },
+      {
+        "input_dims": "[[[4,1,228],[4,1,1]],[]]",
+        "count": 1,
+        "duration_ms": 0.013591
+      },
+      {
+        "input_dims": "[[[4,1,229],[4,1,1]],[]]",
+        "count": 1,
+        "duration_ms": 0.013365
+      },
+      {
+        "input_dims": "[[[4,1,230],[4,1,1]],[]]",
+        "count": 1,
+        "duration_ms": 0.013791
+      },
+      {
+        "input_dims": "[[[4,1,231],[4,1,1]],[]]",
+        "count": 1,
+        "duration_ms": 0.013002
+      },
+      {
+        "input_dims": "[[[4,1,232],[4,1,1]],[]]",
+        "count": 1,
+        "duration_ms": 0.013165
+      },
+      {
+        "input_dims": "[[[4,1,233],[4,1,1]],[]]",
+        "count": 1,
+        "duration_ms": 0.018721
+      },
+      {
+        "input_dims": "[[[4,1,234],[4,1,1]],[]]",
+        "count": 1,
+        "duration_ms": 0.012563
+      },
+      {
+        "input_dims": "[[[4,1,235],[4,1,1]],[]]",
+        "count": 1,
+        "duration_ms": 0.013248
+      },
+      {
+        "input_dims": "[[[4,1,236],[4,1,1]],[]]",
+        "count": 1,
+        "duration_ms": 0.013192
+      },
+      {
+        "input_dims": "[[[4,1,237],[4,1,1]],[]]",
+        "count": 1,
+        "duration_ms": 0.01424
+      },
+      {
+        "input_dims": "[[[4,1,238],[4,1,1]],[]]",
+        "count": 1,
+        "duration_ms": 0.012727
+      },
+      {
+        "input_dims": "[[[4,1,239],[4,1,1]],[]]",
+        "count": 1,
+        "duration_ms": 0.012863
+      },
+      {
+        "input_dims": "[[[4,1,240],[4,1,1]],[]]",
+        "count": 1,
+        "duration_ms": 0.026853
+      },
+      {
+        "input_dims": "[[[4,1,241],[4,1,1]],[]]",
+        "count": 1,
+        "duration_ms": 0.013285
+      }
+    ],
+    "aten::clone": [
+      {
+        "input_dims": "[[1,1,8,256],[]]",
+        "count": 90,
+        "duration_ms": 2.428467
+      },
+      {
+        "input_dims": "[[1,16,226,128],[]]",
+        "count": 54,
+        "duration_ms": 0.935777
+      },
+      {
+        "input_dims": "[[1,16,226],[]]",
+        "count": 36,
+        "duration_ms": 0.581692
+      },
+      {
+        "input_dims": "[[1,6144,4],[]]",
+        "count": 18,
+        "duration_ms": 0.439719
+      },
+      {
+        "input_dims": "[[1,6144,226],[]]",
+        "count": 18,
+        "duration_ms": 0.369847
+      },
+      {
+        "input_dims": "[[1,16,4,64,64],[]]",
+        "count": 18,
+        "duration_ms": 0.414308
+      },
+      {
+        "input_dims": "[[1,16,4,1],[]]",
+        "count": 18,
+        "duration_ms": 0.36589
+      },
+      {
+        "input_dims": "[[1,16,4,1,1],[]]",
+        "count": 18,
+        "duration_ms": 0.357444
+      },
+      {
+        "input_dims": "[[1,16,4,2],[]]",
+        "count": 18,
+        "duration_ms": 0.305664
+      },
+      {
+        "input_dims": "[[1,16,4,2,2],[]]",
+        "count": 18,
+        "duration_ms": 0.308407
+      },
+      {
+        "input_dims": "[[1,16,4,3],[]]",
+        "count": 18,
+        "duration_ms": 0.281034
+      },
+      {
+        "input_dims": "[[1,16,4,3,3],[]]",
+        "count": 18,
+        "duration_ms": 0.306642
+      },
+      {
+        "input_dims": "[[1,16,4,4],[]]",
+        "count": 18,
+        "duration_ms": 0.273043
+      },
+      {
+        "input_dims": "[[1,16,4,4,4],[]]",
+        "count": 18,
+        "duration_ms": 0.27946
+      },
+      {
+        "input_dims": "[[1,16,4,5],[]]",
+        "count": 18,
+        "duration_ms": 0.268414
+      },
+      {
+        "input_dims": "[[1,16,4,5,5],[]]",
+        "count": 18,
+        "duration_ms": 0.25534
+      },
+      {
+        "input_dims": "[[1,16,4,6],[]]",
+        "count": 18,
+        "duration_ms": 0.308381
+      },
+      {
+        "input_dims": "[[1,16,4,6,6],[]]",
+        "count": 18,
+        "duration_ms": 0.263383
+      },
+      {
+        "input_dims": "[[1,16,4,7],[]]",
+        "count": 18,
+        "duration_ms": 0.276974
+      },
+      {
+        "input_dims": "[[1,16,4,7,7],[]]",
+        "count": 18,
+        "duration_ms": 0.265723
+      },
+      {
+        "input_dims": "[[1,16,4,8],[]]",
+        "count": 18,
+        "duration_ms": 0.267226
+      },
+      {
+        "input_dims": "[[1,16,4,8,8],[]]",
+        "count": 18,
+        "duration_ms": 0.271171
+      },
+      {
+        "input_dims": "[[1,16,4,9],[]]",
+        "count": 18,
+        "duration_ms": 0.301345
+      },
+      {
+        "input_dims": "[[1,16,4,9,9],[]]",
+        "count": 18,
+        "duration_ms": 0.264193
+      },
+      {
+        "input_dims": "[[1,16,4,10],[]]",
+        "count": 18,
+        "duration_ms": 0.291256
+      },
+      {
+        "input_dims": "[[1,16,4,10,10],[]]",
+        "count": 18,
+        "duration_ms": 0.261923
+      },
+      {
+        "input_dims": "[[1,16,4,11],[]]",
+        "count": 18,
+        "duration_ms": 0.265241
+      },
+      {
+        "input_dims": "[[1,16,4,11,11],[]]",
+        "count": 18,
+        "duration_ms": 0.253762
+      },
+      {
+        "input_dims": "[[1,16,4,12],[]]",
+        "count": 18,
+        "duration_ms": 0.273697
+      },
+      {
+        "input_dims": "[[1,16,4,12,12],[]]",
+        "count": 18,
+        "duration_ms": 0.27809
+      },
+      {
+        "input_dims": "[[1,16,4,13],[]]",
+        "count": 18,
+        "duration_ms": 0.272548
+      },
+      {
+        "input_dims": "[[1,16,4,13,13],[]]",
+        "count": 18,
+        "duration_ms": 0.271765
+      },
+      {
+        "input_dims": "[[1,16,4,14],[]]",
+        "count": 18,
+        "duration_ms": 0.280673
+      },
+      {
+        "input_dims": "[[1,16,4,14,14],[]]",
+        "count": 18,
+        "duration_ms": 0.261646
+      },
+      {
+        "input_dims": "[[1,16,4,15],[]]",
+        "count": 18,
+        "duration_ms": 0.294431
+      },
+      {
+        "input_dims": "[[1,16,4,15,15],[]]",
+        "count": 18,
+        "duration_ms": 0.252469
+      },
+      {
+        "input_dims": "[[1,16,4,16],[]]",
+        "count": 18,
+        "duration_ms": 0.287194
+      },
+      {
+        "input_dims": "[[1,16,4,16,16],[]]",
+        "count": 18,
+        "duration_ms": 0.255246
+      },
+      {
+        "input_dims": "[[1,16,4,17],[]]",
+        "count": 18,
+        "duration_ms": 0.260207
+      },
+      {
+        "input_dims": "[[1,16,4,17,17],[]]",
+        "count": 18,
+        "duration_ms": 0.29345
+      },
+      {
+        "input_dims": "[[1,16,4,18],[]]",
+        "count": 18,
+        "duration_ms": 0.300641
+      },
+      {
+        "input_dims": "[[1,16,4,18,18],[]]",
+        "count": 18,
+        "duration_ms": 0.26743
+      },
+      {
+        "input_dims": "[[1,16,4,19],[]]",
+        "count": 18,
+        "duration_ms": 0.25908
+      },
+      {
+        "input_dims": "[[1,16,4,19,19],[]]",
+        "count": 18,
+        "duration_ms": 0.290383
+      },
+      {
+        "input_dims": "[[1,16,4,20],[]]",
+        "count": 18,
+        "duration_ms": 0.25981
+      },
+      {
+        "input_dims": "[[1,16,4,20,20],[]]",
+        "count": 18,
+        "duration_ms": 0.271446
+      },
+      {
+        "input_dims": "[[1,16,4,21],[]]",
+        "count": 18,
+        "duration_ms": 0.272641
+      },
+      {
+        "input_dims": "[[1,16,4,21,21],[]]",
+        "count": 18,
+        "duration_ms": 0.281686
+      },
+      {
+        "input_dims": "[[1,16,4,22],[]]",
+        "count": 18,
+        "duration_ms": 0.256815
+      },
+      {
+        "input_dims": "[[1,16,4,22,22],[]]",
+        "count": 18,
+        "duration_ms": 0.285932
+      },
+      {
+        "input_dims": "[[1,16,4,23],[]]",
+        "count": 18,
+        "duration_ms": 0.277637
+      },
+      {
+        "input_dims": "[[1,16,4,23,23],[]]",
+        "count": 18,
+        "duration_ms": 0.266003
+      },
+      {
+        "input_dims": "[[1,16,4,24],[]]",
+        "count": 18,
+        "duration_ms": 0.280403
+      },
+      {
+        "input_dims": "[[1,16,4,24,24],[]]",
+        "count": 18,
+        "duration_ms": 0.268395
+      },
+      {
+        "input_dims": "[[1,16,4,25],[]]",
+        "count": 18,
+        "duration_ms": 0.273192
+      },
+      {
+        "input_dims": "[[1,16,4,25,25],[]]",
+        "count": 18,
+        "duration_ms": 0.256435
+      },
+      {
+        "input_dims": "[[1,16,4,26],[]]",
+        "count": 18,
+        "duration_ms": 0.249144
+      },
+      {
+        "input_dims": "[[1,16,4,26,26],[]]",
+        "count": 18,
+        "duration_ms": 0.273445
+      },
+      {
+        "input_dims": "[[1,16,4,27],[]]",
+        "count": 18,
+        "duration_ms": 0.293431
+      },
+      {
+        "input_dims": "[[1,16,4,27,27],[]]",
+        "count": 18,
+        "duration_ms": 0.260859
+      },
+      {
+        "input_dims": "[[1,16,4,28],[]]",
+        "count": 18,
+        "duration_ms": 0.265541
+      },
+      {
+        "input_dims": "[[1,16,4,28,28],[]]",
+        "count": 18,
+        "duration_ms": 0.264521
+      },
+      {
+        "input_dims": "[[1,16,4,29],[]]",
+        "count": 18,
+        "duration_ms": 0.261702
+      },
+      {
+        "input_dims": "[[1,16,4,29,29],[]]",
+        "count": 18,
+        "duration_ms": 0.268014
+      },
+      {
+        "input_dims": "[[1,16,4,30],[]]",
+        "count": 18,
+        "duration_ms": 0.260327
+      },
+      {
+        "input_dims": "[[1,16,4,30,30],[]]",
+        "count": 18,
+        "duration_ms": 0.264772
+      },
+      {
+        "input_dims": "[[1,16,4,31],[]]",
+        "count": 18,
+        "duration_ms": 0.28095
+      },
+      {
+        "input_dims": "[[1,16,4,31,31],[]]",
+        "count": 18,
+        "duration_ms": 0.267087
+      },
+      {
+        "input_dims": "[[1,16,4,32],[]]",
+        "count": 18,
+        "duration_ms": 0.277353
+      },
+      {
+        "input_dims": "[[1,16,4,32,32],[]]",
+        "count": 18,
+        "duration_ms": 0.297695
+      },
+      {
+        "input_dims": "[[1,16,4,33],[]]",
+        "count": 18,
+        "duration_ms": 0.272185
+      },
+      {
+        "input_dims": "[[1,16,4,33,33],[]]",
+        "count": 18,
+        "duration_ms": 0.264765
+      },
+      {
+        "input_dims": "[[1,16,4,34],[]]",
+        "count": 18,
+        "duration_ms": 0.305887
+      },
+      {
+        "input_dims": "[[1,16,4,34,34],[]]",
+        "count": 18,
+        "duration_ms": 0.255152
+      },
+      {
+        "input_dims": "[[1,16,4,35],[]]",
+        "count": 18,
+        "duration_ms": 0.251957
+      },
+      {
+        "input_dims": "[[1,16,4,35,35],[]]",
+        "count": 18,
+        "duration_ms": 0.254988
+      },
+      {
+        "input_dims": "[[1,16,4,36],[]]",
+        "count": 18,
+        "duration_ms": 0.245017
+      },
+      {
+        "input_dims": "[[1,16,4,36,36],[]]",
+        "count": 18,
+        "duration_ms": 0.266153
+      },
+      {
+        "input_dims": "[[1,16,4,37],[]]",
+        "count": 18,
+        "duration_ms": 0.265215
+      },
+      {
+        "input_dims": "[[1,16,4,37,37],[]]",
+        "count": 18,
+        "duration_ms": 0.265523
+      },
+      {
+        "input_dims": "[[1,16,4,38],[]]",
+        "count": 18,
+        "duration_ms": 0.268712
+      },
+      {
+        "input_dims": "[[1,16,4,38,38],[]]",
+        "count": 18,
+        "duration_ms": 0.256035
+      },
+      {
+        "input_dims": "[[1,16,4,39],[]]",
+        "count": 18,
+        "duration_ms": 0.285323
+      },
+      {
+        "input_dims": "[[1,16,4,39,39],[]]",
+        "count": 18,
+        "duration_ms": 0.282649
+      },
+      {
+        "input_dims": "[[1,16,4,40],[]]",
+        "count": 18,
+        "duration_ms": 0.270704
+      },
+      {
+        "input_dims": "[[1,16,4,40,40],[]]",
+        "count": 18,
+        "duration_ms": 0.259896
+      },
+      {
+        "input_dims": "[[1,16,4,41],[]]",
+        "count": 18,
+        "duration_ms": 0.270732
+      },
+      {
+        "input_dims": "[[1,16,4,41,41],[]]",
+        "count": 18,
+        "duration_ms": 0.278084
+      },
+      {
+        "input_dims": "[[1,16,4,42],[]]",
+        "count": 18,
+        "duration_ms": 0.273001
+      },
+      {
+        "input_dims": "[[1,16,4,42,42],[]]",
+        "count": 18,
+        "duration_ms": 0.267593
+      },
+      {
+        "input_dims": "[[1,16,4,43],[]]",
+        "count": 18,
+        "duration_ms": 0.297976
+      },
+      {
+        "input_dims": "[[1,16,4,43,43],[]]",
+        "count": 18,
+        "duration_ms": 0.252919
+      },
+      {
+        "input_dims": "[[1,16,4,44],[]]",
+        "count": 18,
+        "duration_ms": 0.240138
+      },
+      {
+        "input_dims": "[[1,16,4,44,44],[]]",
+        "count": 18,
+        "duration_ms": 0.248358
+      },
+      {
+        "input_dims": "[[1,16,4,45],[]]",
+        "count": 18,
+        "duration_ms": 0.251739
+      },
+      {
+        "input_dims": "[[1,16,4,45,45],[]]",
+        "count": 18,
+        "duration_ms": 0.265919
+      },
+      {
+        "input_dims": "[[1,16,4,46],[]]",
+        "count": 18,
+        "duration_ms": 0.270436
+      },
+      {
+        "input_dims": "[[1,16,4,46,46],[]]",
+        "count": 18,
+        "duration_ms": 0.257906
+      },
+      {
+        "input_dims": "[[1,16,4,47],[]]",
+        "count": 18,
+        "duration_ms": 0.294162
+      },
+      {
+        "input_dims": "[[1,16,4,47,47],[]]",
+        "count": 18,
+        "duration_ms": 0.267376
+      },
+      {
+        "input_dims": "[[1,16,4,48],[]]",
+        "count": 18,
+        "duration_ms": 0.282595
+      },
+      {
+        "input_dims": "[[1,16,4,48,48],[]]",
+        "count": 18,
+        "duration_ms": 0.259303
+      },
+      {
+        "input_dims": "[[1,16,4,49],[]]",
+        "count": 18,
+        "duration_ms": 0.262549
+      },
+      {
+        "input_dims": "[[1,16,4,49,49],[]]",
+        "count": 18,
+        "duration_ms": 0.254699
+      },
+      {
+        "input_dims": "[[1,16,4,50],[]]",
+        "count": 18,
+        "duration_ms": 0.266413
+      },
+      {
+        "input_dims": "[[1,16,4,50,50],[]]",
+        "count": 18,
+        "duration_ms": 0.261037
+      },
+      {
+        "input_dims": "[[1,16,4,51],[]]",
+        "count": 18,
+        "duration_ms": 0.260299
+      },
+      {
+        "input_dims": "[[1,16,4,51,51],[]]",
+        "count": 18,
+        "duration_ms": 0.26386
+      },
+      {
+        "input_dims": "[[1,16,4,52],[]]",
+        "count": 18,
+        "duration_ms": 0.281903
+      },
+      {
+        "input_dims": "[[1,16,4,52,52],[]]",
+        "count": 18,
+        "duration_ms": 0.265124
+      },
+      {
+        "input_dims": "[[1,16,4,53],[]]",
+        "count": 18,
+        "duration_ms": 0.253699
+      },
+      {
+        "input_dims": "[[1,16,4,53,53],[]]",
+        "count": 18,
+        "duration_ms": 0.258682
+      },
+      {
+        "input_dims": "[[1,16,4,54],[]]",
+        "count": 18,
+        "duration_ms": 0.256661
+      },
+      {
+        "input_dims": "[[1,16,4,54,54],[]]",
+        "count": 18,
+        "duration_ms": 0.245562
+      },
+      {
+        "input_dims": "[[1,16,4,55],[]]",
+        "count": 18,
+        "duration_ms": 0.275274
+      },
+      {
+        "input_dims": "[[1,16,4,55,55],[]]",
+        "count": 18,
+        "duration_ms": 0.275919
+      },
+      {
+        "input_dims": "[[1,16,4,56],[]]",
+        "count": 18,
+        "duration_ms": 0.258755
+      },
+      {
+        "input_dims": "[[1,16,4,56,56],[]]",
+        "count": 18,
+        "duration_ms": 0.276389
+      },
+      {
+        "input_dims": "[[1,16,4,57],[]]",
+        "count": 18,
+        "duration_ms": 0.258098
+      },
+      {
+        "input_dims": "[[1,16,4,57,57],[]]",
+        "count": 18,
+        "duration_ms": 0.260706
+      },
+      {
+        "input_dims": "[[1,16,4,58],[]]",
+        "count": 18,
+        "duration_ms": 0.270105
+      },
+      {
+        "input_dims": "[[1,16,4,58,58],[]]",
+        "count": 18,
+        "duration_ms": 0.268429
+      },
+      {
+        "input_dims": "[[1,16,4,59],[]]",
+        "count": 18,
+        "duration_ms": 0.274796
+      },
+      {
+        "input_dims": "[[1,16,4,59,59],[]]",
+        "count": 18,
+        "duration_ms": 0.263711
+      },
+      {
+        "input_dims": "[[1,16,4,60],[]]",
+        "count": 18,
+        "duration_ms": 0.262422
+      },
+      {
+        "input_dims": "[[1,16,4,60,60],[]]",
+        "count": 18,
+        "duration_ms": 0.26993
+      },
+      {
+        "input_dims": "[[1,16,4,61],[]]",
+        "count": 18,
+        "duration_ms": 0.281376
+      },
+      {
+        "input_dims": "[[1,16,4,61,61],[]]",
+        "count": 18,
+        "duration_ms": 0.268154
+      },
+      {
+        "input_dims": "[[1,16,4,62],[]]",
+        "count": 18,
+        "duration_ms": 0.268043
+      },
+      {
+        "input_dims": "[[1,16,4,62,62],[]]",
+        "count": 18,
+        "duration_ms": 0.282147
+      },
+      {
+        "input_dims": "[[1,16,4,63],[]]",
+        "count": 18,
+        "duration_ms": 0.273554
+      },
+      {
+        "input_dims": "[[1,16,4,63,63],[]]",
+        "count": 18,
+        "duration_ms": 0.261433
+      },
+      {
+        "input_dims": "[[1,226,16,128],[]]",
+        "count": 18,
+        "duration_ms": 0.389153
+      },
+      {
+        "input_dims": "[[1,1],[]]",
+        "count": 15,
+        "duration_ms": 0.363273
+      },
+      {
+        "input_dims": "[[4,1,1],[]]",
+        "count": 15,
+        "duration_ms": 0.271305
+      },
+      {
+        "input_dims": "[[1,226,8,256],[]]",
+        "count": 12,
+        "duration_ms": 0.261634
+      },
+      {
+        "input_dims": "[[9,16,2,2],[]]",
+        "count": 3,
+        "duration_ms": 0.053772
+      },
+      {
+        "input_dims": "[[1,226],[]]",
+        "count": 2,
+        "duration_ms": 0.058927
+      },
+      {
+        "input_dims": "[[1,226,2048],[]]",
+        "count": 2,
+        "duration_ms": 0.033489
+      }
+    ],
+    "aten::copy_": [
+      {
+        "input_dims": "[[1,16,128,128],[1,16,128,128],[]]",
+        "count": 288,
+        "duration_ms": 0.392996
+      },
+      {
+        "input_dims": "[[1,16,226,128],[1,16,226,128],[]]",
+        "count": 162,
+        "duration_ms": 1.216588
+      },
+      {
+        "input_dims": "[[1,226,2048],[1,226,2048],[]]",
+        "count": 100,
+        "duration_ms": 0.777524
+      },
+      {
+        "input_dims": "[[576,16,64],[576,16,64],[]]",
+        "count": 96,
+        "duration_ms": 0.859793
+      },
+      {
+        "input_dims": "[[1,16,226],[1,16,226],[]]",
+        "count": 90,
+        "duration_ms": 0.632026
+      },
+      {
+        "input_dims": "[[1,1,8,256],[1,1,8,256],[]]",
+        "count": 90,
+        "duration_ms": 1.362776
+      },
+      {
+        "input_dims": "[[1],[1],[]]",
+        "count": 78,
+        "duration_ms": 1.681789
+      },
+      {
+        "input_dims": "[[1,16,64,128],[1,16,64,128],[]]",
+        "count": 72,
+        "duration_ms": 0.592961
+      },
+      {
+        "input_dims": "[[3616,128],[3616,128],[]]",
+        "count": 72,
+        "duration_ms": 0.584439
+      },
+      {
+        "input_dims": "[[2048],[2048],[]]",
+        "count": 49,
+        "duration_ms": 0.407597
+      },
+      {
+        "input_dims": "[[1,6144,4],[1,6144,4],[]]",
+        "count": 36,
+        "duration_ms": 0.435643
+      },
+      {
+        "input_dims": "[[1,16,4,1],[1,16,4,1],[]]",
+        "count": 36,
+        "duration_ms": 0.294251
+      },
+      {
+        "input_dims": "[[1,16,4,2],[1,16,4,2],[]]",
+        "count": 36,
+        "duration_ms": 0.278766
+      },
+      {
+        "input_dims": "[[1,16,4,3],[1,16,4,3],[]]",
+        "count": 36,
+        "duration_ms": 0.253978
+      },
+      {
+        "input_dims": "[[1,16,4,4],[1,16,4,4],[]]",
+        "count": 36,
+        "duration_ms": 0.255233
+      },
+      {
+        "input_dims": "[[1,16,4,5],[1,16,4,5],[]]",
+        "count": 36,
+        "duration_ms": 0.243139
+      },
+      {
+        "input_dims": "[[1,16,4,6],[1,16,4,6],[]]",
+        "count": 36,
+        "duration_ms": 0.268477
+      },
+      {
+        "input_dims": "[[1,16,4,7],[1,16,4,7],[]]",
+        "count": 36,
+        "duration_ms": 0.236544
+      },
+      {
+        "input_dims": "[[1,16,4,8],[1,16,4,8],[]]",
+        "count": 36,
+        "duration_ms": 0.244215
+      },
+      {
+        "input_dims": "[[1,16,4,9],[1,16,4,9],[]]",
+        "count": 36,
+        "duration_ms": 0.275622
+      },
+      {
+        "input_dims": "[[1,16,4,10],[1,16,4,10],[]]",
+        "count": 36,
+        "duration_ms": 0.24099
+      },
+      {
+        "input_dims": "[[1,16,4,11],[1,16,4,11],[]]",
+        "count": 36,
+        "duration_ms": 0.24377
+      },
+      {
+        "input_dims": "[[1,16,4,12],[1,16,4,12],[]]",
+        "count": 36,
+        "duration_ms": 0.256971
+      },
+      {
+        "input_dims": "[[1,16,4,13],[1,16,4,13],[]]",
+        "count": 36,
+        "duration_ms": 0.245369
+      },
+      {
+        "input_dims": "[[1,16,4,14],[1,16,4,14],[]]",
+        "count": 36,
+        "duration_ms": 0.253962
+      },
+      {
+        "input_dims": "[[1,16,4,15],[1,16,4,15],[]]",
+        "count": 36,
+        "duration_ms": 0.253586
+      },
+      {
+        "input_dims": "[[1,16,4,16],[1,16,4,16],[]]",
+        "count": 36,
+        "duration_ms": 0.254326
+      },
+      {
+        "input_dims": "[[1,16,4,17],[1,16,4,17],[]]",
+        "count": 36,
+        "duration_ms": 0.247846
+      },
+      {
+        "input_dims": "[[1,16,4,18],[1,16,4,18],[]]",
+        "count": 36,
+        "duration_ms": 0.268433
+      },
+      {
+        "input_dims": "[[1,16,4,19],[1,16,4,19],[]]",
+        "count": 36,
+        "duration_ms": 0.23684
+      },
+      {
+        "input_dims": "[[1,16,4,20],[1,16,4,20],[]]",
+        "count": 36,
+        "duration_ms": 0.235955
+      },
+      {
+        "input_dims": "[[1,16,4,21],[1,16,4,21],[]]",
+        "count": 36,
+        "duration_ms": 0.257004
+      },
+      {
+        "input_dims": "[[1,16,4,22],[1,16,4,22],[]]",
+        "count": 36,
+        "duration_ms": 0.248228
+      },
+      {
+        "input_dims": "[[1,16,4,23],[1,16,4,23],[]]",
+        "count": 36,
+        "duration_ms": 0.246202
+      },
+      {
+        "input_dims": "[[1,16,4,24],[1,16,4,24],[]]",
+        "count": 36,
+        "duration_ms": 0.250481
+      },
+      {
+        "input_dims": "[[1,16,4,25],[1,16,4,25],[]]",
+        "count": 36,
+        "duration_ms": 0.259639
+      },
+      {
+        "input_dims": "[[1,16,4,26],[1,16,4,26],[]]",
+        "count": 36,
+        "duration_ms": 0.234
+      },
+      {
+        "input_dims": "[[1,16,4,27],[1,16,4,27],[]]",
+        "count": 36,
+        "duration_ms": 0.253886
+      },
+      {
+        "input_dims": "[[1,16,4,28],[1,16,4,28],[]]",
+        "count": 36,
+        "duration_ms": 0.250771
+      },
+      {
+        "input_dims": "[[1,16,4,29],[1,16,4,29],[]]",
+        "count": 36,
+        "duration_ms": 0.251862
+      },
+      {
+        "input_dims": "[[1,16,4,30],[1,16,4,30],[]]",
+        "count": 36,
+        "duration_ms": 0.242453
+      },
+      {
+        "input_dims": "[[1,16,4,31],[1,16,4,31],[]]",
+        "count": 36,
+        "duration_ms": 0.246185
+      },
+      {
+        "input_dims": "[[1,16,4,32],[1,16,4,32],[]]",
+        "count": 36,
+        "duration_ms": 0.272447
+      },
+      {
+        "input_dims": "[[1,16,4,33],[1,16,4,33],[]]",
+        "count": 36,
+        "duration_ms": 0.247435
+      },
+      {
+        "input_dims": "[[1,16,4,34],[1,16,4,34],[]]",
+        "count": 36,
+        "duration_ms": 0.269695
+      },
+      {
+        "input_dims": "[[1,16,4,35],[1,16,4,35],[]]",
+        "count": 36,
+        "duration_ms": 0.228848
+      },
+      {
+        "input_dims": "[[1,16,4,36],[1,16,4,36],[]]",
+        "count": 36,
+        "duration_ms": 0.254423
+      },
+      {
+        "input_dims": "[[1,16,4,37],[1,16,4,37],[]]",
+        "count": 36,
+        "duration_ms": 0.245597
+      },
+      {
+        "input_dims": "[[1,16,4,38],[1,16,4,38],[]]",
+        "count": 36,
+        "duration_ms": 0.249828
+      },
+      {
+        "input_dims": "[[1,16,4,39],[1,16,4,39],[]]",
+        "count": 36,
+        "duration_ms": 0.254551
+      },
+      {
+        "input_dims": "[[1,16,4,40],[1,16,4,40],[]]",
+        "count": 36,
+        "duration_ms": 0.257227
+      },
+      {
+        "input_dims": "[[1,16,4,41],[1,16,4,41],[]]",
+        "count": 36,
+        "duration_ms": 0.253136
+      },
+      {
+        "input_dims": "[[1,16,4,42],[1,16,4,42],[]]",
+        "count": 36,
+        "duration_ms": 0.246516
+      },
+      {
+        "input_dims": "[[1,16,4,43],[1,16,4,43],[]]",
+        "count": 36,
+        "duration_ms": 0.251715
+      },
+      {
+        "input_dims": "[[1,16,4,44],[1,16,4,44],[]]",
+        "count": 36,
+        "duration_ms": 0.228878
+      },
+      {
+        "input_dims": "[[1,16,4,45],[1,16,4,45],[]]",
+        "count": 36,
+        "duration_ms": 0.245871
+      },
+      {
+        "input_dims": "[[1,16,4,46],[1,16,4,46],[]]",
+        "count": 36,
+        "duration_ms": 0.249622
+      },
+      {
+        "input_dims": "[[1,16,4,47],[1,16,4,47],[]]",
+        "count": 36,
+        "duration_ms": 0.255563
+      },
+      {
+        "input_dims": "[[1,16,4,48],[1,16,4,48],[]]",
+        "count": 36,
+        "duration_ms": 0.264854
+      },
+      {
+        "input_dims": "[[1,16,4,49],[1,16,4,49],[]]",
+        "count": 36,
+        "duration_ms": 0.244311
+      },
+      {
+        "input_dims": "[[1,16,4,50],[1,16,4,50],[]]",
+        "count": 36,
+        "duration_ms": 0.250064
+      },
+      {
+        "input_dims": "[[1,16,4,51],[1,16,4,51],[]]",
+        "count": 36,
+        "duration_ms": 0.247365
+      },
+      {
+        "input_dims": "[[1,16,4,52],[1,16,4,52],[]]",
+        "count": 36,
+        "duration_ms": 0.249311
+      },
+      {
+        "input_dims": "[[1,16,4,53],[1,16,4,53],[]]",
+        "count": 36,
+        "duration_ms": 0.234638
+      },
+      {
+        "input_dims": "[[1,16,4,54],[1,16,4,54],[]]",
+        "count": 36,
+        "duration_ms": 0.232321
+      },
+      {
+        "input_dims": "[[1,16,4,55],[1,16,4,55],[]]",
+        "count": 36,
+        "duration_ms": 0.248429
+      },
+      {
+        "input_dims": "[[1,16,4,56],[1,16,4,56],[]]",
+        "count": 36,
+        "duration_ms": 0.249291
+      },
+      {
+        "input_dims": "[[1,16,4,57],[1,16,4,57],[]]",
+        "count": 36,
+        "duration_ms": 0.251839
+      },
+      {
+        "input_dims": "[[1,16,4,58],[1,16,4,58],[]]",
+        "count": 36,
+        "duration_ms": 0.25341
+      },
+      {
+        "input_dims": "[[1,16,4,59],[1,16,4,59],[]]",
+        "count": 36,
+        "duration_ms": 0.255444
+      },
+      {
+        "input_dims": "[[1,16,4,60],[1,16,4,60],[]]",
+        "count": 36,
+        "duration_ms": 0.252857
+      },
+      {
+        "input_dims": "[[1,16,4,61],[1,16,4,61],[]]",
+        "count": 36,
+        "duration_ms": 0.256297
+      },
+      {
+        "input_dims": "[[1,16,4,62],[1,16,4,62],[]]",
+        "count": 36,
+        "duration_ms": 0.244952
+      },
+      {
+        "input_dims": "[[1,16,4,63],[1,16,4,63],[]]",
+        "count": 36,
+        "duration_ms": 0.263896
+      },
+      {
+        "input_dims": "[[1,226,16,128],[1,226,16,128],[]]",
+        "count": 36,
+        "duration_ms": 0.323626
+      },
+      {
+        "input_dims": "[[1,1,64],[1,1,64],[]]",
+        "count": 30,
+        "duration_ms": 0.216839
+      },
+      {
+        "input_dims": "[[1,226,8,256],[1,226,8,256],[]]",
+        "count": 24,
+        "duration_ms": 0.246898
+      },
+      {
+        "input_dims": "[[1,6144,226],[1,6144,226],[]]",
+        "count": 18,
+        "duration_ms": 0.160401
+      },
+      {
+        "input_dims": "[[16],[16],[]]",
+        "count": 18,
+        "duration_ms": 0.153056
+      },
+      {
+        "input_dims": "[[1,226,16],[1,226,16],[]]",
+        "count": 18,
+        "duration_ms": 0.125325
+      },
+      {
+        "input_dims": "[[1,16,4,64,64],[1,16,4,64,64],[]]",
+        "count": 18,
+        "duration_ms": 0.221114
+      },
+      {
+        "input_dims": "[[1,16,4,1,1],[1,16,4,1,1],[]]",
+        "count": 18,
+        "duration_ms": 0.162916
+      },
+      {
+        "input_dims": "[[1,16,4,2,2],[1,16,4,2,2],[]]",
+        "count": 18,
+        "duration_ms": 0.134219
+      },
+      {
+        "input_dims": "[[1,16,4,3,3],[1,16,4,3,3],[]]",
+        "count": 18,
+        "duration_ms": 0.140659
+      },
+      {
+        "input_dims": "[[1,16,4,4,4],[1,16,4,4,4],[]]",
+        "count": 18,
+        "duration_ms": 0.1293
+      },
+      {
+        "input_dims": "[[1,16,4,5,5],[1,16,4,5,5],[]]",
+        "count": 18,
+        "duration_ms": 0.117399
+      },
+      {
+        "input_dims": "[[1,16,4,6,6],[1,16,4,6,6],[]]",
+        "count": 18,
+        "duration_ms": 0.118496
+      },
+      {
+        "input_dims": "[[1,16,4,7,7],[1,16,4,7,7],[]]",
+        "count": 18,
+        "duration_ms": 0.119813
+      },
+      {
+        "input_dims": "[[1,16,4,8,8],[1,16,4,8,8],[]]",
+        "count": 18,
+        "duration_ms": 0.122533
+      },
+      {
+        "input_dims": "[[1,16,4,9,9],[1,16,4,9,9],[]]",
+        "count": 18,
+        "duration_ms": 0.120173
+      },
+      {
+        "input_dims": "[[1,16,4,10,10],[1,16,4,10,10],[]]",
+        "count": 18,
+        "duration_ms": 0.119066
+      },
+      {
+        "input_dims": "[[1,16,4,11,11],[1,16,4,11,11],[]]",
+        "count": 18,
+        "duration_ms": 0.115703
+      },
+      {
+        "input_dims": "[[1,16,4,12,12],[1,16,4,12,12],[]]",
+        "count": 18,
+        "duration_ms": 0.127238
+      },
+      {
+        "input_dims": "[[1,16,4,13,13],[1,16,4,13,13],[]]",
+        "count": 18,
+        "duration_ms": 0.130372
+      },
+      {
+        "input_dims": "[[1,16,4,14,14],[1,16,4,14,14],[]]",
+        "count": 18,
+        "duration_ms": 0.118041
+      },
+      {
+        "input_dims": "[[1,16,4,15,15],[1,16,4,15,15],[]]",
+        "count": 18,
+        "duration_ms": 0.115248
+      },
+      {
+        "input_dims": "[[1,16,4,16,16],[1,16,4,16,16],[]]",
+        "count": 18,
+        "duration_ms": 0.121132
+      },
+      {
+        "input_dims": "[[1,16,4,17,17],[1,16,4,17,17],[]]",
+        "count": 18,
+        "duration_ms": 0.120078
+      },
+      {
+        "input_dims": "[[1,16,4,18,18],[1,16,4,18,18],[]]",
+        "count": 18,
+        "duration_ms": 0.122881
+      },
+      {
+        "input_dims": "[[1,16,4,19,19],[1,16,4,19,19],[]]",
+        "count": 18,
+        "duration_ms": 0.132806
+      },
+      {
+        "input_dims": "[[1,16,4,20,20],[1,16,4,20,20],[]]",
+        "count": 18,
+        "duration_ms": 0.120555
+      },
+      {
+        "input_dims": "[[1,16,4,21,21],[1,16,4,21,21],[]]",
+        "count": 18,
+        "duration_ms": 0.133468
+      },
+      {
+        "input_dims": "[[1,16,4,22,22],[1,16,4,22,22],[]]",
+        "count": 18,
+        "duration_ms": 0.12628
+      },
+      {
+        "input_dims": "[[1,16,4,23,23],[1,16,4,23,23],[]]",
+        "count": 18,
+        "duration_ms": 0.124229
+      },
+      {
+        "input_dims": "[[1,16,4,24,24],[1,16,4,24,24],[]]",
+        "count": 18,
+        "duration_ms": 0.121847
+      },
+      {
+        "input_dims": "[[1,16,4,25,25],[1,16,4,25,25],[]]",
+        "count": 18,
+        "duration_ms": 0.122507
+      },
+      {
+        "input_dims": "[[1,16,4,26,26],[1,16,4,26,26],[]]",
+        "count": 18,
+        "duration_ms": 0.122409
+      },
+      {
+        "input_dims": "[[1,16,4,27,27],[1,16,4,27,27],[]]",
+        "count": 18,
+        "duration_ms": 0.122462
+      },
+      {
+        "input_dims": "[[1,16,4,28,28],[1,16,4,28,28],[]]",
+        "count": 18,
+        "duration_ms": 0.119418
+      },
+      {
+        "input_dims": "[[1,16,4,29,29],[1,16,4,29,29],[]]",
+        "count": 18,
+        "duration_ms": 0.127399
+      },
+      {
+        "input_dims": "[[1,16,4,30,30],[1,16,4,30,30],[]]",
+        "count": 18,
+        "duration_ms": 0.122782
+      },
+      {
+        "input_dims": "[[1,16,4,31,31],[1,16,4,31,31],[]]",
+        "count": 18,
+        "duration_ms": 0.120683
+      },
+      {
+        "input_dims": "[[1,16,4,32,32],[1,16,4,32,32],[]]",
+        "count": 18,
+        "duration_ms": 0.138356
+      },
+      {
+        "input_dims": "[[1,16,4,33,33],[1,16,4,33,33],[]]",
+        "count": 18,
+        "duration_ms": 0.126854
+      },
+      {
+        "input_dims": "[[1,16,4,34,34],[1,16,4,34,34],[]]",
+        "count": 18,
+        "duration_ms": 0.120147
+      },
+      {
+        "input_dims": "[[1,16,4,35,35],[1,16,4,35,35],[]]",
+        "count": 18,
+        "duration_ms": 0.1238
+      },
+      {
+        "input_dims": "[[1,16,4,36,36],[1,16,4,36,36],[]]",
+        "count": 18,
+        "duration_ms": 0.117978
+      },
+      {
+        "input_dims": "[[1,16,4,37,37],[1,16,4,37,37],[]]",
+        "count": 18,
+        "duration_ms": 0.124341
+      },
+      {
+        "input_dims": "[[1,16,4,38,38],[1,16,4,38,38],[]]",
+        "count": 18,
+        "duration_ms": 0.11906
+      },
+      {
+        "input_dims": "[[1,16,4,39,39],[1,16,4,39,39],[]]",
+        "count": 18,
+        "duration_ms": 0.127474
+      },
+      {
+        "input_dims": "[[1,16,4,40,40],[1,16,4,40,40],[]]",
+        "count": 18,
+        "duration_ms": 0.121878
+      },
+      {
+        "input_dims": "[[1,16,4,41,41],[1,16,4,41,41],[]]",
+        "count": 18,
+        "duration_ms": 0.138553
+      },
+      {
+        "input_dims": "[[1,16,4,42,42],[1,16,4,42,42],[]]",
+        "count": 18,
+        "duration_ms": 0.118772
+      },
+      {
+        "input_dims": "[[1,16,4,43,43],[1,16,4,43,43],[]]",
+        "count": 18,
+        "duration_ms": 0.118716
+      },
+      {
+        "input_dims": "[[1,16,4,44,44],[1,16,4,44,44],[]]",
+        "count": 18,
+        "duration_ms": 0.117185
+      },
+      {
+        "input_dims": "[[1,16,4,45,45],[1,16,4,45,45],[]]",
+        "count": 18,
+        "duration_ms": 0.123956
+      },
+      {
+        "input_dims": "[[1,16,4,46,46],[1,16,4,46,46],[]]",
+        "count": 18,
+        "duration_ms": 0.117702
+      },
+      {
+        "input_dims": "[[1,16,4,47,47],[1,16,4,47,47],[]]",
+        "count": 18,
+        "duration_ms": 0.131009
+      },
+      {
+        "input_dims": "[[1,16,4,48,48],[1,16,4,48,48],[]]",
+        "count": 18,
+        "duration_ms": 0.123058
+      },
+      {
+        "input_dims": "[[1,16,4,49,49],[1,16,4,49,49],[]]",
+        "count": 18,
+        "duration_ms": 0.117502
+      },
+      {
+        "input_dims": "[[1,16,4,50,50],[1,16,4,50,50],[]]",
+        "count": 18,
+        "duration_ms": 0.119445
+      },
+      {
+        "input_dims": "[[1,16,4,51,51],[1,16,4,51,51],[]]",
+        "count": 18,
+        "duration_ms": 0.121688
+      },
+      {
+        "input_dims": "[[1,16,4,52,52],[1,16,4,52,52],[]]",
+        "count": 18,
+        "duration_ms": 0.126176
+      },
+      {
+        "input_dims": "[[1,16,4,53,53],[1,16,4,53,53],[]]",
+        "count": 18,
+        "duration_ms": 0.119259
+      },
+      {
+        "input_dims": "[[1,16,4,54,54],[1,16,4,54,54],[]]",
+        "count": 18,
+        "duration_ms": 0.114994
+      },
+      {
+        "input_dims": "[[1,16,4,55,55],[1,16,4,55,55],[]]",
+        "count": 18,
+        "duration_ms": 0.119513
+      },
+      {
+        "input_dims": "[[1,16,4,56,56],[1,16,4,56,56],[]]",
+        "count": 18,
+        "duration_ms": 0.135254
+      },
+      {
+        "input_dims": "[[1,16,4,57,57],[1,16,4,57,57],[]]",
+        "count": 18,
+        "duration_ms": 0.127021
+      },
+      {
+        "input_dims": "[[1,16,4,58,58],[1,16,4,58,58],[]]",
+        "count": 18,
+        "duration_ms": 0.118886
+      },
+      {
+        "input_dims": "[[1,16,4,59,59],[1,16,4,59,59],[]]",
+        "count": 18,
+        "duration_ms": 0.121922
+      },
+      {
+        "input_dims": "[[1,16,4,60,60],[1,16,4,60,60],[]]",
+        "count": 18,
+        "duration_ms": 0.124355
+      },
+      {
+        "input_dims": "[[1,16,4,61,61],[1,16,4,61,61],[]]",
+        "count": 18,
+        "duration_ms": 0.124656
+      },
+      {
+        "input_dims": "[[1,16,4,62,62],[1,16,4,62,62],[]]",
+        "count": 18,
+        "duration_ms": 0.13013
+      },
+      {
+        "input_dims": "[[1,16,4,63,63],[1,16,4,63,63],[]]",
+        "count": 18,
+        "duration_ms": 0.119378
+      },
+      {
+        "input_dims": "[[1,248320],[1,248320],[]]",
+        "count": 16,
+        "duration_ms": 0.239619
+      },
+      {
+        "input_dims": "[[1,1],[1,1],[]]",
+        "count": 15,
+        "duration_ms": 0.195418
+      },
+      {
+        "input_dims": "[[4,1,1],[4,1,1],[]]",
+        "count": 15,
+        "duration_ms": 0.149481
+      },
+      {
+        "input_dims": "[[3,1,1,1],[3,1,1,1],[]]",
+        "count": 15,
+        "duration_ms": 0.159096
+      },
+      {
+        "input_dims": "[[1,1,11],[1,1,11],[]]",
+        "count": 15,
+        "duration_ms": 0.180179
+      },
+      {
+        "input_dims": "[[1,1,10],[1,1,10],[]]",
+        "count": 15,
+        "duration_ms": 0.107679
+      },
+      {
+        "input_dims": "[[256],[256],[]]",
+        "count": 12,
+        "duration_ms": 0.087424
+      },
+      {
+        "input_dims": "[[1,226,2,256],[1,226,2,256],[]]",
+        "count": 12,
+        "duration_ms": 0.130852
+      },
+      {
+        "input_dims": "[[0],[0],[]]",
+        "count": 12,
+        "duration_ms": 0.012148
+      },
+      {
+        "input_dims": "[[1,226],[1,226],[]]",
+        "count": 6,
+        "duration_ms": 0.06617
+      },
+      {
+        "input_dims": "[[226],[226],[]]",
+        "count": 4,
+        "duration_ms": 0.056408
+      },
+      {
+        "input_dims": "[[9,16,2,2],[9,16,2,2],[]]",
+        "count": 3,
+        "duration_ms": 0.026858
+      },
+      {
+        "input_dims": "[[1,3],[1,3],[]]",
+        "count": 2,
+        "duration_ms": 0.039708
+      },
+      {
+        "input_dims": "[[],[],[]]",
+        "count": 2,
+        "duration_ms": 0.012286
+      },
+      {
+        "input_dims": "[[1,226,64],[1,226,64],[]]",
+        "count": 2,
+        "duration_ms": 0.013616
+      },
+      {
+        "input_dims": "[[1,227],[1,227],[]]",
+        "count": 2,
+        "duration_ms": 0.018538
+      },
+      {
+        "input_dims": "[[1,228],[1,228],[]]",
+        "count": 2,
+        "duration_ms": 0.020781
+      },
+      {
+        "input_dims": "[[1,229],[1,229],[]]",
+        "count": 2,
+        "duration_ms": 0.019057
+      },
+      {
+        "input_dims": "[[1,230],[1,230],[]]",
+        "count": 2,
+        "duration_ms": 0.022752
+      },
+      {
+        "input_dims": "[[1,231],[1,231],[]]",
+        "count": 2,
+        "duration_ms": 0.017436
+      },
+      {
+        "input_dims": "[[1,232],[1,232],[]]",
+        "count": 2,
+        "duration_ms": 0.021136
+      },
+      {
+        "input_dims": "[[1,233],[1,233],[]]",
+        "count": 2,
+        "duration_ms": 0.019192
+      },
+      {
+        "input_dims": "[[1,234],[1,234],[]]",
+        "count": 2,
+        "duration_ms": 0.018343
+      },
+      {
+        "input_dims": "[[1,235],[1,235],[]]",
+        "count": 2,
+        "duration_ms": 0.017914
+      },
+      {
+        "input_dims": "[[1,236],[1,236],[]]",
+        "count": 2,
+        "duration_ms": 0.022208
+      },
+      {
+        "input_dims": "[[1,237],[1,237],[]]",
+        "count": 2,
+        "duration_ms": 0.018407
+      },
+      {
+        "input_dims": "[[1,238],[1,238],[]]",
+        "count": 2,
+        "duration_ms": 0.017666
+      },
+      {
+        "input_dims": "[[1,239],[1,239],[]]",
+        "count": 2,
+        "duration_ms": 0.021521
+      },
+      {
+        "input_dims": "[[1,240],[1,240],[]]",
+        "count": 2,
+        "duration_ms": 0.017668
+      },
+      {
+        "input_dims": "[[1,241],[1,241],[]]",
+        "count": 2,
+        "duration_ms": 0.01796
+      },
+      {
+        "input_dims": "[[144],[144],[]]",
+        "count": 1,
+        "duration_ms": 0.00061
+      },
+      {
+        "input_dims": "[[576,1536],[576,1536],[]]",
+        "count": 1,
+        "duration_ms": 0.009312
+      },
+      {
+        "input_dims": "[[18],[18],[]]",
+        "count": 1,
+        "duration_ms": 0.012145
+      },
+      {
+        "input_dims": "[[32],[32],[]]",
+        "count": 1,
+        "duration_ms": 0.00603
+      },
+      {
+        "input_dims": "[[1,576],[1,576],[]]",
+        "count": 1,
+        "duration_ms": 0.010035
+      },
+      {
+        "input_dims": "[[1,1,576,2],[1,1,576,2],[]]",
+        "count": 1,
+        "duration_ms": 0.01028
+      },
+      {
+        "input_dims": "[[576,1024],[576,1024],[]]",
+        "count": 1,
+        "duration_ms": 0.008969
+      },
+      {
+        "input_dims": "[[3,1,1,226],[3,1,1,226],[]]",
+        "count": 1,
+        "duration_ms": 0.013361
+      },
+      {
+        "input_dims": "[[1,226,11],[1,226,11],[]]",
+        "count": 1,
+        "duration_ms": 0.012281
+      },
+      {
+        "input_dims": "[[1,226,10],[1,226,10],[]]",
+        "count": 1,
+        "duration_ms": 0.010054
+      }
+    ],
+    "aten::empty_like": [
+      {
+        "input_dims": "[[1,1,2048],[],[],[],[],[]]",
+        "count": 735,
+        "duration_ms": 5.51784
+      },
+      {
+        "input_dims": "[[1,6144,1],[],[],[],[],[]]",
+        "count": 270,
+        "duration_ms": 2.189502
+      },
+      {
+        "input_dims": "[[16,128],[],[],[],[],[]]",
+        "count": 270,
+        "duration_ms": 2.126452
+      },
+      {
+        "input_dims": "[[1,1,8,256],[],[],[],[],[]]",
+        "count": 90,
+        "duration_ms": 0.73057
+      },
+      {
+        "input_dims": "[[1,4,2,256],[],[],[],[],[]]",
+        "count": 90,
+        "duration_ms": 0.819179
+      },
+      {
+        "input_dims": "[[1,16,226,128],[],[],[],[],[]]",
+        "count": 54,
+        "duration_ms": 0.383259
+      },
+      {
+        "input_dims": "[[1,16,226],[],[],[],[],[]]",
+        "count": 36,
+        "duration_ms": 0.247767
+      },
+      {
+        "input_dims": "[[1,576,16,64],[],[],[],[],[]]",
+        "count": 24,
+        "duration_ms": 0.20366
+      },
+      {
+        "input_dims": "[[1,6144,226],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.165501
+      },
+      {
+        "input_dims": "[[1,16,4,64,64],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.156042
+      },
+      {
+        "input_dims": "[[1,16,4,1],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.151322
+      },
+      {
+        "input_dims": "[[1,16,4,1,1],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.163055
+      },
+      {
+        "input_dims": "[[1,16,4,2],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.130123
+      },
+      {
+        "input_dims": "[[1,16,4,2,2],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.14634
+      },
+      {
+        "input_dims": "[[1,16,4,3],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.127565
+      },
+      {
+        "input_dims": "[[1,16,4,3,3],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.136391
+      },
+      {
+        "input_dims": "[[1,16,4,4],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.121906
+      },
+      {
+        "input_dims": "[[1,16,4,4,4],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.123644
+      },
+      {
+        "input_dims": "[[1,16,4,5],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.115734
+      },
+      {
+        "input_dims": "[[1,16,4,5,5],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.11114
+      },
+      {
+        "input_dims": "[[1,16,4,6],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.133637
+      },
+      {
+        "input_dims": "[[1,16,4,6,6],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.1182
+      },
+      {
+        "input_dims": "[[1,16,4,7],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.116452
+      },
+      {
+        "input_dims": "[[1,16,4,7,7],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.113726
+      },
+      {
+        "input_dims": "[[1,16,4,8],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.116998
+      },
+      {
+        "input_dims": "[[1,16,4,8,8],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.120158
+      },
+      {
+        "input_dims": "[[1,16,4,9],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.12652
+      },
+      {
+        "input_dims": "[[1,16,4,9,9],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.117091
+      },
+      {
+        "input_dims": "[[1,16,4,10],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.119202
+      },
+      {
+        "input_dims": "[[1,16,4,10,10],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.116358
+      },
+      {
+        "input_dims": "[[1,16,4,11],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.116137
+      },
+      {
+        "input_dims": "[[1,16,4,11,11],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.111329
+      },
+      {
+        "input_dims": "[[1,16,4,12],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.11374
+      },
+      {
+        "input_dims": "[[1,16,4,12,12],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.124359
+      },
+      {
+        "input_dims": "[[1,16,4,13],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.119723
+      },
+      {
+        "input_dims": "[[1,16,4,13,13],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.112038
+      },
+      {
+        "input_dims": "[[1,16,4,14],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.123814
+      },
+      {
+        "input_dims": "[[1,16,4,14,14],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.117962
+      },
+      {
+        "input_dims": "[[1,16,4,15],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.133012
+      },
+      {
+        "input_dims": "[[1,16,4,15,15],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.110732
+      },
+      {
+        "input_dims": "[[1,16,4,16],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.118718
+      },
+      {
+        "input_dims": "[[1,16,4,16,16],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.108475
+      },
+      {
+        "input_dims": "[[1,16,4,17],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.116151
+      },
+      {
+        "input_dims": "[[1,16,4,17,17],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.12351
+      },
+      {
+        "input_dims": "[[1,16,4,18],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.122112
+      },
+      {
+        "input_dims": "[[1,16,4,18,18],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.11194
+      },
+      {
+        "input_dims": "[[1,16,4,19],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.115874
+      },
+      {
+        "input_dims": "[[1,16,4,19,19],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.124994
+      },
+      {
+        "input_dims": "[[1,16,4,20],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.116096
+      },
+      {
+        "input_dims": "[[1,16,4,20,20],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.109249
+      },
+      {
+        "input_dims": "[[1,16,4,21],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.114256
+      },
+      {
+        "input_dims": "[[1,16,4,21,21],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.120965
+      },
+      {
+        "input_dims": "[[1,16,4,22],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.11073
+      },
+      {
+        "input_dims": "[[1,16,4,22,22],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.131087
+      },
+      {
+        "input_dims": "[[1,16,4,23],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.124039
+      },
+      {
+        "input_dims": "[[1,16,4,23,23],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.115929
+      },
+      {
+        "input_dims": "[[1,16,4,24],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.120292
+      },
+      {
+        "input_dims": "[[1,16,4,24,24],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.119387
+      },
+      {
+        "input_dims": "[[1,16,4,25],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.113921
+      },
+      {
+        "input_dims": "[[1,16,4,25,25],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.107975
+      },
+      {
+        "input_dims": "[[1,16,4,26],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.106115
+      },
+      {
+        "input_dims": "[[1,16,4,26,26],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.109516
+      },
+      {
+        "input_dims": "[[1,16,4,27],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.129346
+      },
+      {
+        "input_dims": "[[1,16,4,27,27],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.111407
+      },
+      {
+        "input_dims": "[[1,16,4,28],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.110451
+      },
+      {
+        "input_dims": "[[1,16,4,28,28],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.118707
+      },
+      {
+        "input_dims": "[[1,16,4,29],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.113609
+      },
+      {
+        "input_dims": "[[1,16,4,29,29],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.114089
+      },
+      {
+        "input_dims": "[[1,16,4,30],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.11213
+      },
+      {
+        "input_dims": "[[1,16,4,30,30],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.116866
+      },
+      {
+        "input_dims": "[[1,16,4,31],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.118963
+      },
+      {
+        "input_dims": "[[1,16,4,31,31],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.118658
+      },
+      {
+        "input_dims": "[[1,16,4,32],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.118422
+      },
+      {
+        "input_dims": "[[1,16,4,32,32],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.131906
+      },
+      {
+        "input_dims": "[[1,16,4,33],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.116015
+      },
+      {
+        "input_dims": "[[1,16,4,33,33],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.111649
+      },
+      {
+        "input_dims": "[[1,16,4,34],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.128869
+      },
+      {
+        "input_dims": "[[1,16,4,34,34],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.108629
+      },
+      {
+        "input_dims": "[[1,16,4,35],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.111746
+      },
+      {
+        "input_dims": "[[1,16,4,35,35],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.106898
+      },
+      {
+        "input_dims": "[[1,16,4,36],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.104197
+      },
+      {
+        "input_dims": "[[1,16,4,36,36],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.122477
+      },
+      {
+        "input_dims": "[[1,16,4,37],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.118286
+      },
+      {
+        "input_dims": "[[1,16,4,37,37],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.113708
+      },
+      {
+        "input_dims": "[[1,16,4,38],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.120169
+      },
+      {
+        "input_dims": "[[1,16,4,38,38],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.11184
+      },
+      {
+        "input_dims": "[[1,16,4,39],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.123241
+      },
+      {
+        "input_dims": "[[1,16,4,39,39],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.128513
+      },
+      {
+        "input_dims": "[[1,16,4,40],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.112239
+      },
+      {
+        "input_dims": "[[1,16,4,40,40],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.111663
+      },
+      {
+        "input_dims": "[[1,16,4,41],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.115206
+      },
+      {
+        "input_dims": "[[1,16,4,41,41],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.114429
+      },
+      {
+        "input_dims": "[[1,16,4,42],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.118351
+      },
+      {
+        "input_dims": "[[1,16,4,42,42],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.122177
+      },
+      {
+        "input_dims": "[[1,16,4,43],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.133024
+      },
+      {
+        "input_dims": "[[1,16,4,43,43],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.109886
+      },
+      {
+        "input_dims": "[[1,16,4,44],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.10278
+      },
+      {
+        "input_dims": "[[1,16,4,44,44],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.105648
+      },
+      {
+        "input_dims": "[[1,16,4,45],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.109063
+      },
+      {
+        "input_dims": "[[1,16,4,45,45],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.11666
+      },
+      {
+        "input_dims": "[[1,16,4,46],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.121514
+      },
+      {
+        "input_dims": "[[1,16,4,46,46],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.115334
+      },
+      {
+        "input_dims": "[[1,16,4,47],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.126999
+      },
+      {
+        "input_dims": "[[1,16,4,47,47],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.111243
+      },
+      {
+        "input_dims": "[[1,16,4,48],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.12024
+      },
+      {
+        "input_dims": "[[1,16,4,48,48],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.11032
+      },
+      {
+        "input_dims": "[[1,16,4,49],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.117606
+      },
+      {
+        "input_dims": "[[1,16,4,49,49],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.111923
+      },
+      {
+        "input_dims": "[[1,16,4,50],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.114939
+      },
+      {
+        "input_dims": "[[1,16,4,50,50],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.115962
+      },
+      {
+        "input_dims": "[[1,16,4,51],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.113251
+      },
+      {
+        "input_dims": "[[1,16,4,51,51],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.116914
+      },
+      {
+        "input_dims": "[[1,16,4,52],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.123919
+      },
+      {
+        "input_dims": "[[1,16,4,52,52],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.113099
+      },
+      {
+        "input_dims": "[[1,16,4,53],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.111232
+      },
+      {
+        "input_dims": "[[1,16,4,53,53],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.11323
+      },
+      {
+        "input_dims": "[[1,16,4,54],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.110163
+      },
+      {
+        "input_dims": "[[1,16,4,54,54],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.105755
+      },
+      {
+        "input_dims": "[[1,16,4,55],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.121543
+      },
+      {
+        "input_dims": "[[1,16,4,55,55],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.11623
+      },
+      {
+        "input_dims": "[[1,16,4,56],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.109148
+      },
+      {
+        "input_dims": "[[1,16,4,56,56],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.113179
+      },
+      {
+        "input_dims": "[[1,16,4,57],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.113684
+      },
+      {
+        "input_dims": "[[1,16,4,57,57],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.109399
+      },
+      {
+        "input_dims": "[[1,16,4,58],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.109031
+      },
+      {
+        "input_dims": "[[1,16,4,58,58],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.109149
+      },
+      {
+        "input_dims": "[[1,16,4,59],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.115909
+      },
+      {
+        "input_dims": "[[1,16,4,59,59],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.113302
+      },
+      {
+        "input_dims": "[[1,16,4,60],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.113651
+      },
+      {
+        "input_dims": "[[1,16,4,60,60],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.114814
+      },
+      {
+        "input_dims": "[[1,16,4,61],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.120688
+      },
+      {
+        "input_dims": "[[1,16,4,61,61],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.114557
+      },
+      {
+        "input_dims": "[[1,16,4,62],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.11551
+      },
+      {
+        "input_dims": "[[1,16,4,62,62],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.124915
+      },
+      {
+        "input_dims": "[[1,16,4,63],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.116134
+      },
+      {
+        "input_dims": "[[1,16,4,63,63],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.113373
+      },
+      {
+        "input_dims": "[[1,16,4,64,128],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.140226
+      },
+      {
+        "input_dims": "[[1,226,16,128],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.172697
+      },
+      {
+        "input_dims": "[[1,16,128,128],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.141937
+      },
+      {
+        "input_dims": "[[1,226,8,256],[],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.155389
+      },
+      {
+        "input_dims": "[[1,1],[],[],[],[],[]]",
+        "count": 15,
+        "duration_ms": 0.119908
+      },
+      {
+        "input_dims": "[[4,1,1],[],[],[],[],[]]",
+        "count": 15,
+        "duration_ms": 0.095927
+      },
+      {
+        "input_dims": "[[9,16,2,2],[],[],[],[],[]]",
+        "count": 3,
+        "duration_ms": 0.020271
+      },
+      {
+        "input_dims": "[[1,226],[],[],[],[],[]]",
+        "count": 2,
+        "duration_ms": 0.021997
+      },
+      {
+        "input_dims": "[[1,226,2048],[],[],[],[],[]]",
+        "count": 2,
+        "duration_ms": 0.013377
+      }
+    ],
+    "aten::empty_strided": [
+      {
+        "input_dims": "[[],[],[],[],[],[]]",
+        "count": 4391,
+        "duration_ms": 24.653268
+      }
+    ],
+    "aten::linear": [
+      {
+        "input_dims": "[[1,1,2048],[2048,2048],[]]",
+        "count": 360,
+        "duration_ms": 12.49179
+      },
+      {
+        "input_dims": "[[1,1,2048],[12288,2048],[]]",
+        "count": 360,
+        "duration_ms": 10.846536
+      },
+      {
+        "input_dims": "[[1,1,6144],[2048,6144],[]]",
+        "count": 360,
+        "duration_ms": 10.680524
+      },
+      {
+        "input_dims": "[[1,1,2048],[512,2048],[]]",
+        "count": 180,
+        "duration_ms": 5.09351
+      },
+      {
+        "input_dims": "[[1,1,2048],[4096,2048],[]]",
+        "count": 90,
+        "duration_ms": 2.788525
+      },
+      {
+        "input_dims": "[[1,226,2048],[6144,2048],[]]",
+        "count": 66,
+        "duration_ms": 2.851328
+      },
+      {
+        "input_dims": "[[1,226,2048],[2048,2048],[]]",
+        "count": 42,
+        "duration_ms": 2.508882
+      },
+      {
+        "input_dims": "[[1,226,2048],[16,2048],[]]",
+        "count": 36,
+        "duration_ms": 1.500188
+      },
+      {
+        "input_dims": "[[576,1024],[3072,1024],[3072]]",
+        "count": 24,
+        "duration_ms": 1.295509
+      },
+      {
+        "input_dims": "[[576,1024],[1024,1024],[1024]]",
+        "count": 24,
+        "duration_ms": 1.749969
+      },
+      {
+        "input_dims": "[[576,1024],[4096,1024],[4096]]",
+        "count": 24,
+        "duration_ms": 1.305228
+      },
+      {
+        "input_dims": "[[576,4096],[1024,4096],[1024]]",
+        "count": 24,
+        "duration_ms": 1.206487
+      },
+      {
+        "input_dims": "[[1,226,6144],[2048,6144],[]]",
+        "count": 24,
+        "duration_ms": 0.993759
+      },
+      {
+        "input_dims": "[[1,1,2048],[248320,2048],[]]",
+        "count": 16,
+        "duration_ms": 0.540827
+      },
+      {
+        "input_dims": "[[1,226,2048],[512,2048],[]]",
+        "count": 12,
+        "duration_ms": 0.565146
+      },
+      {
+        "input_dims": "[[1,226,2048],[4096,2048],[]]",
+        "count": 6,
+        "duration_ms": 0.260173
+      },
+      {
+        "input_dims": "[[144,4096],[4096,4096],[4096]]",
+        "count": 1,
+        "duration_ms": 0.054638
+      },
+      {
+        "input_dims": "[[144,4096],[2048,4096],[2048]]",
+        "count": 1,
+        "duration_ms": 0.087331
+      }
+    ],
+    "aten::matmul": [
+      {
+        "input_dims": "[[1,1,2048],[2048,2048]]",
+        "count": 360,
+        "duration_ms": 10.368235
+      },
+      {
+        "input_dims": "[[1,1,2048],[2048,12288]]",
+        "count": 360,
+        "duration_ms": 8.974386
+      },
+      {
+        "input_dims": "[[1,1,6144],[6144,2048]]",
+        "count": 360,
+        "duration_ms": 8.964521
+      },
+      {
+        "input_dims": "[[1,1,2048],[2048,512]]",
+        "count": 180,
+        "duration_ms": 4.245917
+      },
+      {
+        "input_dims": "[[1,16,64,128],[1,16,128,128]]",
+        "count": 144,
+        "duration_ms": 4.779924
+      },
+      {
+        "input_dims": "[[1,1,2048],[2048,4096]]",
+        "count": 90,
+        "duration_ms": 2.274977
+      },
+      {
+        "input_dims": "[[1,16,64,128],[1,16,128,64]]",
+        "count": 72,
+        "duration_ms": 2.723629
+      },
+      {
+        "input_dims": "[[1,16,64,64],[1,16,64,128]]",
+        "count": 72,
+        "duration_ms": 2.250954
+      },
+      {
+        "input_dims": "[[1,16,128,64],[1,16,64,128]]",
+        "count": 72,
+        "duration_ms": 2.578331
+      },
+      {
+        "input_dims": "[[1,226,2048],[2048,6144]]",
+        "count": 66,
+        "duration_ms": 2.470432
+      },
+      {
+        "input_dims": "[[1,226,2048],[2048,2048]]",
+        "count": 42,
+        "duration_ms": 2.195495
+      },
+      {
+        "input_dims": "[[1,226,2048],[2048,16]]",
+        "count": 36,
+        "duration_ms": 1.352525
+      },
+      {
+        "input_dims": "[[1,16,4,64,64],[1,16,4,64,128]]",
+        "count": 36,
+        "duration_ms": 2.012884
+      },
+      {
+        "input_dims": "[[1,226,6144],[6144,2048]]",
+        "count": 24,
+        "duration_ms": 0.885388
+      },
+      {
+        "input_dims": "[[1,16,4,64,128],[1,16,4,128,64]]",
+        "count": 18,
+        "duration_ms": 1.167282
+      },
+      {
+        "input_dims": "[[1,1,2048],[2048,248320]]",
+        "count": 16,
+        "duration_ms": 0.465333
+      },
+      {
+        "input_dims": "[[3,1,32,1],[3,1,1,1]]",
+        "count": 15,
+        "duration_ms": 0.786322
+      },
+      {
+        "input_dims": "[[1,226,2048],[2048,512]]",
+        "count": 12,
+        "duration_ms": 0.505737
+      },
+      {
+        "input_dims": "[[1,226,2048],[2048,4096]]",
+        "count": 6,
+        "duration_ms": 0.221404
+      },
+      {
+        "input_dims": "[[3,1,32,1],[3,1,1,226]]",
+        "count": 1,
+        "duration_ms": 0.079232
+      }
+    ],
+    "aten::mm": [
+      {
+        "input_dims": "[[1,2048],[2048,2048]]",
+        "count": 360,
+        "duration_ms": 8.366801
+      },
+      {
+        "input_dims": "[[1,2048],[2048,12288]]",
+        "count": 360,
+        "duration_ms": 7.070542
+      },
+      {
+        "input_dims": "[[1,6144],[6144,2048]]",
+        "count": 360,
+        "duration_ms": 7.001
+      },
+      {
+        "input_dims": "[[1,2048],[2048,512]]",
+        "count": 180,
+        "duration_ms": 3.426954
+      },
+      {
+        "input_dims": "[[1,2048],[2048,4096]]",
+        "count": 90,
+        "duration_ms": 1.866025
+      },
+      {
+        "input_dims": "[[226,2048],[2048,6144]]",
+        "count": 66,
+        "duration_ms": 2.103197
+      },
+      {
+        "input_dims": "[[226,2048],[2048,2048]]",
+        "count": 42,
+        "duration_ms": 1.941506
+      },
+      {
+        "input_dims": "[[226,2048],[2048,16]]",
+        "count": 36,
+        "duration_ms": 1.187211
+      },
+      {
+        "input_dims": "[[226,6144],[6144,2048]]",
+        "count": 24,
+        "duration_ms": 0.777792
+      },
+      {
+        "input_dims": "[[1,2048],[2048,248320]]",
+        "count": 16,
+        "duration_ms": 0.389896
+      },
+      {
+        "input_dims": "[[226,2048],[2048,512]]",
+        "count": 12,
+        "duration_ms": 0.44648
+      },
+      {
+        "input_dims": "[[226,2048],[2048,4096]]",
+        "count": 6,
+        "duration_ms": 0.189995
+      }
+    ],
+    "aten::mul": [
+      {
+        "input_dims": "[[1,1,6144],[1,1,6144]]",
+        "count": 360,
+        "duration_ms": 4.134117
+      },
+      {
+        "input_dims": "[[1,16,64,128],[1,16,64,1]]",
+        "count": 144,
+        "duration_ms": 1.52034
+      },
+      {
+        "input_dims": "[[576,16,64],[576,1,64]]",
+        "count": 96,
+        "duration_ms": 1.151308
+      },
+      {
+        "input_dims": "[[1,1,2048],[1,1,2048]]",
+        "count": 90,
+        "duration_ms": 1.035424
+      },
+      {
+        "input_dims": "[[1,16,64,64],[1,16,64,64]]",
+        "count": 72,
+        "duration_ms": 0.861542
+      },
+      {
+        "input_dims": "[[1,16,128,128],[1,16,1,1]]",
+        "count": 72,
+        "duration_ms": 0.747375
+      },
+      {
+        "input_dims": "[[1,226,2048],[1,226,1]]",
+        "count": 49,
+        "duration_ms": 0.612253
+      },
+      {
+        "input_dims": "[[1,226,2048],[2048]]",
+        "count": 49,
+        "duration_ms": 0.515058
+      },
+      {
+        "input_dims": "[[1,226,16,128],[1,226,16,128]]",
+        "count": 36,
+        "duration_ms": 0.416212
+      },
+      {
+        "input_dims": "[[1,226,16,128],[1,226,16,1]]",
+        "count": 36,
+        "duration_ms": 0.425417
+      },
+      {
+        "input_dims": "[[1,16,256,128],[1,16,256,1]]",
+        "count": 36,
+        "duration_ms": 0.431487
+      },
+      {
+        "input_dims": "[[1,1,64],[]]",
+        "count": 30,
+        "duration_ms": 0.379549
+      },
+      {
+        "input_dims": "[[1,226,6144],[1,226,6144]]",
+        "count": 24,
+        "duration_ms": 0.268262
+      },
+      {
+        "input_dims": "[[16],[1,226,16]]",
+        "count": 18,
+        "duration_ms": 0.223375
+      },
+      {
+        "input_dims": "[[1,16,256,128],[]]",
+        "count": 18,
+        "duration_ms": 0.263634
+      },
+      {
+        "input_dims": "[[1,16,4,64,64],[1,16,4,64,64]]",
+        "count": 18,
+        "duration_ms": 0.219192
+      },
+      {
+        "input_dims": "[[1,16,4,1,1],[1,16,4,1,1]]",
+        "count": 18,
+        "duration_ms": 0.196867
+      },
+      {
+        "input_dims": "[[1,16,4,2,1],[1,16,4,2,2]]",
+        "count": 18,
+        "duration_ms": 0.222933
+      },
+      {
+        "input_dims": "[[1,16,4,3,1],[1,16,4,3,3]]",
+        "count": 18,
+        "duration_ms": 0.201719
+      },
+      {
+        "input_dims": "[[1,16,4,4,1],[1,16,4,4,4]]",
+        "count": 18,
+        "duration_ms": 0.200605
+      },
+      {
+        "input_dims": "[[1,16,4,5,1],[1,16,4,5,5]]",
+        "count": 18,
+        "duration_ms": 0.175356
+      },
+      {
+        "input_dims": "[[1,16,4,6,1],[1,16,4,6,6]]",
+        "count": 18,
+        "duration_ms": 0.190391
+      },
+      {
+        "input_dims": "[[1,16,4,7,1],[1,16,4,7,7]]",
+        "count": 18,
+        "duration_ms": 0.18998
+      },
+      {
+        "input_dims": "[[1,16,4,8,1],[1,16,4,8,8]]",
+        "count": 18,
+        "duration_ms": 0.197557
+      },
+      {
+        "input_dims": "[[1,16,4,9,1],[1,16,4,9,9]]",
+        "count": 18,
+        "duration_ms": 0.179591
+      },
+      {
+        "input_dims": "[[1,16,4,10,1],[1,16,4,10,10]]",
+        "count": 18,
+        "duration_ms": 0.17555
+      },
+      {
+        "input_dims": "[[1,16,4,11,1],[1,16,4,11,11]]",
+        "count": 18,
+        "duration_ms": 0.1846
+      },
+      {
+        "input_dims": "[[1,16,4,12,1],[1,16,4,12,12]]",
+        "count": 18,
+        "duration_ms": 0.191044
+      },
+      {
+        "input_dims": "[[1,16,4,13,1],[1,16,4,13,13]]",
+        "count": 18,
+        "duration_ms": 0.176891
+      },
+      {
+        "input_dims": "[[1,16,4,14,1],[1,16,4,14,14]]",
+        "count": 18,
+        "duration_ms": 0.180106
+      },
+      {
+        "input_dims": "[[1,16,4,15,1],[1,16,4,15,15]]",
+        "count": 18,
+        "duration_ms": 0.170341
+      },
+      {
+        "input_dims": "[[1,16,4,16,1],[1,16,4,16,16]]",
+        "count": 18,
+        "duration_ms": 0.169461
+      },
+      {
+        "input_dims": "[[1,16,4,17,1],[1,16,4,17,17]]",
+        "count": 18,
+        "duration_ms": 0.175633
+      },
+      {
+        "input_dims": "[[1,16,4,18,1],[1,16,4,18,18]]",
+        "count": 18,
+        "duration_ms": 0.180445
+      },
+      {
+        "input_dims": "[[1,16,4,19,1],[1,16,4,19,19]]",
+        "count": 18,
+        "duration_ms": 0.181419
+      },
+      {
+        "input_dims": "[[1,16,4,20,1],[1,16,4,20,20]]",
+        "count": 18,
+        "duration_ms": 0.184585
+      },
+      {
+        "input_dims": "[[1,16,4,21,1],[1,16,4,21,21]]",
+        "count": 18,
+        "duration_ms": 0.186843
+      },
+      {
+        "input_dims": "[[1,16,4,22,1],[1,16,4,22,22]]",
+        "count": 18,
+        "duration_ms": 0.176439
+      },
+      {
+        "input_dims": "[[1,16,4,23,1],[1,16,4,23,23]]",
+        "count": 18,
+        "duration_ms": 0.186117
+      },
+      {
+        "input_dims": "[[1,16,4,24,1],[1,16,4,24,24]]",
+        "count": 18,
+        "duration_ms": 0.17266
+      },
+      {
+        "input_dims": "[[1,16,4,25,1],[1,16,4,25,25]]",
+        "count": 18,
+        "duration_ms": 0.171041
+      },
+      {
+        "input_dims": "[[1,16,4,26,1],[1,16,4,26,26]]",
+        "count": 18,
+        "duration_ms": 0.167942
+      },
+      {
+        "input_dims": "[[1,16,4,27,1],[1,16,4,27,27]]",
+        "count": 18,
+        "duration_ms": 0.182317
+      },
+      {
+        "input_dims": "[[1,16,4,28,1],[1,16,4,28,28]]",
+        "count": 18,
+        "duration_ms": 0.19026
+      },
+      {
+        "input_dims": "[[1,16,4,29,1],[1,16,4,29,29]]",
+        "count": 18,
+        "duration_ms": 0.179898
+      },
+      {
+        "input_dims": "[[1,16,4,30,1],[1,16,4,30,30]]",
+        "count": 18,
+        "duration_ms": 0.193
+      },
+      {
+        "input_dims": "[[1,16,4,31,1],[1,16,4,31,31]]",
+        "count": 18,
+        "duration_ms": 0.173952
+      },
+      {
+        "input_dims": "[[1,16,4,32,1],[1,16,4,32,32]]",
+        "count": 18,
+        "duration_ms": 0.179655
+      },
+      {
+        "input_dims": "[[1,16,4,33,1],[1,16,4,33,33]]",
+        "count": 18,
+        "duration_ms": 0.184942
+      },
+      {
+        "input_dims": "[[1,16,4,34,1],[1,16,4,34,34]]",
+        "count": 18,
+        "duration_ms": 0.170555
+      },
+      {
+        "input_dims": "[[1,16,4,35,1],[1,16,4,35,35]]",
+        "count": 18,
+        "duration_ms": 0.170979
+      },
+      {
+        "input_dims": "[[1,16,4,36,1],[1,16,4,36,36]]",
+        "count": 18,
+        "duration_ms": 0.181785
+      },
+      {
+        "input_dims": "[[1,16,4,37,1],[1,16,4,37,37]]",
+        "count": 18,
+        "duration_ms": 0.195491
+      },
+      {
+        "input_dims": "[[1,16,4,38,1],[1,16,4,38,38]]",
+        "count": 18,
+        "duration_ms": 0.172558
+      },
+      {
+        "input_dims": "[[1,16,4,39,1],[1,16,4,39,39]]",
+        "count": 18,
+        "duration_ms": 0.177057
+      },
+      {
+        "input_dims": "[[1,16,4,40,1],[1,16,4,40,40]]",
+        "count": 18,
+        "duration_ms": 0.175965
+      },
+      {
+        "input_dims": "[[1,16,4,41,1],[1,16,4,41,41]]",
+        "count": 18,
+        "duration_ms": 0.181818
+      },
+      {
+        "input_dims": "[[1,16,4,42,1],[1,16,4,42,42]]",
+        "count": 18,
+        "duration_ms": 0.195697
+      },
+      {
+        "input_dims": "[[1,16,4,43,1],[1,16,4,43,43]]",
+        "count": 18,
+        "duration_ms": 0.1703
+      },
+      {
+        "input_dims": "[[1,16,4,44,1],[1,16,4,44,44]]",
+        "count": 18,
+        "duration_ms": 0.166979
+      },
+      {
+        "input_dims": "[[1,16,4,45,1],[1,16,4,45,45]]",
+        "count": 18,
+        "duration_ms": 0.168146
+      },
+      {
+        "input_dims": "[[1,16,4,46,1],[1,16,4,46,46]]",
+        "count": 18,
+        "duration_ms": 0.175777
+      },
+      {
+        "input_dims": "[[1,16,4,47,1],[1,16,4,47,47]]",
+        "count": 18,
+        "duration_ms": 0.193093
+      },
+      {
+        "input_dims": "[[1,16,4,48,1],[1,16,4,48,48]]",
+        "count": 18,
+        "duration_ms": 0.18094
+      },
+      {
+        "input_dims": "[[1,16,4,49,1],[1,16,4,49,49]]",
+        "count": 18,
+        "duration_ms": 0.170517
+      },
+      {
+        "input_dims": "[[1,16,4,50,1],[1,16,4,50,50]]",
+        "count": 18,
+        "duration_ms": 0.179134
+      },
+      {
+        "input_dims": "[[1,16,4,51,1],[1,16,4,51,51]]",
+        "count": 18,
+        "duration_ms": 0.185222
+      },
+      {
+        "input_dims": "[[1,16,4,52,1],[1,16,4,52,52]]",
+        "count": 18,
+        "duration_ms": 0.173249
+      },
+      {
+        "input_dims": "[[1,16,4,53,1],[1,16,4,53,53]]",
+        "count": 18,
+        "duration_ms": 0.171412
+      },
+      {
+        "input_dims": "[[1,16,4,54,1],[1,16,4,54,54]]",
+        "count": 18,
+        "duration_ms": 0.191507
+      },
+      {
+        "input_dims": "[[1,16,4,55,1],[1,16,4,55,55]]",
+        "count": 18,
+        "duration_ms": 0.169891
+      },
+      {
+        "input_dims": "[[1,16,4,56,1],[1,16,4,56,56]]",
+        "count": 18,
+        "duration_ms": 0.178645
+      },
+      {
+        "input_dims": "[[1,16,4,57,1],[1,16,4,57,57]]",
+        "count": 18,
+        "duration_ms": 0.180881
+      },
+      {
+        "input_dims": "[[1,16,4,58,1],[1,16,4,58,58]]",
+        "count": 18,
+        "duration_ms": 0.176752
+      },
+      {
+        "input_dims": "[[1,16,4,59,1],[1,16,4,59,59]]",
+        "count": 18,
+        "duration_ms": 0.20203
+      },
+      {
+        "input_dims": "[[1,16,4,60,1],[1,16,4,60,60]]",
+        "count": 18,
+        "duration_ms": 0.189371
+      },
+      {
+        "input_dims": "[[1,16,4,61,1],[1,16,4,61,61]]",
+        "count": 18,
+        "duration_ms": 0.183946
+      },
+      {
+        "input_dims": "[[1,16,4,62,1],[1,16,4,62,62]]",
+        "count": 18,
+        "duration_ms": 0.184015
+      },
+      {
+        "input_dims": "[[1,16,4,63,1],[1,16,4,63,63]]",
+        "count": 18,
+        "duration_ms": 0.181663
+      },
+      {
+        "input_dims": "[[1,16,4,64,128],[1,16,4,64,1]]",
+        "count": 18,
+        "duration_ms": 0.214565
+      },
+      {
+        "input_dims": "[[3616,128],[3616,1]]",
+        "count": 18,
+        "duration_ms": 0.204625
+      },
+      {
+        "input_dims": "[[128],[3616,128]]",
+        "count": 18,
+        "duration_ms": 0.211026
+      },
+      {
+        "input_dims": "[[3616,128],[3616,128]]",
+        "count": 18,
+        "duration_ms": 0.218317
+      },
+      {
+        "input_dims": "[[1,8,226,64],[1,1,226,64]]",
+        "count": 12,
+        "duration_ms": 0.153505
+      },
+      {
+        "input_dims": "[[1,2,226,64],[1,1,226,64]]",
+        "count": 12,
+        "duration_ms": 0.123337
+      },
+      {
+        "input_dims": "[[1,226,8,256],[1,226,8,1]]",
+        "count": 6,
+        "duration_ms": 0.064928
+      },
+      {
+        "input_dims": "[[1,226,8,256],[256]]",
+        "count": 6,
+        "duration_ms": 0.060538
+      },
+      {
+        "input_dims": "[[1,226,2,256],[1,226,2,1]]",
+        "count": 6,
+        "duration_ms": 0.066538
+      },
+      {
+        "input_dims": "[[1,226,2,256],[256]]",
+        "count": 6,
+        "duration_ms": 0.087973
+      },
+      {
+        "input_dims": "[[1,226,2048],[1,226,2048]]",
+        "count": 6,
+        "duration_ms": 0.064866
+      },
+      {
+        "input_dims": "[[18,1],[1,32]]",
+        "count": 4,
+        "duration_ms": 0.045155
+      },
+      {
+        "input_dims": "[[18],[]]",
+        "count": 2,
+        "duration_ms": 0.023663
+      },
+      {
+        "input_dims": "[[1,226,64],[]]",
+        "count": 2,
+        "duration_ms": 0.025431
+      },
+      {
+        "input_dims": "[[1],[]]",
+        "count": 1,
+        "duration_ms": 0.012986
+      },
+      {
+        "input_dims": "[[9,2,1,1],[]]",
+        "count": 1,
+        "duration_ms": 0.011953
+      },
+      {
+        "input_dims": "[[1],[1]]",
+        "count": 1,
+        "duration_ms": 0.014764
+      },
+      {
+        "input_dims": "[[4,576,1024],[4,576,1]]",
+        "count": 1,
+        "duration_ms": 0.018563
+      },
+      {
+        "input_dims": "[[576,2,1],[16]]",
+        "count": 1,
+        "duration_ms": 0.011829
+      },
+      {
+        "input_dims": "[[],[]]",
+        "count": 1,
+        "duration_ms": 0.013332
+      }
+    ],
+    "aten::sum": [
+      {
+        "input_dims": "[[1,226,16,128],[],[],[]]",
+        "count": 36,
+        "duration_ms": 0.609452
+      },
+      {
+        "input_dims": "[[1,16,4,1,1],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.356474
+      },
+      {
+        "input_dims": "[[1,16,4,2,2],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.315942
+      },
+      {
+        "input_dims": "[[1,16,4,3,3],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.330222
+      },
+      {
+        "input_dims": "[[1,16,4,4,4],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.301258
+      },
+      {
+        "input_dims": "[[1,16,4,5,5],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.263079
+      },
+      {
+        "input_dims": "[[1,16,4,6,6],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.257145
+      },
+      {
+        "input_dims": "[[1,16,4,7,7],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.26897
+      },
+      {
+        "input_dims": "[[1,16,4,8,8],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.298206
+      },
+      {
+        "input_dims": "[[1,16,4,9,9],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.278263
+      },
+      {
+        "input_dims": "[[1,16,4,10,10],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.25649
+      },
+      {
+        "input_dims": "[[1,16,4,11,11],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.260958
+      },
+      {
+        "input_dims": "[[1,16,4,12,12],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.295969
+      },
+      {
+        "input_dims": "[[1,16,4,13,13],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.257141
+      },
+      {
+        "input_dims": "[[1,16,4,14,14],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.279874
+      },
+      {
+        "input_dims": "[[1,16,4,15,15],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.24383
+      },
+      {
+        "input_dims": "[[1,16,4,16,16],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.244816
+      },
+      {
+        "input_dims": "[[1,16,4,17,17],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.26071
+      },
+      {
+        "input_dims": "[[1,16,4,18,18],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.282894
+      },
+      {
+        "input_dims": "[[1,16,4,19,19],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.256407
+      },
+      {
+        "input_dims": "[[1,16,4,20,20],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.276822
+      },
+      {
+        "input_dims": "[[1,16,4,21,21],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.262795
+      },
+      {
+        "input_dims": "[[1,16,4,22,22],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.259689
+      },
+      {
+        "input_dims": "[[1,16,4,23,23],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.247908
+      },
+      {
+        "input_dims": "[[1,16,4,24,24],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.258284
+      },
+      {
+        "input_dims": "[[1,16,4,25,25],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.30233
+      },
+      {
+        "input_dims": "[[1,16,4,26,26],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.249186
+      },
+      {
+        "input_dims": "[[1,16,4,27,27],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.289687
+      },
+      {
+        "input_dims": "[[1,16,4,28,28],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.268502
+      },
+      {
+        "input_dims": "[[1,16,4,29,29],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.246295
+      },
+      {
+        "input_dims": "[[1,16,4,30,30],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.254702
+      },
+      {
+        "input_dims": "[[1,16,4,31,31],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.272233
+      },
+      {
+        "input_dims": "[[1,16,4,32,32],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.255198
+      },
+      {
+        "input_dims": "[[1,16,4,33,33],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.248018
+      },
+      {
+        "input_dims": "[[1,16,4,34,34],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.318636
+      },
+      {
+        "input_dims": "[[1,16,4,35,35],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.242226
+      },
+      {
+        "input_dims": "[[1,16,4,36,36],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.270002
+      },
+      {
+        "input_dims": "[[1,16,4,37,37],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.256293
+      },
+      {
+        "input_dims": "[[1,16,4,38,38],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.247952
+      },
+      {
+        "input_dims": "[[1,16,4,39,39],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.246997
+      },
+      {
+        "input_dims": "[[1,16,4,40,40],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.25851
+      },
+      {
+        "input_dims": "[[1,16,4,41,41],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.255433
+      },
+      {
+        "input_dims": "[[1,16,4,42,42],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.265035
+      },
+      {
+        "input_dims": "[[1,16,4,43,43],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.250856
+      },
+      {
+        "input_dims": "[[1,16,4,44,44],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.249097
+      },
+      {
+        "input_dims": "[[1,16,4,45,45],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.248017
+      },
+      {
+        "input_dims": "[[1,16,4,46,46],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.273678
+      },
+      {
+        "input_dims": "[[1,16,4,47,47],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.256712
+      },
+      {
+        "input_dims": "[[1,16,4,48,48],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.266242
+      },
+      {
+        "input_dims": "[[1,16,4,49,49],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.255388
+      },
+      {
+        "input_dims": "[[1,16,4,50,50],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.275436
+      },
+      {
+        "input_dims": "[[1,16,4,51,51],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.269358
+      },
+      {
+        "input_dims": "[[1,16,4,52,52],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.26128
+      },
+      {
+        "input_dims": "[[1,16,4,53,53],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.240178
+      },
+      {
+        "input_dims": "[[1,16,4,54,54],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.252426
+      },
+      {
+        "input_dims": "[[1,16,4,55,55],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.272182
+      },
+      {
+        "input_dims": "[[1,16,4,56,56],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.271044
+      },
+      {
+        "input_dims": "[[1,16,4,57,57],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.245379
+      },
+      {
+        "input_dims": "[[1,16,4,58,58],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.262213
+      },
+      {
+        "input_dims": "[[1,16,4,59,59],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.275872
+      },
+      {
+        "input_dims": "[[1,16,4,60,60],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.264599
+      },
+      {
+        "input_dims": "[[1,16,4,61,61],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.268657
+      },
+      {
+        "input_dims": "[[1,16,4,62,62],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.255812
+      },
+      {
+        "input_dims": "[[1,16,4,63,63],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.295372
+      },
+      {
+        "input_dims": "[[1,226],[]]",
+        "count": 3,
+        "duration_ms": 0.120319
+      },
+      {
+        "input_dims": "[[1,226],[],[],[]]",
+        "count": 3,
+        "duration_ms": 0.115371
+      },
+      {
+        "input_dims": "[[4,576,1024],[],[],[]]",
+        "count": 1,
+        "duration_ms": 0.021431
+      },
+      {
+        "input_dims": "[[1,227],[]]",
+        "count": 1,
+        "duration_ms": 0.045875
+      },
+      {
+        "input_dims": "[[1,227],[],[],[]]",
+        "count": 1,
+        "duration_ms": 0.043643
+      },
+      {
+        "input_dims": "[[1,228],[]]",
+        "count": 1,
+        "duration_ms": 0.054053
+      },
+      {
+        "input_dims": "[[1,228],[],[],[]]",
+        "count": 1,
+        "duration_ms": 0.051865
+      },
+      {
+        "input_dims": "[[1,229],[]]",
+        "count": 1,
+        "duration_ms": 0.043387
+      },
+      {
+        "input_dims": "[[1,229],[],[],[]]",
+        "count": 1,
+        "duration_ms": 0.041237
+      },
+      {
+        "input_dims": "[[1,230],[]]",
+        "count": 1,
+        "duration_ms": 0.060123
+      },
+      {
+        "input_dims": "[[1,230],[],[],[]]",
+        "count": 1,
+        "duration_ms": 0.055818
+      },
+      {
+        "input_dims": "[[1,231],[]]",
+        "count": 1,
+        "duration_ms": 0.041414
+      },
+      {
+        "input_dims": "[[1,231],[],[],[]]",
+        "count": 1,
+        "duration_ms": 0.039469
+      },
+      {
+        "input_dims": "[[1,232],[]]",
+        "count": 1,
+        "duration_ms": 0.045907
+      },
+      {
+        "input_dims": "[[1,232],[],[],[]]",
+        "count": 1,
+        "duration_ms": 0.043668
+      },
+      {
+        "input_dims": "[[1,233],[]]",
+        "count": 1,
+        "duration_ms": 0.042548
+      },
+      {
+        "input_dims": "[[1,233],[],[],[]]",
+        "count": 1,
+        "duration_ms": 0.04031
+      },
+      {
+        "input_dims": "[[1,234],[]]",
+        "count": 1,
+        "duration_ms": 0.040617
+      },
+      {
+        "input_dims": "[[1,234],[],[],[]]",
+        "count": 1,
+        "duration_ms": 0.038639
+      },
+      {
+        "input_dims": "[[1,235],[]]",
+        "count": 1,
+        "duration_ms": 0.040817
+      },
+      {
+        "input_dims": "[[1,235],[],[],[]]",
+        "count": 1,
+        "duration_ms": 0.03864
+      },
+      {
+        "input_dims": "[[1,236],[]]",
+        "count": 1,
+        "duration_ms": 0.047495
+      },
+      {
+        "input_dims": "[[1,236],[],[],[]]",
+        "count": 1,
+        "duration_ms": 0.045312
+      },
+      {
+        "input_dims": "[[1,237],[]]",
+        "count": 1,
+        "duration_ms": 0.051435
+      },
+      {
+        "input_dims": "[[1,237],[],[],[]]",
+        "count": 1,
+        "duration_ms": 0.03938
+      },
+      {
+        "input_dims": "[[1,238],[]]",
+        "count": 1,
+        "duration_ms": 0.040687
+      },
+      {
+        "input_dims": "[[1,238],[],[],[]]",
+        "count": 1,
+        "duration_ms": 0.038729
+      },
+      {
+        "input_dims": "[[1,239],[]]",
+        "count": 1,
+        "duration_ms": 0.042406
+      },
+      {
+        "input_dims": "[[1,239],[],[],[]]",
+        "count": 1,
+        "duration_ms": 0.04047
+      },
+      {
+        "input_dims": "[[1,240],[]]",
+        "count": 1,
+        "duration_ms": 0.041803
+      },
+      {
+        "input_dims": "[[1,240],[],[],[]]",
+        "count": 1,
+        "duration_ms": 0.039869
+      },
+      {
+        "input_dims": "[[1,241],[]]",
+        "count": 1,
+        "duration_ms": 0.042127
+      },
+      {
+        "input_dims": "[[1,241],[],[],[]]",
+        "count": 1,
+        "duration_ms": 0.040229
+      }
+    ],
+    "aten::to": [
+      {
+        "input_dims": "[[1,226,2048],[],[],[],[]]",
+        "count": 98,
+        "duration_ms": 0.954205
+      },
+      {
+        "input_dims": "[[576,16,64],[],[],[],[]]",
+        "count": 96,
+        "duration_ms": 1.890687
+      },
+      {
+        "input_dims": "[[3616,128],[],[],[],[]]",
+        "count": 90,
+        "duration_ms": 1.302949
+      },
+      {
+        "input_dims": "[[1],[],[],[],[],[],[],[]]",
+        "count": 74,
+        "duration_ms": 1.963568
+      },
+      {
+        "input_dims": "[[1,16,226,128],[],[],[],[]]",
+        "count": 54,
+        "duration_ms": 0.898163
+      },
+      {
+        "input_dims": "[[2048],[],[],[],[]]",
+        "count": 49,
+        "duration_ms": 0.926784
+      },
+      {
+        "input_dims": "[[1,226,2048],[],[],[],[],[],[],[]]",
+        "count": 49,
+        "duration_ms": 0.82038
+      },
+      {
+        "input_dims": "[[576,1,64],[],[],[],[]]",
+        "count": 48,
+        "duration_ms": 0.013659
+      },
+      {
+        "input_dims": "[[1,16,226],[],[],[],[]]",
+        "count": 36,
+        "duration_ms": 0.284948
+      },
+      {
+        "input_dims": "[[3,1,1,1],[],[],[],[]]",
+        "count": 30,
+        "duration_ms": 0.331131
+      },
+      {
+        "input_dims": "[[1,1,64],[],[],[],[]]",
+        "count": 30,
+        "duration_ms": 0.504299
+      },
+      {
+        "input_dims": "[[16],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.349136
+      },
+      {
+        "input_dims": "[[1,226,16],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.285872
+      },
+      {
+        "input_dims": "[[1,16,4,64],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.005864
+      },
+      {
+        "input_dims": "[[1,16,4,64,64],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.005635
+      },
+      {
+        "input_dims": "[[1,226,16,128],[],[],[],[]]",
+        "count": 18,
+        "duration_ms": 0.393502
+      },
+      {
+        "input_dims": "[[1,1,32,1],[],[],[],[]]",
+        "count": 16,
+        "duration_ms": 0.008657
+      },
+      {
+        "input_dims": "[[3,1,32,1],[],[],[],[],[],[],[]]",
+        "count": 16,
+        "duration_ms": 0.017086
+      },
+      {
+        "input_dims": "[[3,1,32,1],[],[],[],[]]",
+        "count": 16,
+        "duration_ms": 0.00505
+      },
+      {
+        "input_dims": "[[1,248320],[],[],[],[],[]]",
+        "count": 16,
+        "duration_ms": 0.437784
+      },
+      {
+        "input_dims": "[[1,226,8,256],[],[],[],[]]",
+        "count": 12,
+        "duration_ms": 0.122992
+      },
+      {
+        "input_dims": "[[256],[],[],[],[]]",
+        "count": 12,
+        "duration_ms": 0.212235
+      },
+      {
+        "input_dims": "[[1,226,2,256],[],[],[],[]]",
+        "count": 12,
+        "duration_ms": 0.151502
+      },
+      {
+        "input_dims": "[[0],[],[],[],[],[]]",
+        "count": 12,
+        "duration_ms": 0.124689
+      },
+      {
+        "input_dims": "[[1,226,8,256],[],[],[],[],[],[],[]]",
+        "count": 6,
+        "duration_ms": 0.117763
+      },
+      {
+        "input_dims": "[[1,226,2,256],[],[],[],[],[],[],[]]",
+        "count": 6,
+        "duration_ms": 0.122473
+      },
+      {
+        "input_dims": "[[1,226],[],[],[],[]]",
+        "count": 5,
+        "duration_ms": 0.06124
+      },
+      {
+        "input_dims": "[[226],[],[],[],[]]",
+        "count": 3,
+        "duration_ms": 0.067968
+      },
+      {
+        "input_dims": "[[1],[],[],[],[],[]]",
+        "count": 2,
+        "duration_ms": 0.090234
+      },
+      {
+        "input_dims": "[[1,3],[],[],[],[],[],[],[]]",
+        "count": 2,
+        "duration_ms": 0.05288
+      },
+      {
+        "input_dims": "[[18],[],[],[],[]]",
+        "count": 2,
+        "duration_ms": 0.035332
+      },
+      {
+        "input_dims": "[[32],[],[],[],[]]",
+        "count": 2,
+        "duration_ms": 0.01514
+      },
+      {
+        "input_dims": "[[1],[],[],[],[]]",
+        "count": 2,
+        "duration_ms": 0.01845
+      },
+      {
+        "input_dims": "[[],[],[],[],[]]",
+        "count": 2,
+        "duration_ms": 0.000412
+      },
+      {
+        "input_dims": "[[1,226,1],[],[],[],[],[],[],[]]",
+        "count": 2,
+        "duration_ms": 0.001125
+      },
+      {
+        "input_dims": "[[3,1,1,226],[],[],[],[]]",
+        "count": 2,
+        "duration_ms": 0.024965
+      },
+      {
+        "input_dims": "[[1,226,64],[],[],[],[]]",
+        "count": 2,
+        "duration_ms": 0.033255
+      },
+      {
+        "input_dims": "[[226],[],[],[],[],[],[],[]]",
+        "count": 1,
+        "duration_ms": 0.029641
+      },
+      {
+        "input_dims": "[[3,226],[],[],[],[],[],[],[]]",
+        "count": 1,
+        "duration_ms": 0.000725
+      },
+      {
+        "input_dims": "[[576,1536],[],[],[],[]]",
+        "count": 1,
+        "duration_ms": 0.0212
+      },
+      {
+        "input_dims": "[[576,3,2,16,16],[],[],[],[]]",
+        "count": 1,
+        "duration_ms": 0.000286
+      },
+      {
+        "input_dims": "[[576,1024],[],[],[],[]]",
+        "count": 1,
+        "duration_ms": 0.020148
+      },
+      {
+        "input_dims": "[[144,2048],[],[],[],[],[]]",
+        "count": 1,
+        "duration_ms": 0.000615
+      },
+      {
+        "input_dims": "[[1,226],[],[],[],[],[]]",
+        "count": 1,
+        "duration_ms": 0.018864
+      },
+      {
+        "input_dims": "[[1,227],[],[],[],[],[]]",
+        "count": 1,
+        "duration_ms": 0.022959
+      },
+      {
+        "input_dims": "[[1,227],[],[],[],[]]",
+        "count": 1,
+        "duration_ms": 0.017317
+      },
+      {
+        "input_dims": "[[1,228],[],[],[],[],[]]",
+        "count": 1,
+        "duration_ms": 0.022468
+      },
+      {
+        "input_dims": "[[1,228],[],[],[],[]]",
+        "count": 1,
+        "duration_ms": 0.024164
+      },
+      {
+        "input_dims": "[[1,229],[],[],[],[],[]]",
+        "count": 1,
+        "duration_ms": 0.02436
+      },
+      {
+        "input_dims": "[[1,229],[],[],[],[]]",
+        "count": 1,
+        "duration_ms": 0.017357
+      },
+      {
+        "input_dims": "[[1,230],[],[],[],[],[]]",
+        "count": 1,
+        "duration_ms": 0.025132
+      },
+      {
+        "input_dims": "[[1,230],[],[],[],[]]",
+        "count": 1,
+        "duration_ms": 0.025221
+      },
+      {
+        "input_dims": "[[1,231],[],[],[],[],[]]",
+        "count": 1,
+        "duration_ms": 0.023926
+      },
+      {
+        "input_dims": "[[1,231],[],[],[],[]]",
+        "count": 1,
+        "duration_ms": 0.016483
+      },
+      {
+        "input_dims": "[[1,232],[],[],[],[],[]]",
+        "count": 1,
+        "duration_ms": 0.024285
+      },
+      {
+        "input_dims": "[[1,232],[],[],[],[]]",
+        "count": 1,
+        "duration_ms": 0.019215
+      },
+      {
+        "input_dims": "[[1,233],[],[],[],[],[]]",
+        "count": 1,
+        "duration_ms": 0.026724
+      },
+      {
+        "input_dims": "[[1,233],[],[],[],[]]",
+        "count": 1,
+        "duration_ms": 0.017573
+      },
+      {
+        "input_dims": "[[1,234],[],[],[],[],[]]",
+        "count": 1,
+        "duration_ms": 0.021826
+      },
+      {
+        "input_dims": "[[1,234],[],[],[],[]]",
+        "count": 1,
+        "duration_ms": 0.016873
+      },
+      {
+        "input_dims": "[[1,235],[],[],[],[],[]]",
+        "count": 1,
+        "duration_ms": 0.024087
+      },
+      {
+        "input_dims": "[[1,235],[],[],[],[]]",
+        "count": 1,
+        "duration_ms": 0.01652
+      },
+      {
+        "input_dims": "[[1,236],[],[],[],[],[]]",
+        "count": 1,
+        "duration_ms": 0.024886
+      },
+      {
+        "input_dims": "[[1,236],[],[],[],[]]",
+        "count": 1,
+        "duration_ms": 0.020831
+      },
+      {
+        "input_dims": "[[1,237],[],[],[],[],[]]",
+        "count": 1,
+        "duration_ms": 0.023222
+      },
+      {
+        "input_dims": "[[1,237],[],[],[],[]]",
+        "count": 1,
+        "duration_ms": 0.01738
+      },
+      {
+        "input_dims": "[[1,238],[],[],[],[],[]]",
+        "count": 1,
+        "duration_ms": 0.021376
+      },
+      {
+        "input_dims": "[[1,238],[],[],[],[]]",
+        "count": 1,
+        "duration_ms": 0.017011
+      },
+      {
+        "input_dims": "[[1,239],[],[],[],[],[]]",
+        "count": 1,
+        "duration_ms": 0.03103
+      },
+      {
+        "input_dims": "[[1,239],[],[],[],[]]",
+        "count": 1,
+        "duration_ms": 0.017144
+      },
+      {
+        "input_dims": "[[1,240],[],[],[],[],[]]",
+        "count": 1,
+        "duration_ms": 0.021683
+      },
+      {
+        "input_dims": "[[1,240],[],[],[],[]]",
+        "count": 1,
+        "duration_ms": 0.017442
+      },
+      {
+        "input_dims": "[[1,241],[],[],[],[],[]]",
+        "count": 1,
+        "duration_ms": 0.022455
+      },
+      {
+        "input_dims": "[[1,241],[],[],[],[]]",
+        "count": 1,
+        "duration_ms": 0.017137
+      }
+    ]
+  },
+  "top_events_by_category": {
+    "Trace": [
+      {
+        "name": "PyTorch Profiler (0)",
+        "count": 1,
+        "duration_ms": 509.744906
+      }
+    ],
+    "cpu_op": [
+      {
+        "name": "aten::matmul",
+        "count": 1982,
+        "duration_ms": 59.302908
+      },
+      {
+        "name": "aten::linear",
+        "count": 1650,
+        "duration_ms": 56.82035
+      },
+      {
+        "name": "aten::clone",
+        "count": 2569,
+        "duration_ms": 40.855592
+      },
+      {
+        "name": "aten::copy_",
+        "count": 4883,
+        "duration_ms": 35.912734
+      },
+      {
+        "name": "aten::mm",
+        "count": 1552,
+        "duration_ms": 34.767399
+      },
+      {
+        "name": "aten::empty_like",
+        "count": 3982,
+        "duration_ms": 28.241016
+      },
+      {
+        "name": "aten::mul",
+        "count": 2422,
+        "duration_ms": 26.317954
+      },
+      {
+        "name": "aten::empty_strided",
+        "count": 4391,
+        "duration_ms": 24.653268
+      },
+      {
+        "name": "aten::sum",
+        "count": 1207,
+        "duration_ms": 19.055724
+      },
+      {
+        "name": "aten::add",
+        "count": 1696,
+        "duration_ms": 18.353857
+      },
+      {
+        "name": "aten::scaled_dot_product_attention",
+        "count": 120,
+        "duration_ms": 14.711861
+      },
+      {
+        "name": "aten::empty",
+        "count": 2291,
+        "duration_ms": 13.749016
+      },
+      {
+        "name": "aten::to",
+        "count": 931,
+        "duration_ms": 13.38158
+      },
+      {
+        "name": "aten::_scaled_dot_product_flash_attention",
+        "count": 120,
+        "duration_ms": 13.184994
+      },
+      {
+        "name": "aten::_to_copy",
+        "count": 674,
+        "duration_ms": 12.457063
+      },
+      {
+        "name": "aten::reshape",
+        "count": 5192,
+        "duration_ms": 11.547324
+      },
+      {
+        "name": "aten::_flash_attention_forward",
+        "count": 120,
+        "duration_ms": 11.36936
+      },
+      {
+        "name": "aten::slice",
+        "count": 5982,
+        "duration_ms": 11.171293
+      },
+      {
+        "name": "aten::bmm",
+        "count": 430,
+        "duration_ms": 10.470864
+      },
+      {
+        "name": "aten::as_strided",
+        "count": 19221,
+        "duration_ms": 8.687725
+      },
+      {
+        "name": "aten::transpose",
+        "count": 3568,
+        "duration_ms": 7.183331
+      },
+      {
+        "name": "aten::select",
+        "count": 3305,
+        "duration_ms": 6.513602
+      },
+      {
+        "name": "aten::cat",
+        "count": 387,
+        "duration_ms": 6.093463
+      },
+      {
+        "name": "aten::item",
+        "count": 42,
+        "duration_ms": 5.845909
+      },
+      {
+        "name": "aten::_local_scalar_dense",
+        "count": 42,
+        "duration_ms": 5.775966
+      },
+      {
+        "name": "aten::is_nonzero",
+        "count": 34,
+        "duration_ms": 5.772843
+      },
+      {
+        "name": "aten::silu",
+        "count": 420,
+        "duration_ms": 5.749529
+      },
+      {
+        "name": "aten::t",
+        "count": 1653,
+        "duration_ms": 5.737487
+      },
+      {
+        "name": "aten::addmm",
+        "count": 98,
+        "duration_ms": 5.091282
+      },
+      {
+        "name": "aten::split",
+        "count": 456,
+        "duration_ms": 4.218896
+      },
+      {
+        "name": "aten::narrow",
+        "count": 1057,
+        "duration_ms": 3.84365
+      },
+      {
+        "name": "aten::split_with_sizes",
+        "count": 631,
+        "duration_ms": 3.745659
+      },
+      {
+        "name": "aten::unsqueeze",
+        "count": 1864,
+        "duration_ms": 3.555901
+      },
+      {
+        "name": "aten::pad",
+        "count": 109,
+        "duration_ms": 3.218163
+      },
+      {
+        "name": "aten::constant_pad_nd",
+        "count": 109,
+        "duration_ms": 3.048407
+      },
+      {
+        "name": "aten::exp",
+        "count": 270,
+        "duration_ms": 3.044331
+      },
+      {
+        "name": "aten::view",
+        "count": 5263,
+        "duration_ms": 2.682555
+      },
+      {
+        "name": "aten::contiguous",
+        "count": 133,
+        "duration_ms": 2.568126
+      },
+      {
+        "name": "aten::sub",
+        "count": 194,
+        "duration_ms": 2.512013
+      },
+      {
+        "name": "aten::fill_",
+        "count": 301,
+        "duration_ms": 2.50823
+      },
+      {
+        "name": "aten::eye",
+        "count": 54,
+        "duration_ms": 2.40092
+      },
+      {
+        "name": "aten::layer_norm",
+        "count": 49,
+        "duration_ms": 1.955116
+      },
+      {
+        "name": "aten::expand",
+        "count": 947,
+        "duration_ms": 1.876242
+      },
+      {
+        "name": "aten::native_layer_norm",
+        "count": 49,
+        "duration_ms": 1.777419
+      },
+      {
+        "name": "aten::sigmoid",
+        "count": 114,
+        "duration_ms": 1.724704
+      },
+      {
+        "name": "aten::convolution",
+        "count": 19,
+        "duration_ms": 1.535702
+      },
+      {
+        "name": "aten::_convolution",
+        "count": 19,
+        "duration_ms": 1.452732
+      },
+      {
+        "name": "aten::conv1d",
+        "count": 18,
+        "duration_ms": 1.434775
+      },
+      {
+        "name": "aten::mean",
+        "count": 79,
+        "duration_ms": 1.412345
+      },
+      {
+        "name": "aten::zero_",
+        "count": 107,
+        "duration_ms": 1.366108
+      },
+      {
+        "name": "aten::rsqrt",
+        "count": 115,
+        "duration_ms": 1.356021
+      },
+      {
+        "name": "aten::pow",
+        "count": 79,
+        "duration_ms": 1.281507
+      },
+      {
+        "name": "aten::neg",
+        "count": 96,
+        "duration_ms": 1.249488
+      },
+      {
+        "name": "aten::squeeze",
+        "count": 288,
+        "duration_ms": 1.173556
+      },
+      {
+        "name": "aten::type_as",
+        "count": 61,
+        "duration_ms": 1.140591
+      },
+      {
+        "name": "aten::chunk",
+        "count": 96,
+        "duration_ms": 0.998383
+      },
+      {
+        "name": "aten::arange",
+        "count": 54,
+        "duration_ms": 0.982252
+      },
+      {
+        "name": "aten::masked_fill",
+        "count": 19,
+        "duration_ms": 0.961537
+      },
+      {
+        "name": "aten::zeros",
+        "count": 37,
+        "duration_ms": 0.888309
+      },
+      {
+        "name": "aten::_unsafe_view",
+        "count": 2081,
+        "duration_ms": 0.882248
+      }
+    ],
+    "cuda_driver": [
+      {
+        "name": "cuLaunchKernel",
+        "count": 2561,
+        "duration_ms": 6.247585
+      },
+      {
+        "name": "cuLaunchKernelEx",
+        "count": 699,
+        "duration_ms": 1.808126
+      }
+    ],
+    "cuda_runtime": [
+      {
+        "name": "cudaLaunchKernel",
+        "count": 14363,
+        "duration_ms": 45.489071
+      },
+      {
+        "name": "cudaStreamSynchronize",
+        "count": 124,
+        "duration_ms": 5.678975
+      },
+      {
+        "name": "cudaGetDeviceProperties_v2",
+        "count": 5705,
+        "duration_ms": 3.548483
+      },
+      {
+        "name": "cudaMemcpyAsync",
+        "count": 235,
+        "duration_ms": 1.668354
+      },
+      {
+        "name": "cudaFree",
+        "count": 3259,
+        "duration_ms": 0.889341
+      },
+      {
+        "name": "cudaFuncSetAttribute",
+        "count": 99,
+        "duration_ms": 0.337514
+      },
+      {
+        "name": "cudaDeviceGetAttribute",
+        "count": 364,
+        "duration_ms": 0.272905
+      },
+      {
+        "name": "cudaMalloc",
+        "count": 1,
+        "duration_ms": 0.111767
+      },
+      {
+        "name": "cudaMemsetAsync",
+        "count": 17,
+        "duration_ms": 0.079015
+      },
+      {
+        "name": "cudaStreamIsCapturing",
+        "count": 98,
+        "duration_ms": 0.075565
+      },
+      {
+        "name": "cudaOccupancyMaxActiveBlocksPerMultiprocessorWithFlags",
+        "count": 4,
+        "duration_ms": 0.007801
+      },
+      {
+        "name": "cudaDeviceSynchronize",
+        "count": 2,
+        "duration_ms": 0.004767
+      },
+      {
+        "name": "cudaFuncGetAttributes",
+        "count": 1,
+        "duration_ms": 0.003491
+      },
+      {
+        "name": "cudaOccupancyMaxActiveBlocksPerMultiprocessor",
+        "count": 1,
+        "duration_ms": 0.001286
+      }
+    ],
+    "gpu_memcpy": [
+      {
+        "name": "Memcpy DtoD (Device -> Device)",
+        "count": 111,
+        "duration_ms": 0.13888
+      },
+      {
+        "name": "Memcpy DtoH (Device -> Pageable)",
+        "count": 77,
+        "duration_ms": 0.033121
+      },
+      {
+        "name": "Memcpy DtoH (Device -> Pinned)",
+        "count": 45,
+        "duration_ms": 0.019001
+      },
+      {
+        "name": "Memcpy HtoD (Pageable -> Device)",
+        "count": 2,
+        "duration_ms": 0.00228
+      }
+    ],
+    "gpu_memset": [
+      {
+        "name": "Memset (Device)",
+        "count": 17,
+        "duration_ms": 0.007
+      }
+    ],
+    "kernel": [
+      {
+        "name": "void gemvt_op<cutlass::bfloat16_t, float, cutlass::bfloat16_t, int4, int4, 32, 4, 1, 2, 1, 1, acfusion::FusionDelegator<cutlass::bfloat16_t, float, cutlass::bfloat16_t, 0, false> >(int, int, float, cutlass::bfloat16_t const*, int, cutlass::bfloat16_t const*, int, float, cutlass::bfloat16_t const*, cutlass::bfloat16_t*, int, float*, acfusion::FusionDelegator<cutlass::bfloat16_t, float, cutlass::bfloat16_t, 0, false>::DefaultImpl::Params)",
+        "count": 1546,
+        "duration_ms": 27.70546
+      },
+      {
+        "name": "void (anonymous namespace)::gdn_recurrent_decode_kernel<4>(__ppu_bfloat16 const*, __ppu_bfloat16 const*, __ppu_bfloat16 const*, float const*, __ppu_bfloat16 const*, float*, __ppu_bfloat16*, int, long, long, long, long, long)",
+        "count": 270,
+        "duration_ms": 14.311841
+      },
+      {
+        "name": "void at::native::elementwise_kernel<128, 2, at::native::gpu_kernel_impl_nocast<at::native::direct_copy_kernel_cuda(at::TensorIteratorBase&)::{lambda()#3}::operator()() const::{lambda()#7}::operator()() const::{lambda(float)#1}>(at::TensorIteratorBase&, at::native::direct_copy_kernel_cuda(at::TensorIteratorBase&)::{lambda()#3}::operator()() const::{lambda()#7}::operator()() const::{lambda(float)#1} const&)::{lambda(int)#1}>(int, at::native::gpu_kernel_impl_nocast<at::native::direct_copy_kernel_cuda(at::TensorIteratorBase&)::{lambda()#3}::operator()() const::{lambda()#7}::operator()() const::{lambda(float)#1}>(at::TensorIteratorBase&, at::native::direct_copy_kernel_cuda(at::TensorIteratorBase&)::{lambda()#3}::operator()() const::{lambda()#7}::operator()() const::{lambda(float)#1} const&)::{lambda(int)#1})",
+        "count": 3632,
+        "duration_ms": 9.603404
+      },
+      {
+        "name": "void gemvt_op<cutlass::bfloat16_t, float, cutlass::bfloat16_t, int4, int4, 64, 2, 1, 2, 1, 1, acfusion::FusionDelegator<cutlass::bfloat16_t, float, cutlass::bfloat16_t, 0, false> >(int, int, float, cutlass::bfloat16_t const*, int, cutlass::bfloat16_t const*, int, float, cutlass::bfloat16_t const*, cutlass::bfloat16_t*, int, float*, acfusion::FusionDelegator<cutlass::bfloat16_t, float, cutlass::bfloat16_t, 0, false>::DefaultImpl::Params)",
+        "count": 360,
+        "duration_ms": 5.496843
+      },
+      {
+        "name": "void at::native::elementwise_kernel<128, 2, at::native::gpu_kernel_impl_nocast<at::native::BinaryFunctor<float, float, float, at::native::binary_internal::MulFunctor<float> > >(at::TensorIteratorBase&, at::native::BinaryFunctor<float, float, float, at::native::binary_internal::MulFunctor<float> > const&)::{lambda(int)#1}>(int, at::native::gpu_kernel_impl_nocast<at::native::BinaryFunctor<float, float, float, at::native::binary_internal::MulFunctor<float> > >(at::TensorIteratorBase&, at::native::BinaryFunctor<float, float, float, at::native::binary_internal::MulFunctor<float> > const&)::{lambda(int)#1})",
+        "count": 1716,
+        "duration_ms": 5.21562
+      },
+      {
+        "name": "gemm_ktype0_aiu1_mtype1_dtypeBF16xBF16xFP32xBF16xBF16_tile64x256x32x64x64x2_layout0x1x0x0_align1x1x8x8_splitk0_fusion0_prefetch0_fp32tc0_ptrhost1_schedule0_algnBias0",
+        "count": 66,
+        "duration_ms": 4.821006
+      },
+      {
+        "name": "void at::native::reduce_kernel<512, 1, at::native::ReduceOp<float, at::native::func_wrapper_t<float, at::native::sum_functor<float, float, float>::operator()(at::TensorIterator&)::{lambda(float, float)#1}>, unsigned int, float, 4, 4> >(at::native::ReduceOp<float, at::native::func_wrapper_t<float, at::native::sum_functor<float, float, float>::operator()(at::TensorIterator&)::{lambda(float, float)#1}>, unsigned int, float, 4, 4>)",
+        "count": 558,
+        "duration_ms": 3.531038
+      },
+      {
+        "name": "gemm_ktype0_aiu1_mtype1_dtypeBF16xBF16xFP32xBF16xBF16_tile128x256x64x64x64x2_layout0x1x0x0_align1x1x8x8_splitk2_fusion0_prefetch0_fp32tc0_ptrhost1_schedule0_algnBias0",
+        "count": 78,
+        "duration_ms": 2.83007
+      },
+      {
+        "name": "(anonymous namespace)::residual_rmsnorm_decode_kernel(__ppu_bfloat16 const*, __ppu_bfloat16*, __ppu_bfloat16 const*, __ppu_bfloat16*, int, long, long, float)",
+        "count": 720,
+        "duration_ms": 2.7897
+      },
+      {
+        "name": "void at::native::vectorized_elementwise_kernel<4, at::native::CUDAFunctor_add<float>, std::array<char*, 3ul> >(int, at::native::CUDAFunctor_add<float>, std::array<char*, 3ul>)",
+        "count": 1326,
+        "duration_ms": 2.387173
+      },
+      {
+        "name": "void at::native::reduce_kernel<128, 4, at::native::ReduceOp<float, at::native::func_wrapper_t<float, at::native::sum_functor<float, float, float>::operator()(at::TensorIterator&)::{lambda(float, float)#1}>, unsigned int, float, 4, 4> >(at::native::ReduceOp<float, at::native::func_wrapper_t<float, at::native::sum_functor<float, float, float>::operator()(at::TensorIterator&)::{lambda(float, float)#1}>, unsigned int, float, 4, 4>)",
+        "count": 289,
+        "duration_ms": 2.141252
+      },
+      {
+        "name": "void at::native::reduce_kernel<256, 2, at::native::ReduceOp<float, at::native::func_wrapper_t<float, at::native::sum_functor<float, float, float>::operator()(at::TensorIterator&)::{lambda(float, float)#1}>, unsigned int, float, 4, 4> >(at::native::ReduceOp<float, at::native::func_wrapper_t<float, at::native::sum_functor<float, float, float>::operator()(at::TensorIterator&)::{lambda(float, float)#1}>, unsigned int, float, 4, 4>)",
+        "count": 288,
+        "duration_ms": 1.898335
+      },
+      {
+        "name": "gemm_ktype0_aiu1_mtype1_dtypeBF16xBF16xFP32xBF16xBF16_tile64x128x32x32x64x2_layout0x1x0x0_align1x1x8x8_splitk0_fusion5_prefetch0_fp32tc0_ptrhost1_schedule0_algnBias0",
+        "count": 49,
+        "duration_ms": 1.565975
+      },
+      {
+        "name": "void at::native::unrolled_elementwise_kernel<at::native::direct_copy_kernel_cuda(at::TensorIteratorBase&)::{lambda()#3}::operator()() const::{lambda()#7}::operator()() const::{lambda(float)#1}, std::array<char*, 2ul>, 4, TrivialOffsetCalculator<1, unsigned int>, TrivialOffsetCalculator<1, unsigned int>, at::native::memory::LoadWithCast<1>, at::native::memory::StoreWithCast<1> >(int, at::native::direct_copy_kernel_cuda(at::TensorIteratorBase&)::{lambda()#3}::operator()() const::{lambda()#7}::operator()() const::{lambda(float)#1}, std::array<char*, 2ul>, TrivialOffsetCalculator<1, unsigned int>, TrivialOffsetCalculator<1, unsigned int>, at::native::memory::LoadWithCast<1>, at::native::memory::StoreWithCast<1>)",
+        "count": 292,
+        "duration_ms": 1.483854
+      },
+      {
+        "name": "void gemvt_op<cutlass::bfloat16_t, float, cutlass::bfloat16_t, double, double, 128, 1, 1, 2, 1, 1, acfusion::FusionDelegator<cutlass::bfloat16_t, float, cutlass::bfloat16_t, 0, false> >(int, int, float, cutlass::bfloat16_t const*, int, cutlass::bfloat16_t const*, int, float, cutlass::bfloat16_t const*, cutlass::bfloat16_t*, int, float*, acfusion::FusionDelegator<cutlass::bfloat16_t, float, cutlass::bfloat16_t, 0, false>::DefaultImpl::Params)",
+        "count": 540,
+        "duration_ms": 1.446975
+      },
+      {
+        "name": "void at::native::elementwise_kernel<128, 4, at::native::gpu_kernel_impl_nocast<at::native::direct_copy_kernel_cuda(at::TensorIteratorBase&)::{lambda()#3}::operator()() const::{lambda()#12}::operator()() const::{lambda(c10::BFloat16)#1}>(at::TensorIteratorBase&, at::native::direct_copy_kernel_cuda(at::TensorIteratorBase&)::{lambda()#3}::operator()() const::{lambda()#12}::operator()() const::{lambda(c10::BFloat16)#1} const&)::{lambda(int)#1}>(int, at::native::gpu_kernel_impl_nocast<at::native::direct_copy_kernel_cuda(at::TensorIteratorBase&)::{lambda()#3}::operator()() const::{lambda()#12}::operator()() const::{lambda(c10::BFloat16)#1}>(at::TensorIteratorBase&, at::native::direct_copy_kernel_cuda(at::TensorIteratorBase&)::{lambda()#3}::operator()() const::{lambda()#12}::operator()() const::{lambda(c10::BFloat16)#1} const&)::{lambda(int)#1})",
+        "count": 210,
+        "duration_ms": 1.253684
+      },
+      {
+        "name": "void at::native::vectorized_elementwise_kernel<4, at::native::(anonymous namespace)::silu_kernel(at::TensorIteratorBase&)::{lambda()#1}::operator()() const::{lambda()#6}::operator()() const::{lambda(c10::BFloat16)#1}, std::array<char*, 2ul> >(int, at::native::(anonymous namespace)::silu_kernel(at::TensorIteratorBase&)::{lambda()#1}::operator()() const::{lambda()#6}::operator()() const::{lambda(c10::BFloat16)#1}, std::array<char*, 2ul>)",
+        "count": 384,
+        "duration_ms": 1.241613
+      },
+      {
+        "name": "gemm_ktype0_aiu1_mtype1_dtypeBF16xBF16xFP32xBF16xBF16_tile128x128x32x64x64x2_layout0x1x0x0_align1x1x8x8_splitk0_fusion5_prefetch0_fp32tc0_ptrhost1_schedule0_algnBias0",
+        "count": 24,
+        "duration_ms": 1.205413
+      },
+      {
+        "name": "void flash_fwd_splitkv_kernel<Flash_fwd_kernel_traits<256, 64, 64, 4, false, false, cutlass::bfloat16_t, Flash_kernel_traits<256, 64, 64, 4, cutlass::bfloat16_t> >, false, false, false, false, true, false, true, false>(Flash_fwd_params)",
+        "count": 90,
+        "duration_ms": 1.201526
+      },
+      {
+        "name": "void at::native::(anonymous namespace)::CatArrayBatchedCopy_vectorized<at::native::(anonymous namespace)::OpaqueType<2u>, unsigned int, 3, 128, 1, 16, 8>(char*, at::native::(anonymous namespace)::CatArrInputTensorMetadata<at::native::(anonymous namespace)::OpaqueType<2u>, unsigned int, 128, 1>, at::native::(anonymous namespace)::TensorSizeStride<unsigned int, 4u>, int, unsigned int)",
+        "count": 180,
+        "duration_ms": 1.190731
+      },
+      {
+        "name": "void at::native::vectorized_elementwise_kernel<4, at::native::BinaryFunctor<c10::BFloat16, c10::BFloat16, c10::BFloat16, at::native::binary_internal::MulFunctor<float> >, std::array<char*, 3ul> >(int, at::native::BinaryFunctor<c10::BFloat16, c10::BFloat16, c10::BFloat16, at::native::binary_internal::MulFunctor<float> >, std::array<char*, 3ul>)",
+        "count": 516,
+        "duration_ms": 0.990968
+      },
+      {
+        "name": "gemm_ktype0_aiu1_mtype1_dtypeBF16xBF16xFP32xBF16xBF16_tile64x256x32x64x64x2_layout0x1x0x0_align1x1x8x8_splitk0_fusion5_prefetch0_fp32tc0_ptrhost1_schedule0_algnBias0",
+        "count": 24,
+        "duration_ms": 0.963209
+      },
+      {
+        "name": "gemm_ktype1_aiu1_mtype1_dtypeFP32xFP32xFP32xFP32xFP32_tile64x64x32x32x32x2_layout0x0x0x0_align1x1x4x4_splitk0_fusion0_prefetch0_fp32tc1_ptrhost1_schedule0_algnBias0",
+        "count": 216,
+        "duration_ms": 0.910768
+      },
+      {
+        "name": "(anonymous namespace)::causal_conv1d_decode_kernel(__ppu_bfloat16 const*, __ppu_bfloat16*, __ppu_bfloat16 const*, __ppu_bfloat16 const*, __ppu_bfloat16*, int, long, long, bool)",
+        "count": 270,
+        "duration_ms": 0.692529
+      },
+      {
+        "name": "(anonymous namespace)::gated_rmsnorm_decode_kernel(__ppu_bfloat16 const*, __ppu_bfloat16 const*, __ppu_bfloat16 const*, __ppu_bfloat16*, int, long, long, float)",
+        "count": 270,
+        "duration_ms": 0.671608
+      },
+      {
+        "name": "void flash_fwd_splitkv_combine_kernel<Flash_fwd_kernel_traits<256, 64, 64, 4, false, false, cutlass::bfloat16_t, Flash_kernel_traits<256, 64, 64, 4, cutlass::bfloat16_t> >, 4, 2, true>(Flash_fwd_params)",
+        "count": 96,
+        "duration_ms": 0.653929
+      },
+      {
+        "name": "void at::native::elementwise_kernel<128, 4, at::native::gpu_kernel_impl<at::native::direct_copy_kernel_cuda(at::TensorIteratorBase&)::{lambda()#3}::operator()() const::{lambda()#7}::operator()() const::{lambda(float)#1}>(at::TensorIteratorBase&, at::native::direct_copy_kernel_cuda(at::TensorIteratorBase&)::{lambda()#3}::operator()() const::{lambda()#7}::operator()() const::{lambda(float)#1} const&)::{lambda(int)#1}>(int, at::native::gpu_kernel_impl<at::native::direct_copy_kernel_cuda(at::TensorIteratorBase&)::{lambda()#3}::operator()() const::{lambda()#7}::operator()() const::{lambda(float)#1}>(at::TensorIteratorBase&, at::native::direct_copy_kernel_cuda(at::TensorIteratorBase&)::{lambda()#3}::operator()() const::{lambda()#7}::operator()() const::{lambda(float)#1} const&)::{lambda(int)#1})",
+        "count": 54,
+        "duration_ms": 0.571048
+      },
+      {
+        "name": "void at::native::reduce_kernel<512, 1, at::native::ReduceOp<float, at::native::MeanOps<float, float, float, float>, unsigned int, float, 4, 4> >(at::native::ReduceOp<float, at::native::MeanOps<float, float, float, float>, unsigned int, float, 4, 4>)",
+        "count": 79,
+        "duration_ms": 0.568244
+      },
+      {
+        "name": "void flash_fwd_kernel<Flash_fwd_kernel_traits<64, 64, 64, 4, false, false, cutlass::bfloat16_t, Flash_kernel_traits<64, 64, 64, 4, cutlass::bfloat16_t> >, false, false, false, false, true, true, false, false>(Flash_fwd_params)",
+        "count": 24,
+        "duration_ms": 0.562526
+      },
+      {
+        "name": "(anonymous namespace)::gdn_gate_prep_decode_kernel(__ppu_bfloat16 const*, __ppu_bfloat16 const*, float const*, __ppu_bfloat16 const*, float*, __ppu_bfloat16*, int, long, long, long, long)",
+        "count": 270,
+        "duration_ms": 0.544169
+      },
+      {
+        "name": "void at::native::(anonymous namespace)::CatArrayBatchedCopy<at::native::(anonymous namespace)::OpaqueType<4u>, unsigned int, 3, 64, 64>(at::native::(anonymous namespace)::OpaqueType<4u>*, at::native::(anonymous namespace)::CatArrInputTensorMetadata<at::native::(anonymous namespace)::OpaqueType<4u>, unsigned int, 64, 64>, at::native::(anonymous namespace)::TensorSizeStride<unsigned int, 4u>, int, unsigned int)",
+        "count": 49,
+        "duration_ms": 0.504282
+      },
+      {
+        "name": "void at::native::elementwise_kernel<128, 2, at::native::gpu_kernel_impl_nocast<at::native::CUDAFunctor_add<float> >(at::TensorIteratorBase&, at::native::CUDAFunctor_add<float> const&)::{lambda(int)#1}>(int, at::native::gpu_kernel_impl_nocast<at::native::CUDAFunctor_add<float> >(at::TensorIteratorBase&, at::native::CUDAFunctor_add<float> const&)::{lambda(int)#1})",
+        "count": 180,
+        "duration_ms": 0.503211
+      },
+      {
+        "name": "void at::native::(anonymous namespace)::conv_depthwise2d_forward_kernel_generic<c10::BFloat16, int>(torch::headeronly::detail::GenericPackedTensorAccessor<torch::headeronly::detail::TensorAccessor<c10::ArrayRef<long>, c10::BFloat16 const, 3ul, torch::headeronly::DefaultPtrTraits, int>, at::detail::IndexBoundsCheck<4ul, int>, c10::BFloat16 const, 4ul, torch::headeronly::DefaultPtrTraits, int>, torch::headeronly::detail::GenericPackedTensorAccessor<torch::headeronly::detail::TensorAccessor<c10::ArrayRef<long>, c10::BFloat16, 3ul, torch::headeronly::DefaultPtrTraits, int>, at::detail::IndexBoundsCheck<4ul, int>, c10::BFloat16, 4ul, torch::headeronly::DefaultPtrTraits, int>, torch::headeronly::detail::GenericPackedTensorAccessor<torch::headeronly::detail::TensorAccessor<c10::ArrayRef<long>, c10::BFloat16 const, 3ul, torch::headeronly::DefaultPtrTraits, int>, at::detail::IndexBoundsCheck<4ul, int>, c10::BFloat16 const, 4ul, torch::headeronly::DefaultPtrTraits, int>, torch::headeronly::detail::GenericPackedTensorAccessor<torch::headeronly::detail::TensorAccessor<c10::ArrayRef<long>, c10::BFloat16 const, 0ul, torch::headeronly::DefaultPtrTraits, int>, at::detail::IndexBoundsCheck<1ul, int>, c10::BFloat16 const, 1ul, torch::headeronly::DefaultPtrTraits, int>, bool, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int)",
+        "count": 18,
+        "duration_ms": 0.488607
+      },
+      {
+        "name": "void at::native::reduce_kernel<512, 1, at::native::ReduceOp<c10::BFloat16, at::native::func_wrapper_t<c10::BFloat16, at::native::sum_functor<c10::BFloat16, float, c10::BFloat16>::operator()(at::TensorIterator&)::{lambda(float, float)#1}>, unsigned int, c10::BFloat16, 4, 8> >(at::native::ReduceOp<c10::BFloat16, at::native::func_wrapper_t<c10::BFloat16, at::native::sum_functor<c10::BFloat16, float, c10::BFloat16>::operator()(at::TensorIterator&)::{lambda(float, float)#1}>, unsigned int, c10::BFloat16, 4, 8>)",
+        "count": 36,
+        "duration_ms": 0.418324
+      },
+      {
+        "name": "void at::native::vectorized_elementwise_kernel<4, at::native::sigmoid_kernel_cuda(at::TensorIteratorBase&)::{lambda()#2}::operator()() const::{lambda()#4}::operator()() const::{lambda(c10::BFloat16)#1}, std::array<char*, 2ul> >(int, at::native::sigmoid_kernel_cuda(at::TensorIteratorBase&)::{lambda()#2}::operator()() const::{lambda()#4}::operator()() const::{lambda(c10::BFloat16)#1}, std::array<char*, 2ul>)",
+        "count": 114,
+        "duration_ms": 0.412723
+      },
+      {
+        "name": "void at::native::vectorized_elementwise_kernel<4, at::native::bfloat16_copy_kernel_cuda(at::TensorIteratorBase&)::{lambda(float)#1}, std::array<char*, 2ul> >(int, at::native::bfloat16_copy_kernel_cuda(at::TensorIteratorBase&)::{lambda(float)#1}, std::array<char*, 2ul>)",
+        "count": 197,
+        "duration_ms": 0.410763
+      },
+      {
+        "name": "void at::native::elementwise_kernel<128, 2, at::native::gpu_kernel_impl_nocast<at::native::exp_kernel_cuda(at::TensorIteratorBase&)::{lambda()#2}::operator()() const::{lambda()#2}::operator()() const::{lambda(float)#1}>(at::TensorIteratorBase&, at::native::exp_kernel_cuda(at::TensorIteratorBase&)::{lambda()#2}::operator()() const::{lambda()#2}::operator()() const::{lambda(float)#1} const&)::{lambda(int)#1}>(int, at::native::gpu_kernel_impl_nocast<at::native::exp_kernel_cuda(at::TensorIteratorBase&)::{lambda()#2}::operator()() const::{lambda()#2}::operator()() const::{lambda(float)#1}>(at::TensorIteratorBase&, at::native::exp_kernel_cuda(at::TensorIteratorBase&)::{lambda()#2}::operator()() const::{lambda()#2}::operator()() const::{lambda(float)#1} const&)::{lambda(int)#1})",
+        "count": 144,
+        "duration_ms": 0.366123
+      },
+      {
+        "name": "gemm_ktype1_aiu1_mtype1_dtypeFP32xFP32xFP32xFP32xFP32_tile64x128x32x32x32x2_layout1x0x0x0_align1x1x4x4_splitk0_fusion0_prefetch0_fp32tc1_ptrhost1_schedule0_algnBias0",
+        "count": 72,
+        "duration_ms": 0.353885
+      },
+      {
+        "name": "reduction_dtypeFP32xBF16xBF16_align8x8_fusion0_prefetch0_rtype0_ptrhost1(acrtc::ReduceKernelArgument<float>)",
+        "count": 114,
+        "duration_ms": 0.35256
+      },
+      {
+        "name": "void at::native::elementwise_kernel<128, 4, at::native::gpu_kernel_impl_nocast<at::native::BinaryFunctor<c10::BFloat16, c10::BFloat16, c10::BFloat16, at::native::binary_internal::MulFunctor<float> > >(at::TensorIteratorBase&, at::native::BinaryFunctor<c10::BFloat16, c10::BFloat16, c10::BFloat16, at::native::binary_internal::MulFunctor<float> > const&)::{lambda(int)#1}>(int, at::native::gpu_kernel_impl_nocast<at::native::BinaryFunctor<c10::BFloat16, c10::BFloat16, c10::BFloat16, at::native::binary_internal::MulFunctor<float> > >(at::TensorIteratorBase&, at::native::BinaryFunctor<c10::BFloat16, c10::BFloat16, c10::BFloat16, at::native::binary_internal::MulFunctor<float> > const&)::{lambda(int)#1})",
+        "count": 78,
+        "duration_ms": 0.330641
+      },
+      {
+        "name": "void at::native::(anonymous namespace)::CatArrayBatchedCopy_alignedK_contig<at::native::(anonymous namespace)::OpaqueType<8u>, unsigned int, 2, 128, 1, 16>(at::native::(anonymous namespace)::OpaqueType<8u>*, at::native::(anonymous namespace)::CatArrInputTensorMetadata<at::native::(anonymous namespace)::OpaqueType<8u>, unsigned int, 128, 1>, at::native::(anonymous namespace)::TensorSizeStride<unsigned int, 4u>, int, unsigned int)",
+        "count": 49,
+        "duration_ms": 0.310802
+      },
+      {
+        "name": "void at::native::(anonymous namespace)::CatArrayBatchedCopy<at::native::(anonymous namespace)::OpaqueType<2u>, unsigned int, 4, 64, 64>(at::native::(anonymous namespace)::OpaqueType<2u>*, at::native::(anonymous namespace)::CatArrInputTensorMetadata<at::native::(anonymous namespace)::OpaqueType<2u>, unsigned int, 64, 64>, at::native::(anonymous namespace)::TensorSizeStride<unsigned int, 4u>, int, unsigned int)",
+        "count": 36,
+        "duration_ms": 0.305243
+      },
+      {
+        "name": "gemm_ktype0_aiu1_mtype1_dtypeBF16xBF16xFP32xBF16xBF16_tile128x256x64x64x64x2_layout0x1x0x0_align1x1x8x8_splitk0_fusion0_prefetch0_fp32tc0_ptrhost1_schedule0_algnBias0",
+        "count": 6,
+        "duration_ms": 0.275201
+      },
+      {
+        "name": "void at::native::vectorized_elementwise_kernel<4, at::native::FillFunctor<float>, std::array<char*, 1ul> >(int, at::native::FillFunctor<float>, std::array<char*, 1ul>)",
+        "count": 162,
+        "duration_ms": 0.27192
+      },
+      {
+        "name": "gemm_ktype1_aiu1_mtype1_dtypeFP32xFP32xFP32xFP32xFP32_tile32x64x16x32x32x2_layout0x1x0x0_align1x1x4x4_splitk0_fusion0_prefetch0_fp32tc1_ptrhost1_schedule0_algnBias0",
+        "count": 72,
+        "duration_ms": 0.260643
+      },
+      {
+        "name": "gemm_ktype1_aiu1_mtype1_dtypeFP32xFP32xFP32xFP32xFP32_tile64x128x32x32x32x2_layout0x0x0x0_align1x1x4x4_splitk0_fusion0_prefetch0_fp32tc1_ptrhost1_schedule0_algnBias0",
+        "count": 36,
+        "duration_ms": 0.258361
+      },
+      {
+        "name": "_ZN7cutlass6KernelINS_4conv6kernel23ImplicitGemmConvolutionINS1_11threadblock22ImplicitGemmMultistageINS_4gemm9GemmShapeILi128ELi128ELi32EEENS4_48Conv3dFpropActivationTileAccessIteratorOptimizedINS_11MatrixShapeILi128ELi32EEENS_10bfloat16_tENS_6layout11TensorNDHWCENS_9transform29PitchLinearWarpRakedThreadMapINSD_16PitchLinearShapeILi32ELi128EEELi256ENSH_ILi4ELi8EEELi8EEELi8EEENSF_11threadblock25RegularTileAccessIteratorISB_SC_NSD_37RowMajorTensorOpMultiplicandCrosswiseILi16ELi32EEELi0ESK_Li16EEELNS_4arch14CacheOperation4KindE0ENS4_44Conv3dFpropFilterTileAccessIteratorOptimizedINSA_ILi32ELi128EEESC_SE_SK_Li8EEENSN_ISV_SC_NSD_40ColumnMajorTensorOpMultiplicandCrosswiseILi16ELi32EEELi1ESK_Li16EEELST_1ENS6_11threadblock9MmaPolicyINS6_4warp11MmaTensorOpINS7_ILi32ELi64ELi32EEESC_SP_SC_SY_fNSD_8RowMajorENS12_17MmaTensorOpPolicyINSR_3MmaINS7_ILi16ELi16ELi16EEELi32ESC_S15_SC_NSD_11ColumnMajorEfS15_NSR_13OpMultiplyAddEEENSA_ILi1ELi1EEEEELi1ELb0EbLi128ELi128EEENSA_ILi0ELi0EEES1F_Li1EEELi3ELb1ELb0EEENS_8epilogue11threadblock8EpilogueIS8_S1E_Li1ENS1J_22PredicatedTileIteratorINS1J_26OutputTileOptimalThreadMapINS1J_15OutputTileShapeILi128ELi8ELi4ELi1ELi1EEENS1N_ILi1ELi4ELi1ELi1ELi4EEELi256ELi8ELi16EEESC_Lb0ELb0EEENS1I_4warp24FragmentIteratorTensorOpIS14_S18_fNS_5ArrayIfLi8ELb1EEES15_Lb0ESC_EENS1S_20TileIteratorTensorOpIS14_S18_SC_S15_Lb0EEENS1J_18SharedLoadIteratorINS1Q_18CompactedThreadMapESC_Li16EEENS1I_6thread17LinearCombinationISC_Li8ESC_fLNS22_9ScaleType4KindE0ELNS_15FloatRoundStyleE2EEENSA_ILi0ELi4EEELi1ELb0EEENS10_30GemmIdentityThreadblockSwizzleILi1EEELNS1_8OperatorE0ENS1_17Conv3dProblemSizeELb1ELb0ESC_Lb0EEELi256EEEvNT_6ParamsE",
+        "count": 1,
+        "duration_ms": 0.254203
+      },
+      {
+        "name": "void flash_fwd_splitkv_kernel<Flash_fwd_kernel_traits<256, 64, 64, 4, false, false, cutlass::bfloat16_t, Flash_kernel_traits<256, 64, 64, 4, cutlass::bfloat16_t> >, true, false, false, false, true, false, true, false>(Flash_fwd_params)",
+        "count": 6,
+        "duration_ms": 0.247045
+      },
+      {
+        "name": "void at::native::(anonymous namespace)::vectorized_layer_norm_kernel<c10::BFloat16, float, false>(int, float, c10::BFloat16 const*, c10::BFloat16 const*, c10::BFloat16 const*, float*, float*, c10::BFloat16*)",
+        "count": 49,
+        "duration_ms": 0.237483
+      },
+      {
+        "name": "void at::native::vectorized_elementwise_kernel<4, at::native::CUDAFunctor_add<c10::BFloat16>, std::array<char*, 3ul> >(int, at::native::CUDAFunctor_add<c10::BFloat16>, std::array<char*, 3ul>)",
+        "count": 97,
+        "duration_ms": 0.233962
+      },
+      {
+        "name": "void at::native::vectorized_elementwise_kernel<4, at::native::CUDAFunctorOnSelf_add<float>, std::array<char*, 2ul> >(int, at::native::CUDAFunctorOnSelf_add<float>, std::array<char*, 2ul>)",
+        "count": 140,
+        "duration_ms": 0.23348
+      },
+      {
+        "name": "void at::native::vectorized_elementwise_kernel<4, at::native::exp_kernel_cuda(at::TensorIteratorBase&)::{lambda()#2}::operator()() const::{lambda()#2}::operator()() const::{lambda(float)#1}, std::array<char*, 2ul> >(int, at::native::exp_kernel_cuda(at::TensorIteratorBase&)::{lambda()#2}::operator()() const::{lambda()#2}::operator()() const::{lambda(float)#1}, std::array<char*, 2ul>)",
+        "count": 126,
+        "duration_ms": 0.222043
+      },
+      {
+        "name": "(anonymous namespace)::qk_rmsnorm_rope_decode_kernel(__ppu_bfloat16 const*, __ppu_bfloat16 const*, __ppu_bfloat16 const*, __ppu_bfloat16 const*, __ppu_bfloat16 const*, __ppu_bfloat16 const*, __ppu_bfloat16*, __ppu_bfloat16*, int, long, long, long, long, long, long, float)",
+        "count": 90,
+        "duration_ms": 0.220683
+      },
+      {
+        "name": "void at::native::elementwise_kernel<128, 4, at::native::gpu_kernel_impl<at::native::CUDAFunctor_add<float> >(at::TensorIteratorBase&, at::native::CUDAFunctor_add<float> const&)::{lambda(int)#1}>(int, at::native::gpu_kernel_impl<at::native::CUDAFunctor_add<float> >(at::TensorIteratorBase&, at::native::CUDAFunctor_add<float> const&)::{lambda(int)#1})",
+        "count": 18,
+        "duration_ms": 0.207
+      },
+      {
+        "name": "void at::native::unrolled_elementwise_kernel<at::native::BinaryFunctor<float, float, float, at::native::binary_internal::MulFunctor<float> >, std::array<char*, 3ul>, 4, TrivialOffsetCalculator<2, unsigned int>, TrivialOffsetCalculator<1, unsigned int>, at::native::memory::LoadWithCast<2>, at::native::memory::StoreWithCast<1> >(int, at::native::BinaryFunctor<float, float, float, at::native::binary_internal::MulFunctor<float> >, std::array<char*, 3ul>, TrivialOffsetCalculator<2, unsigned int>, TrivialOffsetCalculator<1, unsigned int>, at::native::memory::LoadWithCast<2>, at::native::memory::StoreWithCast<1>)",
+        "count": 18,
+        "duration_ms": 0.206164
+      },
+      {
+        "name": "void at::native::elementwise_kernel<128, 2, at::native::gpu_kernel_impl_nocast<at::native::neg_kernel_cuda(at::TensorIteratorBase&)::{lambda()#2}::operator()() const::{lambda()#7}::operator()() const::{lambda(float)#1}>(at::TensorIteratorBase&, at::native::neg_kernel_cuda(at::TensorIteratorBase&)::{lambda()#2}::operator()() const::{lambda()#7}::operator()() const::{lambda(float)#1} const&)::{lambda(int)#1}>(int, at::native::gpu_kernel_impl_nocast<at::native::neg_kernel_cuda(at::TensorIteratorBase&)::{lambda()#2}::operator()() const::{lambda()#7}::operator()() const::{lambda(float)#1}>(at::TensorIteratorBase&, at::native::neg_kernel_cuda(at::TensorIteratorBase&)::{lambda()#2}::operator()() const::{lambda()#7}::operator()() const::{lambda(float)#1} const&)::{lambda(int)#1})",
+        "count": 48,
+        "duration_ms": 0.18544
+      },
+      {
+        "name": "void at::native::reduce_kernel<512, 1, at::native::ReduceOp<float, at::native::ArgMaxOps<float>, unsigned int, long, 4, 4> >(at::native::ReduceOp<float, at::native::ArgMaxOps<float>, unsigned int, long, 4, 4>)",
+        "count": 16,
+        "duration_ms": 0.1814
+      },
+      {
+        "name": "void at::native::vectorized_elementwise_kernel<4, at::native::GeluCUDAKernelImpl(at::TensorIteratorBase&, at::native::GeluType)::{lambda()#1}::operator()() const::{lambda()#4}::operator()() const::{lambda(c10::BFloat16)#1}, std::array<char*, 2ul> >(int, at::native::GeluCUDAKernelImpl(at::TensorIteratorBase&, at::native::GeluType)::{lambda()#1}::operator()() const::{lambda()#4}::operator()() const::{lambda(c10::BFloat16)#1}, std::array<char*, 2ul>)",
+        "count": 24,
+        "duration_ms": 0.18064
+      },
+      {
+        "name": "void at::native::triu_tril_kernel<float, int, false, 2, false>(at::cuda::detail::TensorInfo<float, int>, at::cuda::detail::TensorInfo<float const, int>, long, long, int)",
+        "count": 36,
+        "duration_ms": 0.178442
+      },
+      {
+        "name": "void at::native::vectorized_elementwise_kernel<4, at::native::(anonymous namespace)::pow_tensor_scalar_kernel_impl<float, float>(at::TensorIteratorBase&, float)::{lambda(float)#1}, std::array<char*, 2ul> >(int, at::native::(anonymous namespace)::pow_tensor_scalar_kernel_impl<float, float>(at::TensorIteratorBase&, float)::{lambda(float)#1}, std::array<char*, 2ul>)",
+        "count": 79,
+        "duration_ms": 0.177802
+      }
+    ],
+    "overhead": [
+      {
+        "name": "Buffer Flush",
+        "count": 19,
+        "duration_ms": 4.756131
+      }
+    ]
+  },
+  "trace": "results/gate-prep-scratch-profile/gdn_gate_prep-trace.json"
+}

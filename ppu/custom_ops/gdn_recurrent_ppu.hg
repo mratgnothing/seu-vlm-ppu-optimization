@@ -50,6 +50,41 @@ __device__ float block_sum(float value) {
   return value;
 }
 
+__global__ void gdn_gate_prep_decode_kernel(
+    const __ppu_bfloat16* raw_a,
+    const __ppu_bfloat16* raw_b,
+    const float* exp_a_log,
+    const __ppu_bfloat16* dt_bias,
+    float* g,
+    __ppu_bfloat16* beta,
+    int batch_size,
+    int64_t a_batch_stride,
+    int64_t b_batch_stride,
+    int64_t g_batch_stride,
+    int64_t beta_batch_stride) {
+  const int head = threadIdx.x;
+  const int batch = blockIdx.x;
+  if (batch >= batch_size || head >= kHeads) return;
+
+  const float a_value = __bfloat162float(
+      raw_a[static_cast<int64_t>(batch) * a_batch_stride + head]);
+  const float b_value = __bfloat162float(
+      raw_b[static_cast<int64_t>(batch) * b_batch_stride + head]);
+  const float dt_value = __bfloat162float(dt_bias[head]);
+  const float softplus_input = a_value + dt_value;
+  // Match torch.nn.functional.softplus(beta=1, threshold=20) without
+  // evaluating expf for the overflow-prone positive tail.
+  const float softplus_value = softplus_input > 20.0F
+      ? softplus_input
+      : log1pf(expf(softplus_input));
+  const float sigmoid_value = 1.0F / (1.0F + expf(-b_value));
+
+  g[static_cast<int64_t>(batch) * g_batch_stride + head] =
+      -exp_a_log[head] * softplus_value;
+  beta[static_cast<int64_t>(batch) * beta_batch_stride + head] =
+      __float2bfloat16_rn(sigmoid_value);
+}
+
 template <int kTilesPerHead>
 __global__ void gdn_recurrent_decode_kernel(
     const __ppu_bfloat16* query,
@@ -435,6 +470,36 @@ extern "C" int seu_ppu_gdn_recurrent_decode_bf16(
   } else {
     return static_cast<int>(hggcErrorInvalidValue);
   }
+  return static_cast<int>(hggcGetLastError());
+}
+
+extern "C" int seu_ppu_gdn_gate_prep_decode_bf16(
+    const uint16_t* raw_a,
+    const uint16_t* raw_b,
+    const float* exp_a_log,
+    const uint16_t* dt_bias,
+    float* g,
+    uint16_t* beta,
+    int batch_size,
+    int64_t a_batch_stride,
+    int64_t b_batch_stride,
+    int64_t g_batch_stride,
+    int64_t beta_batch_stride,
+    void* stream_handle) {
+  if (batch_size <= 0) return static_cast<int>(hggcErrorInvalidValue);
+  const hggcStream_t stream = reinterpret_cast<hggcStream_t>(stream_handle);
+  gdn_gate_prep_decode_kernel<<<batch_size, 32, 0, stream>>>(
+      reinterpret_cast<const __ppu_bfloat16*>(raw_a),
+      reinterpret_cast<const __ppu_bfloat16*>(raw_b),
+      exp_a_log,
+      reinterpret_cast<const __ppu_bfloat16*>(dt_bias),
+      g,
+      reinterpret_cast<__ppu_bfloat16*>(beta),
+      batch_size,
+      a_batch_stride,
+      b_batch_stride,
+      g_batch_stride,
+      beta_batch_stride);
   return static_cast<int>(hggcGetLastError());
 }
 

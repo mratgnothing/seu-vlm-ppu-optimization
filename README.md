@@ -50,6 +50,12 @@
   `[1,1,2048]` add 与 720 次 kernel launch。CN20 两轮由 `100.156→101.616`、
   `98.576→101.507 token/s`，配对中位均约 `1.021x`、各 14/20 获胜，Accuracy
   均为 85% 且两轮 20/20 全文一致。它同样默认关闭，待完整集门禁。
+- 新增 18 层 GDN gate-prep 融合：加载时缓存 FP32 `exp(A_log)`，一个 HGGC kernel
+  合并 Sigmoid、两个 cast、add、Softplus、mul/neg，并用 thread-local scratch 复用
+  `g/beta`。最终 128-token 六对全部获胜、全文一致，配对中位 `1.0839x`；CN20
+  两轮配对中位 `1.0811x/1.0863x`、19/20 和 17/20 获胜，均 20/20 全文一致、
+  Accuracy 85%。16-token profile 的 launch `16253→14363`，Self CPU/PPU
+  `366.100/119.365→324.074/112.982 ms`。候选仍由显式开关启用，完整集门禁进行中。
 - 资源释放前完成独立 SwiGLU HGGC 核负实验：四组线程均 bit-exact，但最好只有
   `0.7901x`，因此未接入正式 wrapper；后续改走 packed GEMM epilogue fusion。
 - 已将 PPU 源码、编译产物、小型结果、pip/设备清单、全部原始 trace 和 MMBench
@@ -68,6 +74,7 @@ PPU 侧已完成 SDK、真实模型闭环、20 条稳态基线、算子级 profi
 [PPU acBLAS GEMV 调查](docs/experiments/2026-08-27-ppu-acblas-gemv.md)、
 [PPU GDN 输入投影打包](docs/experiments/2026-08-27-ppu-packed-gdn-projections.md)、
 [PPU residual-add + RMSNorm 跨层融合](docs/experiments/2026-08-27-ppu-residual-rmsnorm.md)、
+[PPU GDN gate-prep 融合](docs/experiments/2026-08-28-ppu-gdn-gate-prep.md)、
 [PPU SwiGLU 融合负实验](docs/experiments/2026-08-27-ppu-swiglu-negative.md)、
 [PPU decode 融合算子与问题记录](ppu/custom_ops/README.md)、
 [PPU 兼容性矩阵](docs/ppu-compatibility-matrix.md) 和 [需要向主办方确认的问题](docs/questions-for-organizer.md)。

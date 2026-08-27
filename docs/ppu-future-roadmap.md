@@ -8,8 +8,8 @@
 
 ## P0：恢复与精度门禁
 
-1. 用保存镜像 + CPFS 在新 PPU 实例复现当前 `a71108f` 状态；核对设备/SDK/torch、
-   模型与数据哈希、18/18/49/18/6/24/18/24 模块计数。
+1. 用保存镜像 + CPFS 在新 PPU 实例复现最新 gate-prep 提交；核对设备/SDK/torch、
+   模型与数据哈希、18/18/49/18/6/24/18/24/18 模块计数。
 2. 对 grouped-acBLAS GDN + 48-edge residual-RMSNorm 跑中文/英文完整公开集，比较
    parsed answer、token 数、完整文本哈希和 Accuracy；任何定向漂移都回退。
 3. 获取主办方私有门禁和最终镜像，固定一次“提交候选”而不是继续追逐小样本噪声。
@@ -23,11 +23,12 @@
 12288 维投影中间张量落地、split、独立 SiLU 和 mul。它对所有 SwiGLU Transformer
 通用，预期收益也比单独 elementwise 核更可靠。
 
-### GDN raw-gate 与常量折叠
+### GDN raw-gate 与常量折叠（已完成独立 gate-prep）
 
-当前每层每 token 重复执行 `sigmoid(b)`、`exp(A_log)`、`softplus(a+dt_bias)`。
-先把静态 `exp(A_log)` 在加载阶段缓存，再评估把 raw `a/b` 交给 recurrent kernel。
-必须复刻 BF16/FP32 舍入点；随机 exact 不足以证明长序列 state exact。
+已在加载阶段缓存静态 FP32 `exp(A_log)`，并用一个 HGGC kernel 合并 raw `a/b`
+门控准备；最终 CN20 两轮配对中位约 +8%，均 20/20 全文 exact。当前采用独立
+gate-prep + recurrent 两核，以保留已验证的 state kernel。除非后续 profile 证明
+GEMM 路线受阻，不再为省一次 launch 把它强行并入 recurrent kernel。
 
 ### Decode scratch arena
 
@@ -52,6 +53,13 @@ projection buffer；先检查 cache/stream 生命周期和 alias，再逐个替�
    16×128×128 FP32 state 带宽与跨 token 依赖；微基准不能只测空 state。
 3. 评估将 causal-conv、raw gate preparation、recurrent update 合成一层 decode
    pipeline；只有当中间 q/k/v 不再落地时，融合才可能抵消更复杂的 launch 成本。
+
+## 下一轮唯一主线：GEMM/GEMV
+
+本轮 gate-prep 完成后停止继续拆改 GDN。下一轮优先确认 acBLAS 是否开放自定义
+epilogue、grouped/batched GEMV 与权重预打包接口；首选目标是 packed gate/up GEMM
+直接产生 `SiLU(gate) * up`，其次才是 2048→6144、6144→2048 的 batch=1 decode
+GEMV。独立 SwiGLU 和自写通用 GEMV 已有负结果，不重复做线程盲搜。
 
 ## P4：量化与低精度
 

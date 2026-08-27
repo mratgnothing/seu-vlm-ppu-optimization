@@ -121,6 +121,29 @@ step 共减少 720 次设备 launch。正式 wrapper smoke 为真实 Transformer
 首版 24-edge profile 的 AB/summary JSON 也保留在同目录，用于解释为何必须补齐跨层
 链；它们不能与最终 48-edge profile 混用。
 
+## PPU GDN gate-prep 融合
+
+在最终优化栈上缓存 18 层 FP32 `exp(A_log)`，将每层每 token 的 Sigmoid、cast、
+Add、Softplus、Mul/Neg 合为一个 HGGC kernel，并用 thread-local scratch 复用
+`g/beta`。固定 128-token 六对配对中位 `1.0839x`、6/6 获胜且全文一致。CN20
+两轮分别为：
+
+- `101.651→109.275 tokens/s`，配对中位 `1.0811x`，19/20 获胜；
+- `100.085→107.083 tokens/s`，配对中位 `1.0863x`，17/20 获胜。
+
+两轮均 20/20 全文一致、Accuracy 85%。16-token profile 的 launch
+`16253→14363`，Self CPU/PPU 分别下降 11.48%/5.35%，memcheck 为 0 errors。
+
+- [`ppu-gdn-gate-prep-smoke-20260828.json`](ppu-gdn-gate-prep-smoke-20260828.json)
+- [`ppu-gdn-gate-prep-ab128-20260828.json`](ppu-gdn-gate-prep-ab128-20260828.json)
+- [`ppu-gdn-gate-prep-cn20-r1-20260828.json`](ppu-gdn-gate-prep-cn20-r1-20260828.json)
+- [`ppu-gdn-gate-prep-cn20-r2-20260828.json`](ppu-gdn-gate-prep-cn20-r2-20260828.json)
+- [`ppu-gdn-gate-prep-profile-ab-20260828.json`](ppu-gdn-gate-prep-profile-ab-20260828.json)
+- [`ppu-gdn-gate-prep-profile-baseline-summary-20260828.json`](ppu-gdn-gate-prep-profile-baseline-summary-20260828.json)
+- [`ppu-gdn-gate-prep-profile-candidate-summary-20260828.json`](ppu-gdn-gate-prep-profile-candidate-summary-20260828.json)
+- [`ppu-gdn-gate-prep-memcheck-20260828.txt`](ppu-gdn-gate-prep-memcheck-20260828.txt)
+- [实验说明](../docs/experiments/2026-08-28-ppu-gdn-gate-prep.md)
+
 ## PPU SwiGLU 独立融合负实验
 
 `SiLU(gate) * up` 自定义 HGGC 核在随机 BF16 `[1,1,6144]` 上四组线程配置均

@@ -33,10 +33,16 @@ def parse_args() -> argparse.Namespace:
         default="torch-packed",
     )
     parser.add_argument("--acblas-build-dir", type=Path)
-    parser.add_argument(
+    targets = parser.add_mutually_exclusive_group()
+    targets.add_argument(
         "--residual-rmsnorm-ab",
         action="store_true",
         help="Keep the selected GDN projection backend on and A/B residual RMSNorm",
+    )
+    targets.add_argument(
+        "--gate-prep-ab",
+        action="store_true",
+        help="Keep projections/residual RMSNorm on and A/B GDN gate preparation",
     )
     return parser.parse_args()
 
@@ -46,6 +52,8 @@ def main() -> int:
     group_sizes = tuple(int(value) for value in args.group_sizes.split(","))
     repo_root = args.repo_root.resolve()
     custom_op_dir = repo_root / "ppu" / "custom_ops"
+    if not custom_op_dir.is_dir():
+        custom_op_dir = Path(__file__).resolve().parent
     for path in (repo_root, custom_op_dir):
         if str(path) not in sys.path:
             sys.path.insert(0, str(path))
@@ -118,7 +126,7 @@ def main() -> int:
     if len(packed_modules) != 18:
         raise RuntimeError(f"expected 18 packed GDN modules, got {len(packed_modules)}")
     residual_modules = []
-    if args.residual_rmsnorm_ab:
+    if args.residual_rmsnorm_ab or args.gate_prep_ab:
         from ppu_gdn import (
             pack_qwen35_decoder_residual_rmsnorm,
             set_qwen35_decoder_residual_rmsnorm,
@@ -144,16 +152,35 @@ def main() -> int:
             raise RuntimeError(
                 f"expected 24 residual RMSNorm modules, got {len(residual_modules)}"
             )
+    gate_prep_modules = []
+    if args.gate_prep_ab:
+        from ppu_gdn import pack_qwen35_gdn_gate_prep
+
+        for module in packed_modules:
+            pack_qwen35_gdn_gate_prep(module, model._ppu_gdn_library)
+            gate_prep_modules.append(module)
+        if len(gate_prep_modules) != 18:
+            raise RuntimeError(
+                f"expected 18 GDN gate-prep modules, got {len(gate_prep_modules)}"
+            )
     torch.cuda.empty_cache()
 
     def set_enabled(enabled: bool) -> None:
         for module in packed_modules:
             set_packed_qwen35_gdn_input_projections(
-                module, True if args.residual_rmsnorm_ab else enabled
+                module,
+                True if args.residual_rmsnorm_ab or args.gate_prep_ab else enabled,
             )
-        if args.residual_rmsnorm_ab:
+        if args.residual_rmsnorm_ab or args.gate_prep_ab:
             for module in residual_modules:
-                set_qwen35_decoder_residual_rmsnorm(module, enabled)
+                set_qwen35_decoder_residual_rmsnorm(
+                    module, True if args.gate_prep_ab else enabled
+                )
+        if args.gate_prep_ab:
+            from ppu_gdn import set_qwen35_gdn_gate_prep
+
+            for module in gate_prep_modules:
+                set_qwen35_gdn_gate_prep(module, enabled)
 
     def run_sample(sample, enabled: bool, pair_index: int) -> dict[str, object]:
         set_enabled(enabled)
@@ -171,7 +198,9 @@ def main() -> int:
             "pair_index": pair_index,
             "pair_order": "AB" if pair_index % 2 == 0 else "BA",
             "mode": (
-                "residual_rmsnorm"
+                "gdn_gate_prep"
+                if enabled and args.gate_prep_ab
+                else "residual_rmsnorm"
                 if enabled and args.residual_rmsnorm_ab
                 else "packed_gdn"
                 if enabled
@@ -218,7 +247,11 @@ def main() -> int:
         bool(record["correct"]) for record in candidate_records
     )
     candidate_label = (
-        "residual_rmsnorm" if args.residual_rmsnorm_ab else "packed_gdn"
+        "gdn_gate_prep"
+        if args.gate_prep_ab
+        else "residual_rmsnorm"
+        if args.residual_rmsnorm_ab
+        else "packed_gdn"
     )
     payload = {
         "sample_offset": args.sample_offset,
@@ -230,6 +263,7 @@ def main() -> int:
         "projection_backend": args.projection_backend,
         "ab_target": candidate_label,
         "residual_rmsnorm_modules": len(residual_modules),
+        "gdn_gate_prep_modules": len(gate_prep_modules),
         "baseline": {
             "avg_ttft_ms": mean_metric(baseline_records, "ttft_ms"),
             "avg_throughput_tokens_per_sec": mean_metric(

@@ -202,6 +202,7 @@ class VLMModel:
         self._ppu_gdn_patched_modules = 0
         self._ppu_packed_gdn_projection_modules = 0
         self._ppu_residual_rmsnorm_modules = 0
+        self._ppu_gdn_gate_prep_modules = 0
         self._ppu_gdn_projection_backend = "disabled"
         self._ppu_gdn_projection_groups = "disabled"
         gdn_library_path = os.getenv("SEU_PPU_GDN_LIBRARY")
@@ -217,6 +218,7 @@ class VLMModel:
             from ppu_gdn import (
                 PPUGDNLibrary,
                 pack_qwen35_decoder_residual_rmsnorm,
+                pack_qwen35_gdn_gate_prep,
                 pack_qwen35_mlp_module,
             )
 
@@ -419,6 +421,17 @@ class VLMModel:
                         "SEU PPU residual RMSNorm expected 24 decoder layers, "
                         f"patched {self._ppu_residual_rmsnorm_modules}"
                     )
+            if os.getenv("SEU_PPU_GDN_GATE_PREP_ENABLE", "0") == "1":
+                for module in self._model.modules():
+                    if type(module).__name__ != "Qwen3_5GatedDeltaNet":
+                        continue
+                    pack_qwen35_gdn_gate_prep(module, self._ppu_gdn_library)
+                    self._ppu_gdn_gate_prep_modules += 1
+                if self._ppu_gdn_gate_prep_modules != 18:
+                    raise RuntimeError(
+                        "SEU PPU GDN gate-prep expected 18 modules, "
+                        f"patched {self._ppu_gdn_gate_prep_modules}"
+                    )
 
     def _load_dummy_backend(self, reason: str) -> None:
         self._dummy_reason = reason
@@ -557,6 +570,9 @@ class VLMModel:
                 ),
                 "ppu_residual_rmsnorm_modules": getattr(
                     self, "_ppu_residual_rmsnorm_modules", 0
+                ),
+                "ppu_gdn_gate_prep_modules": getattr(
+                    self, "_ppu_gdn_gate_prep_modules", 0
                 ),
             },
         )

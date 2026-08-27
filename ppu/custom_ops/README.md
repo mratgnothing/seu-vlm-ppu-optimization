@@ -9,6 +9,7 @@
 | 算子 | 固定 decode 形状/语义 | 模型调用数 |
 |---|---|---:|
 | recurrent GDN | q/k/v BF16 `[B,1,16,128]`，state FP32 `[B,16,128,128]` | 18/token |
+| GDN gate-prep | raw a/b BF16 `[B,1,16]`，cached A FP32，输出 g FP32/beta BF16 | 18/token |
 | causal-conv update | BF16 `[B,6144,1]`，state `[B,6144,4]`，SiLU | 18/token |
 | RMSNorm | BF16 `[B,1,2048]`，FP32 reduction | 49/token |
 | residual-add + RMSNorm | BF16 `[B,1,2048]` residual/branch，FP32 reduction | 48/token |
@@ -28,6 +29,11 @@ residual-RMSNorm 路径进一步利用 decoder 图中 48 条相邻的 `residual 
 RMS reduction 和 weight scaling。每层内部的 attention 边直接融合，MLP 边通过
 thread-local、输入对象身份校验的缓存连接下一层 input norm（最后一层连接 final
 norm）；prefill 和不匹配的 dtype/device/shape 均回退原 forward。
+
+GDN gate-prep 在加载时缓存 FP32 `exp(A_log)`，一个 kernel 合并
+`sigmoid(b)`、两个 cast、`a+dt_bias`、Softplus、乘法和取负。每层使用
+thread-local scratch 复用 `g/beta`，只覆盖 eval、BF16、batch=1、seq=1 且已有
+recurrent cache 的 decode；prefill 和其他契约全部回退。
 
 目录还保留一个独立的 BF16 SwiGLU 负实验核。它在 `[1,1,6144]` 上与
 `F.silu(gate) * up` bit-exact，但 128/256/512/1024 线程的最好速度仅为 Torch
@@ -58,6 +64,8 @@ export LD_LIBRARY_PATH="$PPU_SDK/lib:$PPU_SDK/lib64:${LD_LIBRARY_PATH:-}"
 ./build_gdn_shared.sh
 
 python smoke_gdn_integration.py --tiles-per-head 4 --warmup 50 --iters 1000
+python smoke_gdn_gate_prep_integration.py \
+  --library build/libseu_ppu_gdn.so --warmup 50 --iters 1000 --repeats 5
 python smoke_causal_conv_integration.py --threads 96 --warmup 50 --iters 1000
 python smoke_rmsnorm_integration.py --threads 512 --warmup 50 --iters 1000
 python smoke_swiglu_integration.py \
@@ -84,6 +92,7 @@ bit-exact，GDN 最大 state/output 误差为 `5.96e-8 / 0`。
 | 算子 | eager ms | fused ms | 单算子加速 |
 |---|---:|---:|---:|
 | recurrent GDN，4 tiles | 0.19490 | 0.031362 | 6.21x |
+| GDN gate-prep | 0.028592 | 0.020680 | 1.3826x |
 | causal-conv，96 threads | 0.03677 | 0.015997 | 2.30x |
 | RMSNorm，512 threads | 0.05651 | 0.012120 | 4.66x |
 | gated RMSNorm，128 threads | 0.06298 | 0.014572 | 4.32x |
@@ -116,6 +125,8 @@ export SEU_PPU_QK_ROPE_ENABLE=1
 export SEU_PPU_PACK_MLP_ENABLE=1
 # 跨层 residual-add + RMSNorm；仍需完整集精度门禁，默认关闭。
 export SEU_PPU_RESIDUAL_RMSNORM_ENABLE=1
+# 缓存 A 并融合 GDN gate-prep；只覆盖 batch=1 cached decode。
+export SEU_PPU_GDN_GATE_PREP_ENABLE=1
 # 激进候选；CN20 有 1/20 完整文本漂移，默认必须保持关闭。
 export SEU_PPU_PACK_GDN_PROJECTIONS_ENABLE=1
 export SEU_PPU_PACK_GDN_PROJECTIONS_GROUPS=4
@@ -133,7 +144,8 @@ export SEU_PPU_ACBLAS_GDN_ALGORITHM=-1
 
 随后照常运行 `benchmark_public.py`。`GenerationResult.meta` 会记录实际挂载的
 GDN/conv/RMSNorm/gated-RMSNorm/qk-RoPE/packed-MLP/packed-GDN 模块数，预期分别为
-`18/18/49/18/6/24/18`。启用跨层融合时另应得到 24 个 decoder patch。
+`18/18/49/18/6/24/18`。启用跨层融合时另应得到 24 个 decoder patch；启用
+gate-prep 时还应得到 18 个 gate-prep module patch。
 grouped-acBLAS + residual-RMSNorm 正式单样本冒烟已得到完整计数，且
 `ppu_gdn_projection_backend` 为 `acblas-grouped`、公开校验无错误。
 
@@ -154,6 +166,8 @@ grouped-acBLAS + residual-RMSNorm 正式单样本冒烟已得到完整计数，�
 | all-five + packed-MLP + grouped-acBLAS GDN r2 | - | 99.601 | 85% | +100.26% |
 | 上项 + 48-edge residual-RMSNorm r1 | 118.654 | 101.616 | 85% | +104.31% |
 | 上项 + 48-edge residual-RMSNorm r2 | 120.807 | 101.507 | 85% | +104.09% |
+| 上项 + GDN gate-prep r1 | 121.477 | 109.275 | 85% | +119.71% |
+| 上项 + GDN gate-prep r2 | 120.096 | 107.083 | 85% | +115.31% |
 
 20 条中各路径的解析答案和正确性均一致。GDN-only 有 3 条 token 数变化，
 all-four 有 5 条；因此这些结果证明小样本无 Accuracy 回退，不等于已经证明完整公开集

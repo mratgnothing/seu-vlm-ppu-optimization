@@ -122,10 +122,14 @@ class PPUMicrobenchContractTest(unittest.TestCase):
         swiglu_smoke = (
             ROOT / "ppu" / "custom_ops" / "smoke_swiglu_integration.py"
         ).read_text(encoding="utf-8")
+        gate_prep_smoke = (
+            ROOT / "ppu" / "custom_ops" / "smoke_gdn_gate_prep_integration.py"
+        ).read_text(encoding="utf-8")
         self.assertIn("stream_handle", kernel)
         self.assertIn("round_to_bf16", kernel)
         for symbol in (
             "seu_ppu_gdn_recurrent_decode_bf16",
+            "seu_ppu_gdn_gate_prep_decode_bf16",
             "seu_ppu_causal_conv1d_decode_bf16",
             "seu_ppu_rmsnorm_decode_bf16",
             "seu_ppu_residual_rmsnorm_decode_bf16",
@@ -156,6 +160,10 @@ class PPUMicrobenchContractTest(unittest.TestCase):
         self.assertIn("normalized_exact", residual_smoke)
         self.assertIn("fused_bf16_swiglu", swiglu_smoke)
         self.assertIn("max_abs_error", swiglu_smoke)
+        self.assertIn("g_exact", gate_prep_smoke)
+        self.assertIn("beta_exact", gate_prep_smoke)
+        self.assertIn("pack_qwen35_gdn_gate_prep", wrapper)
+        self.assertIn("threading.local()", wrapper)
         self.assertIn("Path(sys.executable).parent", extension_builder)
         self.assertIn("exact_output_match", benchmark)
         self.assertIn('"2048x2048": 42', acblas_benchmark)
@@ -182,6 +190,7 @@ class PPUMicrobenchContractTest(unittest.TestCase):
             "SEU_PPU_ACBLAS_GDN_BUILD_DIR",
             "SEU_PPU_ACBLAS_GDN_ALGORITHM",
             "SEU_PPU_RESIDUAL_RMSNORM_ENABLE",
+            "SEU_PPU_GDN_GATE_PREP_ENABLE",
         ):
             self.assertIn(variable, integration)
         self.assertIn("GDN projection backends are mutually exclusive", integration)

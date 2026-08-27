@@ -224,6 +224,7 @@ Torch extension + C-ABI acBLAS bridge 也完成了 ABI 隔离和 102 个 Linear 
 | + packed GDN projections，paired | 98.430 | 85% | +97.90% |
 | + grouped-acBLAS GDN r1/r2 | 98.028 / 99.601 | 85% | +97.10% / +100.26% |
 | + 48-edge residual-RMSNorm r1/r2 | 101.616 / 101.507 | 85% | +104.31% / +104.09% |
+| + GDN gate-prep r1/r2 | 109.275 / 107.083 | 85% | +119.71% / +115.31% |
 
 最终线程隔离版 packed-GDN 的同模型逐样本 AB/BA 中，基线/候选为
 94.099/98.430 token/s，成对速度比中位数 1.0355x，20 条赢 15 条；Accuracy 都是
@@ -247,6 +248,16 @@ CN20 两轮由 100.156→101.616 和 98.576→101.507 token/s，配对中位
 1.0213x/1.0206x，均 14/20 获胜、85% Accuracy、20/20 全文一致。Profile 中目标
 `aten::add` 720→0、`cudaLaunchKernel` 16973→16253；正式 wrapper smoke 也通过
 真实 PPU 后端和公开校验。
+
+最后一轮进一步针对 18 个 GDN 层的门控准备：eval 加载时缓存 FP32
+`exp(A_log)`，一个 HGGC kernel 合并 `sigmoid(b)`、两个 cast、bias add、Softplus、
+乘法和取负，并以 thread-local scratch 复用 FP32 `g` 与 BF16 `beta`。最终固定
+128-token 六对全部获胜、全文一致、配对中位 1.0839x；CN20 两轮分别为
+101.651→109.275 和 100.085→107.083 token/s，配对中位 1.0811x/1.0863x、
+19/20 和 17/20 获胜，两轮均 20/20 全文一致且 Accuracy 85%。Profile 中
+`cudaLaunchKernel` 16253→14363，Self CPU/PPU 分别下降 11.48%/5.35%，
+`hggc-memcheck` 为 0 errors。完整公开集正在作为独立精度门禁运行，未按公开标签
+调节实现。
 
 ### 7.3 当前边界
 

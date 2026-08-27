@@ -125,6 +125,13 @@
   两轮中位为 1.0159x/1.0233x，CN20 两轮平均吞吐为 100.156→101.616 和
   98.576→101.507 token/s，成对中位 1.0213x/1.0206x、均 14/20 获胜，Accuracy
   均 85% 且 20/20 全文一致。正式 wrapper 真实 PPU smoke 通过，候选仍默认关闭。
+- 18 层 cached decode 的 GDN gate-prep 已把 `sigmoid(b)`、`exp(A_log)`、
+  `softplus(a+dt_bias)` 等七组小 kernel 合成一次 HGGC 调用，并缓存静态
+  `exp(A_log)`、thread-local 复用 `g/beta`。最终固定 128-token 六对 6/6 获胜、
+  全文一致、配对中位 1.0839x；CN20 两轮为 101.651→109.275 和
+  100.085→107.083 token/s，配对中位 1.0811x/1.0863x、19/20 和 17/20 获胜，
+  均 20/20 全文一致、Accuracy 85%。profile 的 launch 16253→14363，Self CPU/PPU
+  分别下降 11.48%/5.35%；memcheck 0 errors。正式开关默认关闭，完整集正在门禁。
 - 独立 BF16 SwiGLU HGGC 核在 `[1,1,6144]` 上四组线程均 bit-exact，但最优仅
   `0.7901x`，未通过单算子性能门禁；没有运行公开集挑样本，也没有接入 wrapper。
   后续只考虑 packed gate/up GEMM epilogue fusion。
@@ -139,6 +146,7 @@
   [注册式 acBLAS Linear](experiments/2026-08-27-ppu-acblas-gemv.md) 和
   [GDN 输入投影打包](experiments/2026-08-27-ppu-packed-gdn-projections.md)、
   [residual-add + RMSNorm](experiments/2026-08-27-ppu-residual-rmsnorm.md)、
+  [GDN gate-prep](experiments/2026-08-28-ppu-gdn-gate-prep.md)、
   [SwiGLU 负实验](experiments/2026-08-27-ppu-swiglu-negative.md)、
   [资源释放与恢复](ppu-resource-release-handoff.md) 和 [未来路线](ppu-future-roadmap.md)。
 
@@ -147,8 +155,8 @@
 - 获取主办方 PPU-vLLM/Qwen3.5/GDN fast path，并与 eager 做同口径对照。
 - 在完整公开集验证 GDN+conv、all-four、packed-MLP 与 packed-GDN 的 Accuracy、答案和生成长度漂移，再决定
   最终默认开关。
-- 获取厂商 grouped/batched-GEMV 接口，或实现能保持原数值路径并减少设备 launch
-  的 HGGC multi-output GEMV；继续按 profile 排 remaining elementwise/cat/reduce。
+- 下一轮集中获取厂商 grouped/batched-GEMV 与 GEMM epilogue 接口，优先处理
+  packed MLP 的 gate/up GEMM + SwiGLU epilogue；本轮不再扩展 GDN kernel。
 - 量化/权重变换的正式允许范围确认。
 - 初赛技术报告已形成可持续更新的初稿，源码候选包可一键生成；仍缺 PPU 实测章节、最终复现说明和按主办方格式定稿。
 

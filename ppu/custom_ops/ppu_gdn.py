@@ -79,6 +79,25 @@ class PPUGDNLibrary:
             ctypes.c_void_p,
         ]
         self.launch.restype = ctypes.c_int
+        self.gate_prep_launch = getattr(
+            self.library, "seu_ppu_gdn_gate_prep_decode_bf16", None
+        )
+        if self.gate_prep_launch is not None:
+            self.gate_prep_launch.argtypes = [
+                ctypes.c_void_p,
+                ctypes.c_void_p,
+                ctypes.c_void_p,
+                ctypes.c_void_p,
+                ctypes.c_void_p,
+                ctypes.c_void_p,
+                ctypes.c_int,
+                ctypes.c_int64,
+                ctypes.c_int64,
+                ctypes.c_int64,
+                ctypes.c_int64,
+                ctypes.c_void_p,
+            ]
+            self.gate_prep_launch.restype = ctypes.c_int
         self.conv_launch = self.library.seu_ppu_causal_conv1d_decode_bf16
         self.conv_launch.argtypes = [
             ctypes.c_void_p,
@@ -210,6 +229,50 @@ class PPUGDNLibrary:
         if status != 0:
             raise RuntimeError(f"PPU GDN launch failed with HGGC status {status}")
         return output
+
+    def gate_prep_decode(
+        self,
+        raw_a: torch.Tensor,
+        raw_b: torch.Tensor,
+        exp_a_log: torch.Tensor,
+        dt_bias: torch.Tensor,
+        *,
+        g_out: torch.Tensor | None = None,
+        beta_out: torch.Tensor | None = None,
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        """Prepare the FP32 decay log and BF16 beta for batch-1 GDN decode."""
+        if self.gate_prep_launch is None:
+            raise RuntimeError("PPU GDN library does not export gate-prep support")
+        _validate_gate_prep_inputs(raw_a, raw_b, exp_a_log, dt_bias)
+        batch_size = raw_a.shape[0]
+        if g_out is None and beta_out is None:
+            g = torch.empty_like(raw_a, dtype=torch.float32)
+            beta = torch.empty_like(raw_b)
+        elif g_out is not None and beta_out is not None:
+            _validate_gate_prep_outputs(raw_a, g_out, beta_out)
+            g, beta = g_out, beta_out
+        else:
+            raise ValueError("g_out and beta_out must be provided together")
+        stream = torch.cuda.current_stream(raw_a.device).cuda_stream
+        status = self.gate_prep_launch(
+            raw_a.data_ptr(),
+            raw_b.data_ptr(),
+            exp_a_log.data_ptr(),
+            dt_bias.data_ptr(),
+            g.data_ptr(),
+            beta.data_ptr(),
+            batch_size,
+            raw_a.stride(0),
+            raw_b.stride(0),
+            g.stride(0),
+            beta.stride(0),
+            stream,
+        )
+        if status != 0:
+            raise RuntimeError(
+                f"PPU GDN gate-prep launch failed with HGGC status {status}"
+            )
+        return g, beta
 
     def causal_conv1d_decode(
         self,
@@ -503,6 +566,133 @@ class PPUGDNLibrary:
         return fused_attention_forward
 
 
+def pack_qwen35_gdn_gate_prep(module, library: PPUGDNLibrary) -> Callable:
+    """Replace only cached one-token GDN decode with fused gate preparation."""
+    if type(module).__name__ != "Qwen3_5GatedDeltaNet":
+        raise TypeError("gate-prep integration requires Qwen3_5GatedDeltaNet")
+    if module.num_v_heads != HEADS or module.head_k_dim != HEAD_DIM:
+        raise ValueError("gate-prep integration requires 16 heads of width 128")
+    if library.gate_prep_launch is None:
+        raise RuntimeError("PPU GDN library does not export gate-prep support")
+    if hasattr(module, "_seu_gdn_gate_prep_forwards"):
+        return module._seu_gdn_gate_prep_forwards[0]
+    if module.A_log.dtype != torch.bfloat16 or module.dt_bias.dtype != torch.bfloat16:
+        raise TypeError("gate-prep integration requires BF16 A_log/dt_bias")
+    exp_a_log = module.A_log.float().exp().contiguous()
+    module.register_buffer("_seu_exp_a_log", exp_a_log, persistent=False)
+    original_forward = module.forward
+    scratch = threading.local()
+
+    def gate_prep(raw_a: torch.Tensor, raw_b: torch.Tensor):
+        buffers = getattr(scratch, "buffers", None)
+        if (
+            buffers is None
+            or buffers[0].device != raw_a.device
+            or buffers[0].shape != raw_a.shape
+        ):
+            buffers = (
+                torch.empty_like(raw_a, dtype=torch.float32),
+                torch.empty_like(raw_b),
+            )
+            scratch.buffers = buffers
+        return library.gate_prep_decode(
+            raw_a,
+            raw_b,
+            module._seu_exp_a_log,
+            module.dt_bias,
+            g_out=buffers[0],
+            beta_out=buffers[1],
+        )
+
+    def fused_forward(
+        hidden_states: torch.Tensor,
+        cache_params=None,
+        attention_mask: torch.Tensor | None = None,
+        **kwargs,
+    ):
+        supported_decode = (
+            not module.training
+            and hidden_states.ndim == 3
+            and hidden_states.shape[0] == 1
+            and hidden_states.shape[1] == 1
+            and hidden_states.shape[2] == HIDDEN_SIZE
+            and hidden_states.dtype == torch.bfloat16
+            and hidden_states.device.type == "cuda"
+            and cache_params is not None
+            and cache_params.has_previous_state(module.layer_idx)
+        )
+        if not supported_decode:
+            return original_forward(
+                hidden_states,
+                cache_params=cache_params,
+                attention_mask=attention_mask,
+                **kwargs,
+            )
+
+        from transformers.models.qwen3_5.modeling_qwen3_5 import (
+            apply_mask_to_padding_states,
+        )
+
+        hidden_states = apply_mask_to_padding_states(hidden_states, attention_mask)
+        batch_size, seq_len, _ = hidden_states.shape
+        conv_state = cache_params.layers[module.layer_idx].conv_states[0]
+        recurrent_state = cache_params.layers[module.layer_idx].recurrent_states[0]
+
+        mixed_qkv = module.in_proj_qkv(hidden_states).transpose(1, 2)
+        z = module.in_proj_z(hidden_states).reshape(
+            batch_size, seq_len, -1, module.head_v_dim
+        )
+        raw_b = module.in_proj_b(hidden_states)
+        raw_a = module.in_proj_a(hidden_states)
+        mixed_qkv = module.causal_conv1d_update(
+            mixed_qkv,
+            conv_state,
+            module.conv1d.weight.squeeze(1),
+            module.conv1d.bias,
+            module.activation,
+        ).transpose(1, 2)
+        query, key, value = torch.split(
+            mixed_qkv,
+            [module.key_dim, module.key_dim, module.value_dim],
+            dim=-1,
+        )
+        query = query.reshape(batch_size, seq_len, -1, module.head_k_dim)
+        key = key.reshape(batch_size, seq_len, -1, module.head_k_dim)
+        value = value.reshape(batch_size, seq_len, -1, module.head_v_dim)
+        g, beta = gate_prep(raw_a, raw_b)
+        if module.num_v_heads // module.num_k_heads > 1:
+            repeats = module.num_v_heads // module.num_k_heads
+            query = query.repeat_interleave(repeats, dim=2)
+            key = key.repeat_interleave(repeats, dim=2)
+        core_attn_out, last_recurrent_state = module.recurrent_gated_delta_rule(
+            query,
+            key,
+            value,
+            g=g,
+            beta=beta,
+            initial_state=recurrent_state,
+            output_final_state=True,
+            use_qk_l2norm_in_kernel=True,
+        )
+        cache_params.update_recurrent_state(last_recurrent_state, module.layer_idx)
+        core_attn_out = core_attn_out.reshape(-1, module.head_v_dim)
+        z = z.reshape(-1, module.head_v_dim)
+        core_attn_out = module.norm(core_attn_out, z)
+        core_attn_out = core_attn_out.reshape(batch_size, seq_len, -1)
+        return module.out_proj(core_attn_out)
+
+    module._seu_gdn_gate_prep_forwards = (original_forward, fused_forward)
+    module.forward = fused_forward
+    return original_forward
+
+
+def set_qwen35_gdn_gate_prep(module, enabled: bool) -> None:
+    forwards = getattr(module, "_seu_gdn_gate_prep_forwards", None)
+    if forwards is None:
+        raise RuntimeError("GDN gate-prep module has not been packed")
+    module.forward = forwards[1 if enabled else 0]
+
+
 def pack_qwen35_decoder_residual_rmsnorm(
     module,
     library: PPUGDNLibrary,
@@ -706,6 +896,44 @@ def _validate_inputs(
             raise ValueError(f"{name} heads must be contiguous")
     if g.stride(-1) != 1 or beta.stride(-1) != 1:
         raise ValueError("g/beta heads must be contiguous")
+
+
+def _validate_gate_prep_inputs(
+    raw_a: torch.Tensor,
+    raw_b: torch.Tensor,
+    exp_a_log: torch.Tensor,
+    dt_bias: torch.Tensor,
+) -> None:
+    tensors = (raw_a, raw_b, exp_a_log, dt_bias)
+    if any(tensor.device.type != "cuda" for tensor in tensors):
+        raise ValueError("all GDN gate-prep tensors must use the CUDA compatibility device")
+    if raw_a.shape != raw_b.shape or raw_a.ndim != 3 or raw_a.shape[1:] != (1, HEADS):
+        raise ValueError("raw a/b must share shape [batch, 1, 16]")
+    if raw_a.dtype != torch.bfloat16 or raw_b.dtype != torch.bfloat16:
+        raise TypeError("raw a/b must be torch.bfloat16")
+    if exp_a_log.shape != (HEADS,) or exp_a_log.dtype != torch.float32:
+        raise TypeError("exp(A_log) must be contiguous torch.float32 shape [16]")
+    if dt_bias.shape != (HEADS,) or dt_bias.dtype != torch.bfloat16:
+        raise TypeError("dt_bias must be contiguous torch.bfloat16 shape [16]")
+    if any(tensor.device != raw_a.device for tensor in tensors[1:]):
+        raise ValueError("all GDN gate-prep tensors must share one PPU device")
+    if any(tensor.stride(-1) != 1 for tensor in tensors):
+        raise ValueError("GDN gate-prep head dimensions must be contiguous")
+
+
+def _validate_gate_prep_outputs(
+    raw_a: torch.Tensor,
+    g_out: torch.Tensor,
+    beta_out: torch.Tensor,
+) -> None:
+    if g_out.shape != raw_a.shape or beta_out.shape != raw_a.shape:
+        raise ValueError("gate-prep outputs must match raw a shape")
+    if g_out.dtype != torch.float32 or beta_out.dtype != torch.bfloat16:
+        raise TypeError("gate-prep outputs must be FP32 g and BF16 beta")
+    if g_out.device != raw_a.device or beta_out.device != raw_a.device:
+        raise ValueError("gate-prep outputs must share the input PPU device")
+    if not g_out.is_contiguous() or not beta_out.is_contiguous():
+        raise ValueError("gate-prep outputs must be contiguous")
 
 
 def _validate_conv_inputs(

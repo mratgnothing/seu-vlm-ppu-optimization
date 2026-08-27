@@ -1,14 +1,15 @@
 # PPU 资源释放前快照与恢复手册
 
-更新时间：2026-08-27
+更新时间：2026-08-28
 
 ## 1. 已完成的三层备份
 
 ### Git 可公开层
 
 - 分支：`5070ti`；
-- residual-RMSNorm 正向里程碑本地提交：`a71108fe53675bcec4123703061274722e9367d7`；
-- GitHub 当前 HTTPS 被本机网络重置，提交尚待网络恢复后 push；
+- gate-prep 开发前的已推送基线：`a04c3b6676ed227c66e7e228d45d0fba4889d9c6`；
+- 最新 gate-prep 提交以 `5070ti` 分支的 `git rev-parse HEAD` 为准；通过 GitHub
+  SSH-over-443 推送并用 `git ls-remote` 核验，不依赖不稳定的 HTTPS；
 - 源码、脚本、小型结果与实验说明进入 Git；密钥、模型、数据和原始巨型 trace 不进入。
 
 ### 本地 ignored artifact 层
@@ -20,6 +21,11 @@
 | `ppu-progress-snapshot-20260827-final.tar.gz` | 远端最终实验源码、编译产物、全部小型结果（含 SwiGLU 负实验）、pip freeze、设备/编译器信息；排除巨型 trace | `fcd3e21b4d474bf9061cc926ba58fdc890150e36d7c8edf2978d15b9c282b9b2` |
 | `ppu-profile-traces-20260827.tar.gz` | 全部原始 PyTorch profiler trace | `6e8f3f317a7721e5cfc47b17b7df434950b84c33d1cdce6bde421cd8b8d8eceb` |
 | `mmbench-local-copy-20260827.tar.gz` | 远端 `datasets/mmbench` 完整副本 | `7e27032f5b5cccc75371bd1c7d7115cad59ccd5be449f3ea011088c3bd19af01` |
+
+2026-08-28 gate-prep 迭代另在本地 ignored
+`artifacts/ppu-snapshot-20260828/` 保存最终共享库和两份原始 profile trace；源码、
+小型 JSON、memcheck 与实验说明进入 Git。最终归档 SHA-256 在完整集结束、提交冻结后
+写入同目录清单，不覆盖上表三份已核验快照。
 
 本地模型已在 `models/Qwen3.5-2B/`；锁定 revision 为
 `15852e8c16360a2fea060d615a32b45270f8a8fc`，主权重 SHA-256 为
@@ -102,6 +108,10 @@ cd /mnt/workspace/seu/acblas-extension-work-20260827
 python smoke_residual_rmsnorm_integration.py \
   --library build/residual-rmsnorm/libseu_ppu_gdn.so \
   --threads 512 --warmup 5 --iters 20
+
+python smoke_gdn_gate_prep_integration.py \
+  --library build/gate-prep/libseu_ppu_gdn.so \
+  --warmup 50 --iters 1000 --repeats 5
 ```
 
 若自定义 `.so` 因新镜像 ABI 变化无法加载，使用保存的 `gdn_recurrent_ppu.hg` 和
@@ -113,6 +123,7 @@ python smoke_residual_rmsnorm_integration.py \
 - [ ] CPFS 文件系统仍存在，且快照归档 SHA-256 可读取；
 - [ ] 本地三个 tar.gz SHA-256 全部匹配；
 - [ ] 本地 Qwen 权重哈希匹配；
-- [ ] `5070ti` 本地分支提交存在；网络恢复后 push 并核对远端哈希；
+- [ ] `5070ti` 本地分支提交存在，已 push 并核对远端哈希；
+- [ ] `SEU_PPU_GDN_GATE_PREP_ENABLE=1` 时 meta 记录 18 个 gate-prep module；
 - [ ] 用新镜像 + 同一 CPFS 创建的新实例通过 device、单算子、单样本三层 smoke；
 - [ ] 上述全部完成后才释放旧实例。
