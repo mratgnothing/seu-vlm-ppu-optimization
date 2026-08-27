@@ -20,6 +20,11 @@ batch/seq 非 1 和无 recurrent cache 的路径全部回退 Transformers 原实
 已经包含五类 HGGC、packed-MLP、grouped-acBLAS GDN 和 48-edge residual-RMSNorm
 的最终基线的增量，不是相对原始 eager 的数字。
 
+最终中文完整公开集 4029 条 paired AB/BA 也已通过：两路 Accuracy 均为
+`3374/4029 = 83.7429%`，`4029/4029` 完整文本、答案和 token 数一致；吞吐成对中位
+`1.08623x`，3882/4029 获胜。完整集只承担无回退门禁，长时间运行中的平均吞吐不
+替代固定长无 profiler 性能结果。
+
 ## 数学与舍入契约
 
 候选保持原模型的精度边界：
@@ -56,6 +61,21 @@ gate-prep 微基准为 `0.028592 -> 0.020680 ms`，即 `1.3826x`；该数字只�
 TTFT 在两轮中方向不一致，因此本实验只声明稳态 decode throughput 收益，不声明
 TTFT 改善。公开题目只用于统一回归门禁，没有根据题号、类别、标签或答案调整实现。
 
+### 中文完整公开集 4029 条
+
+| 指标 | 最终优化基线 | + gate-prep |
+|---|---:|---:|
+| Accuracy | 3374/4029 (83.7429%) | 3374/4029 (83.7429%) |
+| 平均吞吐 | 101.080 token/s | 109.797 token/s |
+| 成对中位/均值速度比 | - | 1.086229x / 1.087416x |
+| p05 / p95 速度比 | - | 1.009529x / 1.166900x |
+| 获胜/失败 | - | 3882 / 147 |
+| exact 文本/答案/token 数 | - | 4029/4029 |
+
+该完整集运行没有 profiler 插桩，且未按题目、答案或类别选择候选。平均吞吐受约两小时
+长测期间系统状态影响，因此最终性能声明仍以固定 128-token paired A/B 和 CN20 两轮
+为主；完整集用于证明 gate-prep 没有扩大数值漂移。
+
 ## Profile 机制证据
 
 同一 226-token prompt、2-token warmup、16-token profile：
@@ -85,9 +105,11 @@ thread-local scratch 消除了这项回退，并在第二轮固定长测试中�
 - 随机和边界 `g/beta`：bit-exact；
 - 固定 128-token：全文 exact；
 - CN20 两轮：均 20/20 全文 exact，Accuracy 不变；
+- 中文完整公开集：4029/4029 全文 exact，Accuracy 同为 3374/4029；
 - 候选只通过 `SEU_PPU_GDN_GATE_PREP_ENABLE=1` 显式启用；
 - 形状、dtype、设备、eval、cache 任一契约不满足时回退原 forward；
-- 由于完整公开集/主办方私有集门禁仍在进行，默认配置不改变。
+- 公开完整集门禁已通过；主办方私有集仍是最终外部门禁。正式 wrapper 继续要求显式
+  环境开关，但 gate-prep 已是当前推荐提交配置的一部分。
 
 ## 复现
 
@@ -126,3 +148,5 @@ export SEU_PPU_GDN_GATE_PREP_ENABLE=1
 - `results/ppu-gdn-gate-prep-profile-baseline-summary-20260828.json`
 - `results/ppu-gdn-gate-prep-profile-candidate-summary-20260828.json`
 - `results/ppu-gdn-gate-prep-memcheck-20260828.txt`
+- `results/gate-prep-scratch-cn-full4029-summary.json`
+- `results/ppu-final-formal-wrapper-smoke-20260828.json`

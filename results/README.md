@@ -134,6 +134,10 @@ Add、Softplus、Mul/Neg 合为一个 HGGC kernel，并用 thread-local scratch 
 两轮均 20/20 全文一致、Accuracy 85%。16-token profile 的 launch
 `16253→14363`，Self CPU/PPU 分别下降 11.48%/5.35%，memcheck 为 0 errors。
 
+中文完整公开集 4029 条最终门禁中，两路 Accuracy 均为 `3374/4029`，完整文本、
+答案和 token 数均 4029/4029 一致；成对吞吐中位 `1.0862x`，3882/4029 获胜。
+该长测只作为完整精度/一致性门禁，不替代固定 128-token 性能结论。
+
 - [`ppu-gdn-gate-prep-smoke-20260828.json`](ppu-gdn-gate-prep-smoke-20260828.json)
 - [`ppu-gdn-gate-prep-ab128-20260828.json`](ppu-gdn-gate-prep-ab128-20260828.json)
 - [`ppu-gdn-gate-prep-cn20-r1-20260828.json`](ppu-gdn-gate-prep-cn20-r1-20260828.json)
@@ -142,7 +146,26 @@ Add、Softplus、Mul/Neg 合为一个 HGGC kernel，并用 thread-local scratch 
 - [`ppu-gdn-gate-prep-profile-baseline-summary-20260828.json`](ppu-gdn-gate-prep-profile-baseline-summary-20260828.json)
 - [`ppu-gdn-gate-prep-profile-candidate-summary-20260828.json`](ppu-gdn-gate-prep-profile-candidate-summary-20260828.json)
 - [`ppu-gdn-gate-prep-memcheck-20260828.txt`](ppu-gdn-gate-prep-memcheck-20260828.txt)
+- [`gate-prep-scratch-cn-full4029-summary.json`](gate-prep-scratch-cn-full4029-summary.json)
+- [`ppu-final-formal-wrapper-smoke-20260828.json`](ppu-final-formal-wrapper-smoke-20260828.json)
 - [实验说明](../docs/experiments/2026-08-28-ppu-gdn-gate-prep.md)
+
+## PPU acBLASLt Matmul 负实验
+
+SDK 正式 epilogue 没有 SiLU/SwiGLU。四个 decode 主形状各扫描 32 个 bit-exact
+heuristic，只有 `2048x2048` 的 `1.0577x` 通过低层 3% 门槛；隔离 extension 加上
+预分配输出后模块级为 `1.2797x`。但完整 gate-prep 栈固定 128-token 八对仅
+`0.9898x`、3/8
+获胜，因此不接入正式 wrapper。Profile 显示 `aten::linear/mm` 各减少 360 次，但
+主 `gemvt_op` 增加 270 次且累计设备时间上升，解释了局部快、整模不快。
+
+- [`acblaslt-sweep-summary-20260828.json`](acblaslt-sweep-summary-20260828.json)
+- [`acblaslt-square-isolated-smoke-20260828.json`](acblaslt-square-isolated-smoke-20260828.json)
+- [`acblaslt-square-ab128-20260828.json`](acblaslt-square-ab128-20260828.json)
+- [`acblaslt-square-profile-ab-20260828.json`](acblaslt-square-profile-ab-20260828.json)
+- [`acblaslt-square-profile-baseline-summary-20260828.json`](acblaslt-square-profile-baseline-summary-20260828.json)
+- [`acblaslt-square-profile-candidate-summary-20260828.json`](acblaslt-square-profile-candidate-summary-20260828.json)
+- [实验说明](../docs/experiments/2026-08-28-ppu-acblaslt-matmul.md)
 
 ## PPU SwiGLU 独立融合负实验
 

@@ -26,7 +26,10 @@ Accuracy，但只有 19/20 完整文本一致。进一步实现的结构专用 g
 保留四个原形状 GEMV，CN20 两轮成对中位提升 1.87%/3.91%，Accuracy 均为 85%
 且 20/20 全文一致。在此基础上，48-edge residual-add + RMSNorm 跨层融合又在
 16-token profile 中减少 720 次 kernel launch，CN20 两轮配对中位提升约 2.1%，
-均保持 20/20 全文一致；所有新增路径都默认关闭，需完整公开集和私有集门禁。
+均保持 20/20 全文一致。最终 gate-prep 组合进一步通过中文完整公开集：两路
+Accuracy 均为 3374/4029，4029/4029 完整文本、答案和 token 数一致，成对吞吐中位
+1.0862x。公开 acBLASLt epilogue 不含 SiLU；方阵 scratch 候选虽模块级 1.2797x，
+整模固定长仅 0.9898x，作为负实验保留。正式路径继续显式启用，私有集仍是外部门禁。
 
 ## 1. 应用场景与目标
 
@@ -256,14 +259,23 @@ CN20 两轮由 100.156→101.616 和 98.576→101.507 token/s，配对中位
 101.651→109.275 和 100.085→107.083 token/s，配对中位 1.0811x/1.0863x、
 19/20 和 17/20 获胜，两轮均 20/20 全文一致且 Accuracy 85%。Profile 中
 `cudaLaunchKernel` 16253→14363，Self CPU/PPU 分别下降 11.48%/5.35%，
-`hggc-memcheck` 为 0 errors。完整公开集正在作为独立精度门禁运行，未按公开标签
-调节实现。
+`hggc-memcheck` 为 0 errors。中文完整公开集 4029 条 paired AB/BA 中，两路 Accuracy
+均为 3374/4029，完整文本、答案和 token 数均 4029/4029 一致；配对速度比中位
+1.0862x、3882/4029 获胜。该长测只承担精度/一致性门禁，未按公开标签调节实现，
+也不替代固定 128-token 性能结论。
+
+随后对 acBLASLt 四个真实 decode 形状各扫描 32 个 bit-exact heuristic。packed
+gate/up、MLP down 和 GDN qkv 最佳仅 1.0121x/1.0269x/1.0191x；2048 方阵最佳
+1.0577x，配合 per-module scratch 后模块级为 1.2797x。但完整模型固定 128-token
+八对成对中位 0.9898x、仅 3/8 获胜。Profile 显示 `aten::linear/mm` 各减少 360 次，
+主 `gemvt_op` 却增加 270 次，因此不接入正式 wrapper。
 
 ### 7.3 当前边界
 
-全部自定义路径默认关闭，只有显式环境变量才挂载。五类融合的 reduction 顺序使
+全部自定义路径只有显式环境变量才挂载。五类融合的 reduction 顺序使
 all-five 相对 eager 有 5/20 生成长度变化，packed-GDN 又相对 packed 基线新增 1/20
-文本漂移；虽未改变 CN20 Accuracy，但最终提交前仍需完整公开集和私有集门禁。
+文本漂移；最终 grouped-acBLAS + residual-RMSNorm + gate-prep 组合已通过中文公开
+完整集严格一致性门禁，但主办方私有集仍需保持相同 Accuracy/文本护栏。
 
 ## 8. 可复现性
 

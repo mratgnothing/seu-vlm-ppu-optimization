@@ -36,6 +36,8 @@ def parse_args() -> argparse.Namespace:
         default="torch-packed",
     )
     parser.add_argument("--acblas-build-dir", type=Path)
+    parser.add_argument("--acblaslt-build-dir", type=Path)
+    parser.add_argument("--acblaslt-heuristic-index", type=int, default=25)
     targets = parser.add_mutually_exclusive_group()
     targets.add_argument(
         "--residual-rmsnorm-ab",
@@ -46,6 +48,11 @@ def parse_args() -> argparse.Namespace:
         "--gate-prep-ab",
         action="store_true",
         help="Keep projections/residual RMSNorm on and A/B GDN gate preparation",
+    )
+    targets.add_argument(
+        "--acblaslt-square-ab",
+        action="store_true",
+        help="Keep gate-prep stack on and A/B acBLASLt 2048-square Linears",
     )
     return parser.parse_args()
 
@@ -141,7 +148,7 @@ def main() -> int:
     if len(packed_modules) != 18:
         raise RuntimeError(f"expected 18 packed GDN modules, got {len(packed_modules)}")
     residual_modules = []
-    if args.residual_rmsnorm_ab or args.gate_prep_ab:
+    if args.residual_rmsnorm_ab or args.gate_prep_ab or args.acblaslt_square_ab:
         from ppu_gdn import (
             pack_qwen35_decoder_residual_rmsnorm,
             set_qwen35_decoder_residual_rmsnorm,
@@ -168,7 +175,7 @@ def main() -> int:
                 f"expected 24 residual RMSNorm modules, got {len(residual_modules)}"
             )
     gate_prep_modules = []
-    if args.gate_prep_ab:
+    if args.gate_prep_ab or args.acblaslt_square_ab:
         from ppu_gdn import pack_qwen35_gdn_gate_prep
 
         for module in packed_modules:
@@ -178,24 +185,63 @@ def main() -> int:
             raise RuntimeError(
                 f"expected 18 GDN gate-prep modules, got {len(gate_prep_modules)}"
             )
+    acblaslt_square_modules = []
+    acblaslt_square_shape_counts: dict[str, int] = {}
+    if args.acblaslt_square_ab:
+        if args.acblaslt_build_dir is None:
+            raise ValueError(
+                "--acblaslt-build-dir is required for --acblaslt-square-ab"
+            )
+        from ppu_acblaslt_square import PPUACBLASLtSquareExtension
+
+        square_extension = PPUACBLASLtSquareExtension(
+            args.acblaslt_build_dir,
+            heuristic_index=args.acblaslt_heuristic_index,
+        )
+        square_names, acblaslt_square_shape_counts = (
+            square_extension.patch_qwen35_language_linears(model._model)
+        )
+        if acblaslt_square_shape_counts != {"2048x2048": 42}:
+            raise RuntimeError(
+                "expected 42 acBLASLt 2048-square modules, got "
+                f"{acblaslt_square_shape_counts}"
+            )
+        named_modules = dict(model._model.named_modules())
+        acblaslt_square_modules = [named_modules[name] for name in square_names]
     torch.cuda.empty_cache()
 
     def set_enabled(enabled: bool) -> None:
         for module in packed_modules:
             set_packed_qwen35_gdn_input_projections(
                 module,
-                True if args.residual_rmsnorm_ab or args.gate_prep_ab else enabled,
+                True
+                if (
+                    args.residual_rmsnorm_ab
+                    or args.gate_prep_ab
+                    or args.acblaslt_square_ab
+                )
+                else enabled,
             )
-        if args.residual_rmsnorm_ab or args.gate_prep_ab:
+        if args.residual_rmsnorm_ab or args.gate_prep_ab or args.acblaslt_square_ab:
             for module in residual_modules:
                 set_qwen35_decoder_residual_rmsnorm(
-                    module, True if args.gate_prep_ab else enabled
+                    module,
+                    True if args.gate_prep_ab or args.acblaslt_square_ab else enabled,
                 )
-        if args.gate_prep_ab:
+        if args.gate_prep_ab or args.acblaslt_square_ab:
             from ppu_gdn import set_qwen35_gdn_gate_prep
 
             for module in gate_prep_modules:
-                set_qwen35_gdn_gate_prep(module, enabled)
+                set_qwen35_gdn_gate_prep(
+                    module, True if args.acblaslt_square_ab else enabled
+                )
+        if args.acblaslt_square_ab:
+            for module in acblaslt_square_modules:
+                module.forward = (
+                    module._seu_acblaslt_square_forward
+                    if enabled
+                    else module._seu_acblaslt_square_original_forward
+                )
 
     def run_once(enabled: bool, pair_index: int) -> dict[str, object]:
         set_enabled(enabled)
@@ -209,7 +255,9 @@ def main() -> int:
         )
         return {
             "mode": (
-                "gdn_gate_prep"
+                "acblaslt_square"
+                if enabled and args.acblaslt_square_ab
+                else "gdn_gate_prep"
                 if enabled and args.gate_prep_ab
                 else "residual_rmsnorm"
                 if enabled and args.residual_rmsnorm_ab
@@ -252,7 +300,9 @@ def main() -> int:
     candidate_hashes = {str(r["text_sha256"]) for r in candidate_records}
     exact = len(baseline_hashes) == 1 and baseline_hashes == candidate_hashes
     candidate_label = (
-        "gdn_gate_prep"
+        "acblaslt_square"
+        if args.acblaslt_square_ab
+        else "gdn_gate_prep"
         if args.gate_prep_ab
         else "residual_rmsnorm"
         if args.residual_rmsnorm_ab
@@ -269,6 +319,11 @@ def main() -> int:
         "ab_target": candidate_label,
         "residual_rmsnorm_modules": len(residual_modules),
         "gdn_gate_prep_modules": len(gate_prep_modules),
+        "acblaslt_square_modules": len(acblaslt_square_modules),
+        "acblaslt_square_shape_counts": acblaslt_square_shape_counts,
+        "acblaslt_heuristic_index": (
+            args.acblaslt_heuristic_index if args.acblaslt_square_ab else None
+        ),
         "baseline": baseline,
         "paired_decode": {
             "median_speedup": statistics.median(pair_ratios),

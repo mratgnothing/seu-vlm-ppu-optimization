@@ -906,8 +906,14 @@ def _validate_gate_prep_inputs(
 ) -> None:
     tensors = (raw_a, raw_b, exp_a_log, dt_bias)
     if any(tensor.device.type != "cuda" for tensor in tensors):
-        raise ValueError("all GDN gate-prep tensors must use the CUDA compatibility device")
-    if raw_a.shape != raw_b.shape or raw_a.ndim != 3 or raw_a.shape[1:] != (1, HEADS):
+        raise ValueError(
+            "all GDN gate-prep tensors must use the CUDA compatibility device"
+        )
+    if (
+        raw_a.shape != raw_b.shape
+        or raw_a.ndim != 3
+        or raw_a.shape[1:] != (1, HEADS)
+    ):
         raise ValueError("raw a/b must share shape [batch, 1, 16]")
     if raw_a.dtype != torch.bfloat16 or raw_b.dtype != torch.bfloat16:
         raise TypeError("raw a/b must be torch.bfloat16")

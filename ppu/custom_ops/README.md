@@ -40,6 +40,12 @@ recurrent cache 的 decode；prefill 和其他契约全部回退。
 两核的 `0.7901x`，因此没有接入模型 wrapper。后续应争取 acBLAS GEMM epilogue
 fusion，直接避免 gate/up 中间张量，而不是增加独立 HGGC launch。
 
+后续 acBLASLt 调查确认公开 epilogue 只有 Bias/ReLU/GELU，没有 SiLU。四个真实
+decode 形状的 32 heuristic 扫描中，只有 2048 方阵超过 3%；它配合 scratch 的
+模块级为 `1.2797x`，但整模固定 128-token 八对仅 `0.9898x`、3/8 获胜，故同样
+不接入正式 wrapper。详见
+[`2026-08-28-ppu-acblaslt-matmul.md`](../../docs/experiments/2026-08-28-ppu-acblaslt-matmul.md)。
+
 此外，本目录提供一个不新增 HGGC kernel 的 packed-MLP decode 路径：24 个 MLP 的
 `gate_proj` 和 `up_proj` 权重拼成共享存储 `[12288, 2048]`，decode 时把两次
 `2048→6144` 线性投影合成一次 `2048→12288`，再 split、SiLU、逐元素乘和

@@ -1,0 +1,55 @@
+{
+  "benchmark_version": "dndx_public_self_test",
+  "timestamp": "2026-08-27T17:28:41.989559",
+  "dataset_path": "/mnt/workspace/seu/datasets/mmbench/mmbench_dev_cn.tsv",
+  "sample_count": 1,
+  "seed": 20260625,
+  "backend": "transformers",
+  "performance": {
+    "avg_ttft_ms": 121.313,
+    "avg_throughput_tokens_per_sec": 106.217
+  },
+  "timing": {
+    "benchmark_elapsed_seconds": 14.851,
+    "benchmark_elapsed_minutes": 0.248,
+    "avg_seconds_per_sample": 14.851
+  },
+  "accuracy": {
+    "score": 0.0,
+    "correct": 0,
+    "total": 1
+  },
+  "public_validation": {
+    "passed": true,
+    "failed_samples": 0
+  },
+  "answers": [
+    {
+      "question_id": "3000984",
+      "parsed_answer": "A",
+      "correct": false,
+      "ttft_ms": 121.313,
+      "throughput_tokens_per_sec": 106.217,
+      "token_count": 51,
+      "validation_errors": [],
+      "meta": {
+        "backend": "transformers",
+        "choice_markup_normalized": false,
+        "choice_conclusion_normalized": false,
+        "optimization_profile": "o1_inference_mode",
+        "ttft_measurement": "first_generated_token_put",
+        "ppu_gdn_patched_modules": 18,
+        "ppu_conv_patched_modules": 18,
+        "ppu_rmsnorm_patched_modules": 49,
+        "ppu_gated_rmsnorm_patched_modules": 18,
+        "ppu_qk_rope_patched_modules": 6,
+        "ppu_packed_mlp_modules": 24,
+        "ppu_packed_gdn_projection_modules": 18,
+        "ppu_packed_gdn_projection_groups": "4",
+        "ppu_gdn_projection_backend": "acblas-grouped",
+        "ppu_residual_rmsnorm_modules": 24,
+        "ppu_gdn_gate_prep_modules": 18
+      }
+    }
+  ]
+}

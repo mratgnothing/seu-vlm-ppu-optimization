@@ -55,7 +55,12 @@
   `g/beta`。最终 128-token 六对全部获胜、全文一致，配对中位 `1.0839x`；CN20
   两轮配对中位 `1.0811x/1.0863x`、19/20 和 17/20 获胜，均 20/20 全文一致、
   Accuracy 85%。16-token profile 的 launch `16253→14363`，Self CPU/PPU
-  `366.100/119.365→324.074/112.982 ms`。候选仍由显式开关启用，完整集门禁进行中。
+  `366.100/119.365→324.074/112.982 ms`。最终中文完整公开集两路 Accuracy 同为
+  3374/4029，4029/4029 完整文本、答案和 token 数一致，成对吞吐中位 `1.0862x`。
+  候选仍由显式开关启用，但已是当前推荐提交配置的一部分。
+- 完成 acBLASLt 四个真实 decode 形状、每形状 32 个 heuristic 的调查。唯一方阵
+  候选配合 scratch 模块级达到 `1.2797x`，但完整模型固定 128-token 八对仅
+  `0.9898x`、3/8 获胜，故作为负实验止损，未进入正式 wrapper。
 - 资源释放前完成独立 SwiGLU HGGC 核负实验：四组线程均 bit-exact，但最好只有
   `0.7901x`，因此未接入正式 wrapper；后续改走 packed GEMM epilogue fusion。
 - 已将 PPU 源码、编译产物、小型结果、pip/设备清单、全部原始 trace 和 MMBench
@@ -75,6 +80,7 @@ PPU 侧已完成 SDK、真实模型闭环、20 条稳态基线、算子级 profi
 [PPU GDN 输入投影打包](docs/experiments/2026-08-27-ppu-packed-gdn-projections.md)、
 [PPU residual-add + RMSNorm 跨层融合](docs/experiments/2026-08-27-ppu-residual-rmsnorm.md)、
 [PPU GDN gate-prep 融合](docs/experiments/2026-08-28-ppu-gdn-gate-prep.md)、
+[PPU acBLASLt Matmul 负实验](docs/experiments/2026-08-28-ppu-acblaslt-matmul.md)、
 [PPU SwiGLU 融合负实验](docs/experiments/2026-08-27-ppu-swiglu-negative.md)、
 [PPU decode 融合算子与问题记录](ppu/custom_ops/README.md)、
 [PPU 兼容性矩阵](docs/ppu-compatibility-matrix.md) 和 [需要向主办方确认的问题](docs/questions-for-organizer.md)。

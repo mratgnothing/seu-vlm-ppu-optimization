@@ -1,0 +1,45 @@
+{
+  "source": "results/gate-prep-scratch-cn-full4029.json",
+  "sample_offset": 0,
+  "sample_count": 4029,
+  "max_new_tokens": 64,
+  "ab_target": "gdn_gate_prep",
+  "projection_backend": "acblas-grouped",
+  "module_counts": {
+    "packed_gdn": 18,
+    "residual_rmsnorm": 24,
+    "gdn_gate_prep": 18
+  },
+  "baseline": {
+    "avg_ttft_ms": 120.64858857242007,
+    "avg_throughput_tokens_per_sec": 101.07987503027269,
+    "accuracy": 0.8374286423430132,
+    "correct": 3374
+  },
+  "gdn_gate_prep": {
+    "avg_ttft_ms": 121.37937016460474,
+    "avg_throughput_tokens_per_sec": 109.79673469803318,
+    "accuracy": 0.8374286423430132,
+    "correct": 3374
+  },
+  "paired_decode": {
+    "mean_speedup": 1.0874162584342268,
+    "median_speedup": 1.086228841490808,
+    "p05_speedup": 1.0095289314606122,
+    "p25_speedup": 1.0601182521434445,
+    "p75_speedup": 1.1134865458227416,
+    "p95_speedup": 1.166900132151796,
+    "min_speedup": 0.7421494068867033,
+    "max_speedup": 1.4195844953877579,
+    "wins": 3882,
+    "ties": 0,
+    "losses": 147
+  },
+  "pair_consistency": {
+    "exact_text": 4029,
+    "same_answer": 4029,
+    "same_token_count": 4029,
+    "total": 4029
+  },
+  "passed": true
+}

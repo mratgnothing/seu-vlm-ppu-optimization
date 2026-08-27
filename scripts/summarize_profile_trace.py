@@ -126,6 +126,7 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("trace", type=Path)
     parser.add_argument("--top", type=int, default=20)
+    parser.add_argument("--output", type=Path)
     parser.add_argument(
         "--shape-op",
         action="append",
@@ -141,7 +142,11 @@ def main() -> int:
     shape_ops = set(args.shape_op) if args.shape_op else DEFAULT_SHAPE_OPS
     summary = summarize_trace(events, top=args.top, shape_ops=shape_ops)
     summary["trace"] = str(args.trace)
-    print(json.dumps(summary, ensure_ascii=False, indent=2))
+    rendered = json.dumps(summary, ensure_ascii=False, indent=2) + "\n"
+    if args.output is not None:
+        args.output.parent.mkdir(parents=True, exist_ok=True)
+        args.output.write_text(rendered, encoding="utf-8")
+    print(rendered, end="")
     return 0
 
 

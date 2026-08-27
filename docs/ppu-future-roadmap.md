@@ -1,6 +1,6 @@
 # PPU 后续优化路线图
 
-更新时间：2026-08-27
+更新时间：2026-08-28
 
 路线只依据 Qwen3.5 图结构、PPU profile 和跨样本性能/精度门禁，不按公开题号、类别或
 答案定制。每一项都必须按“随机/真实张量数值 → 固定长交错 AB/BA → CN20 两轮 →
@@ -10,8 +10,8 @@
 
 1. 用保存镜像 + CPFS 在新 PPU 实例复现最新 gate-prep 提交；核对设备/SDK/torch、
    模型与数据哈希、18/18/49/18/6/24/18/24/18 模块计数。
-2. 对 grouped-acBLAS GDN + 48-edge residual-RMSNorm 跑中文/英文完整公开集，比较
-   parsed answer、token 数、完整文本哈希和 Accuracy；任何定向漂移都回退。
+2. grouped-acBLAS GDN + 48-edge residual-RMSNorm + gate-prep 的中文完整公开集已
+   4029/4029 exact；下一步补英文公开集或直接按主办方要求进入私有集门禁。
 3. 获取主办方私有门禁和最终镜像，固定一次“提交候选”而不是继续追逐小样本噪声。
 
 ## P1：真正减少内存中间量和 launch
@@ -19,7 +19,8 @@
 ### GEMM epilogue SwiGLU
 
 本轮独立 HGGC SwiGLU 核虽 bit-exact，但最好仅 0.7901x。下一步不是继续调线程，而是
-请求/接入 acBLAS epilogue：packed gate/up GEMM 直接产出 `SiLU(gate)*up`，避免
+SDK 2.1.1 公开 acBLASLt epilogue 已确认只有 Bias/ReLU/GELU，没有 SiLU。后续需向
+厂商请求自定义 epilogue：packed gate/up GEMM 直接产出 `SiLU(gate)*up`，避免
 12288 维投影中间张量落地、split、独立 SiLU 和 mul。它对所有 SwiGLU Transformer
 通用，预期收益也比单独 elementwise 核更可靠。
 
@@ -32,7 +33,7 @@ GEMM 路线受阻，不再为省一次 launch 把它强行并入 recurrent kerne
 
 ### Decode scratch arena
 
-最终 profile 仍有 `empty_like=3982`、`empty_strided=4931`、`cudaFree=3259` 和大量
+最终 gate-prep profile 仍有 `empty_like=3982`、`empty_strided=4391`、`cudaFree=3259` 和大量
 clone/copy。为固定 batch=1 decode 建立每层 scratch arena，复用 qkv、gate、norm 和
 projection buffer；先检查 cache/stream 生命周期和 alias，再逐个替换临时分配。
 
@@ -56,10 +57,12 @@ projection buffer；先检查 cache/stream 生命周期和 alias，再逐个替�
 
 ## 下一轮唯一主线：GEMM/GEMV
 
-本轮 gate-prep 完成后停止继续拆改 GDN。下一轮优先确认 acBLAS 是否开放自定义
-epilogue、grouped/batched GEMV 与权重预打包接口；首选目标是 packed gate/up GEMM
+gate-prep 与 acBLASLt heuristic 调查均已完成。公开 epilogue 没有 SiLU，四个真实
+形状扫参只有方阵过 3% 低层门槛，且整模最终为负。下一轮只在厂商开放自定义
+epilogue、grouped/batched GEMV 与权重预打包接口后继续；首选目标是 packed gate/up GEMM
 直接产生 `SiLU(gate) * up`，其次才是 2048→6144、6144→2048 的 batch=1 decode
-GEMV。独立 SwiGLU 和自写通用 GEMV 已有负结果，不重复做线程盲搜。
+GEMV。独立 SwiGLU、自写通用 GEMV、通用 acBLAS Linear 和 acBLASLt 方阵均已有负
+结果，不重复做线程或 heuristic 盲搜。
 
 ## P4：量化与低精度
 

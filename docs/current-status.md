@@ -1,6 +1,6 @@
 # 当前状态
 
-更新时间：2026-08-27
+更新时间：2026-08-28
 
 ## 已确认
 
@@ -131,7 +131,15 @@
   全文一致、配对中位 1.0839x；CN20 两轮为 101.651→109.275 和
   100.085→107.083 token/s，配对中位 1.0811x/1.0863x、19/20 和 17/20 获胜，
   均 20/20 全文一致、Accuracy 85%。profile 的 launch 16253→14363，Self CPU/PPU
-  分别下降 11.48%/5.35%；memcheck 0 errors。正式开关默认关闭，完整集正在门禁。
+  分别下降 11.48%/5.35%；memcheck 0 errors。中文完整公开集两路 Accuracy 均为
+  3374/4029，4029/4029 完整文本、答案和 token 数一致，成对吞吐中位 1.0862x、
+  3882/4029 获胜。正式开关仍需显式启用，但已是当前推荐提交配置的一部分。
+- acBLASLt 四个真实 decode 形状各扫描 32 个 bit-exact heuristic；packed MLP、MLP
+  down、GDN qkv 最高仅 1.0121x/1.0269x/1.0191x，止损。2048 方阵低层 1.0577x，
+  配合 scratch 模块级 1.2797x，但整模固定 128-token 八对仅 0.9898x、3/8 获胜。
+  Profile 显示主 `gemvt_op` 增加 270 次，故作为负实验保留，不接入 wrapper。
+- 最终正式 wrapper 单样本 smoke 为真实 Transformers/PPU backend、公开校验通过，
+  模块计数为 `18/18/49/18/6/24/18/24/18`；45 项无模型单元测试全部通过。
 - 独立 BF16 SwiGLU HGGC 核在 `[1,1,6144]` 上四组线程均 bit-exact，但最优仅
   `0.7901x`，未通过单算子性能门禁；没有运行公开集挑样本，也没有接入 wrapper。
   后续只考虑 packed gate/up GEMM epilogue fusion。
@@ -147,16 +155,18 @@
   [GDN 输入投影打包](experiments/2026-08-27-ppu-packed-gdn-projections.md)、
   [residual-add + RMSNorm](experiments/2026-08-27-ppu-residual-rmsnorm.md)、
   [GDN gate-prep](experiments/2026-08-28-ppu-gdn-gate-prep.md)、
+  [acBLASLt Matmul 负实验](experiments/2026-08-28-ppu-acblaslt-matmul.md)、
   [SwiGLU 负实验](experiments/2026-08-27-ppu-swiglu-negative.md)、
   [资源释放与恢复](ppu-resource-release-handoff.md) 和 [未来路线](ppu-future-roadmap.md)。
 
 ## 尚未完成
 
 - 获取主办方 PPU-vLLM/Qwen3.5/GDN fast path，并与 eager 做同口径对照。
-- 在完整公开集验证 GDN+conv、all-four、packed-MLP 与 packed-GDN 的 Accuracy、答案和生成长度漂移，再决定
-  最终默认开关。
-- 下一轮集中获取厂商 grouped/batched-GEMV 与 GEMM epilogue 接口，优先处理
-  packed MLP 的 gate/up GEMM + SwiGLU epilogue；本轮不再扩展 GDN kernel。
+- grouped-acBLAS + residual-RMSNorm + gate-prep 的组合公开完整集已通过；仍需主办方
+  私有集最终验证，并确认提交环境变量/镜像是否由评测入口保留。
+- SDK 公开 acBLASLt epilogue 已确认不含 SiLU。下一轮只在厂商提供自定义
+  SwiGLU epilogue、grouped/batched GEMV 或图编译接口后继续 GEMM 融合，不再盲扫
+  heuristic 编号。
 - 量化/权重变换的正式允许范围确认。
 - 初赛技术报告已形成可持续更新的初稿，源码候选包可一键生成；仍缺 PPU 实测章节、最终复现说明和按主办方格式定稿。
 
@@ -168,6 +178,7 @@ RTX 4050 的 6GB 显存仍只适合作为历史单样本环境；更长输入、
 CN20 平均吞吐约 98.430 token/s，但它新增 1/20 文本漂移；grouped-acBLAS GDN
   两轮保持 20/20 exact，但固定长重复的胜率仍不稳定；residual-RMSNorm 虽在两轮
   CN20 都保持 20/20 exact，仍未通过完整集；all-five 也已有 5/20
-生成长度漂移，说明 reduction 数值顺序仍是精度风险。下一步优先跑
-完整公开集并获取官方 PPU-vLLM/FLA 对照，不能只凭 20 条 Accuracy 宣称无损。
+生成长度漂移，说明 reduction 数值顺序仍是精度风险。最终 gate-prep 组合已经通过
+公开中文 4029 条严格一致性门禁；下一步获取官方 PPU-vLLM/FLA 对照并等待主办方
+私有集，公开集结果不能替代私有评测成绩。
 CPU offload、冷 RTC、profiler 插桩和稳态 PPU 结果不得混算。

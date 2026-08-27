@@ -22,10 +22,18 @@
 | `ppu-profile-traces-20260827.tar.gz` | 全部原始 PyTorch profiler trace | `6e8f3f317a7721e5cfc47b17b7df434950b84c33d1cdce6bde421cd8b8d8eceb` |
 | `mmbench-local-copy-20260827.tar.gz` | 远端 `datasets/mmbench` 完整副本 | `7e27032f5b5cccc75371bd1c7d7115cad59ccd5be449f3ea011088c3bd19af01` |
 
-2026-08-28 gate-prep 迭代另在本地 ignored
-`artifacts/ppu-snapshot-20260828/` 保存最终共享库和两份原始 profile trace；源码、
-小型 JSON、memcheck 与实验说明进入 Git。最终归档 SHA-256 在完整集结束、提交冻结后
-写入同目录清单，不覆盖上表三份已核验快照。
+2026-08-28 gate-prep/GEMM 迭代另在本地 ignored
+`artifacts/ppu-snapshot-20260828/` 保存最终共享库、4029 条原始 paired A/B、四份
+acBLASLt heuristic JSONL 和四份原始 profile trace；源码、小型聚合 JSON、memcheck
+与实验说明进入 Git。新增 CPFS/本地双副本归档：
+
+| 文件 | 内容 | SHA-256 |
+|---|---|---|
+| `ppu-final-evidence-20260828.tar.gz` | 实验源码、构建产物、完整集原始结果和小型证据；排除巨型 trace/log | `b581bbc957ddbedc1ab4ab08e0a8e8efd84a1fb02bda3c190f0db39c839cdfcb` |
+| `ppu-acblaslt-traces-20260828.tar.gz` | acBLASLt 方阵负实验两份原始 trace | `ba237680986179ea14d95ea0aa970693fdc404133e347e46cce23fc76589705c` |
+
+逐文件哈希见 `artifacts/ppu-snapshot-20260828/SHA256SUMS-final.txt`；本地值已与服务器
+源文件逐项匹配，不覆盖上表 2026-08-27 三份已核验快照。
 
 本地模型已在 `models/Qwen3.5-2B/`；锁定 revision 为
 `15852e8c16360a2fea060d615a32b45270f8a8fc`，主权重 SHA-256 为
@@ -44,7 +52,15 @@
 /mnt/workspace/seu/ppu-progress-snapshot-20260827-final.tar.gz
 /mnt/workspace/seu/ppu-profile-traces-20260827.tar.gz
 /mnt/workspace/seu/mmbench-local-copy-20260827.tar.gz
+/mnt/workspace/seu/ppu-final-evidence-20260828.tar.gz
+/mnt/workspace/seu/ppu-acblaslt-traces-20260828.tar.gz
+/mnt/workspace/seu/submission-source-20260828.zip
 ```
+
+最终源码白名单包在所有文档与代码冻结后重新生成并验证；最终文件数和 SHA-256
+记录在本地 ignored 的 `artifacts/ppu-snapshot-20260828/SHA256SUMS-final.txt`，并以
+CPFS 上对同名文件执行 `sha256sum` 的结果交叉核验。这里不内嵌源码包自身哈希，避免
+包内文档自引用导致哈希随记录值再次改变。
 
 释放计算实例前不要删除 CPFS 文件系统；创建下一台 DSW 时把同一 CPFS 根目录重新
 挂载到 `/mnt/workspace`。镜像负责系统环境，CPFS 负责代码、venv、模型、数据和结果，
@@ -121,9 +137,10 @@ python smoke_gdn_gate_prep_integration.py \
 
 - [ ] ACR 镜像状态成功，记录完整镜像地址和 tag；
 - [ ] CPFS 文件系统仍存在，且快照归档 SHA-256 可读取；
-- [ ] 本地三个 tar.gz SHA-256 全部匹配；
+- [x] 本地 2026-08-27 三份归档和 2026-08-28 两份归档 SHA-256 全部匹配；
 - [ ] 本地 Qwen 权重哈希匹配；
 - [ ] `5070ti` 本地分支提交存在，已 push 并核对远端哈希；
-- [ ] `SEU_PPU_GDN_GATE_PREP_ENABLE=1` 时 meta 记录 18 个 gate-prep module；
+- [x] `SEU_PPU_GDN_GATE_PREP_ENABLE=1` 时 meta 记录 18 个 gate-prep module；最终
+  正式 smoke 的完整计数为 `18/18/49/18/6/24/18/24/18`；
 - [ ] 用新镜像 + 同一 CPFS 创建的新实例通过 device、单算子、单样本三层 smoke；
 - [ ] 上述全部完成后才释放旧实例。
