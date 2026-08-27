@@ -1,0 +1,49 @@
+{
+  "candidate": "fused_bf16_swiglu",
+  "device": "PPU-ZW810E",
+  "shape": [1, 1, 6144],
+  "dtype": "bfloat16",
+  "warmup": 50,
+  "iterations": 1000,
+  "baseline": "torch.nn.functional.silu(gate) * up",
+  "records": [
+    {
+      "threads": 128,
+      "baseline_ms": 0.008774959564208984,
+      "candidate_ms": 0.011106040000915527,
+      "speedup": 0.7901069655327749,
+      "exact": true,
+      "max_abs_error": 0.0
+    },
+    {
+      "threads": 256,
+      "baseline_ms": 0.008661600112915039,
+      "candidate_ms": 0.013045599937438965,
+      "speedup": 0.6639480096317772,
+      "exact": true,
+      "max_abs_error": 0.0
+    },
+    {
+      "threads": 512,
+      "baseline_ms": 0.00819379997253418,
+      "candidate_ms": 0.011180680274963379,
+      "speedup": 0.7328534374498082,
+      "exact": true,
+      "max_abs_error": 0.0
+    },
+    {
+      "threads": 1024,
+      "baseline_ms": 0.008440239906311035,
+      "candidate_ms": 0.011334839820861817,
+      "speedup": 0.7446280705949404,
+      "exact": true,
+      "max_abs_error": 0.0
+    }
+  ],
+  "best_threads": 128,
+  "best_speedup": 0.7901069655327749,
+  "passed_accuracy_gate": true,
+  "passed_performance_gate": false,
+  "integrated_into_model": false,
+  "decision": "retain as a negative microbenchmark; do not expose a production wrapper switch"
+}

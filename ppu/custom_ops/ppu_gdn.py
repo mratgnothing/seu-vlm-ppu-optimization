@@ -33,6 +33,7 @@ class PPUGDNLibrary:
         conv_threads: int = 96,
         rmsnorm_threads: int = 512,
         gated_rmsnorm_threads: int = 128,
+        swiglu_threads: int = 256,
     ) -> None:
         if library_path is None:
             library_path = Path(__file__).with_name("build") / "libseu_ppu_gdn.so"
@@ -55,6 +56,9 @@ class PPUGDNLibrary:
                 "gated_rmsnorm_threads must be a multiple of 32 through 1024"
             )
         self.gated_rmsnorm_threads = gated_rmsnorm_threads
+        if swiglu_threads <= 0 or swiglu_threads > 1024 or swiglu_threads % 32:
+            raise ValueError("swiglu_threads must be a multiple of 32 through 1024")
+        self.swiglu_threads = swiglu_threads
         self.library = ctypes.CDLL(str(self.path))
         self.launch = self.library.seu_ppu_gdn_recurrent_decode_bf16
         self.launch.argtypes = [
@@ -118,6 +122,19 @@ class PPUGDNLibrary:
                 ctypes.c_void_p,
             ]
             self.residual_rmsnorm_launch.restype = ctypes.c_int
+        self.swiglu_launch = getattr(
+            self.library, "seu_ppu_swiglu_decode_bf16", None
+        )
+        if self.swiglu_launch is not None:
+            self.swiglu_launch.argtypes = [
+                ctypes.c_void_p,
+                ctypes.c_void_p,
+                ctypes.c_void_p,
+                ctypes.c_int,
+                ctypes.c_int,
+                ctypes.c_void_p,
+            ]
+            self.swiglu_launch.restype = ctypes.c_int
         self.gated_rmsnorm_launch = self.library.seu_ppu_gated_rmsnorm_decode_bf16
         self.gated_rmsnorm_launch.argtypes = [
             ctypes.c_void_p,
@@ -304,6 +321,28 @@ class PPUGDNLibrary:
                 f"PPU residual RMSNorm launch failed with HGGC status {status}"
             )
         return update, normalized_output
+
+    def swiglu_decode(
+        self,
+        gate: torch.Tensor,
+        up: torch.Tensor,
+    ) -> torch.Tensor:
+        _validate_swiglu_inputs(gate, up)
+        if self.swiglu_launch is None:
+            raise RuntimeError("PPU GDN library lacks SwiGLU symbol")
+        output = torch.empty_like(gate)
+        stream = torch.cuda.current_stream(gate.device).cuda_stream
+        status = self.swiglu_launch(
+            gate.data_ptr(),
+            up.data_ptr(),
+            output.data_ptr(),
+            gate.numel(),
+            self.swiglu_threads,
+            stream,
+        )
+        if status != 0:
+            raise RuntimeError(f"PPU SwiGLU launch failed with HGGC status {status}")
+        return output
 
     def qk_rmsnorm_rope_decode(
         self,
@@ -721,6 +760,17 @@ def _validate_residual_rmsnorm_inputs(
         raise ValueError("residual/update must share shape and PPU device")
     if residual.data_ptr() == update.data_ptr():
         raise ValueError("residual/update must not alias the same tensor")
+
+
+def _validate_swiglu_inputs(gate: torch.Tensor, up: torch.Tensor) -> None:
+    if gate.device.type != "cuda" or up.device != gate.device:
+        raise ValueError("SwiGLU gate/up must share the PPU device")
+    if gate.dtype != torch.bfloat16 or up.dtype != torch.bfloat16:
+        raise TypeError("SwiGLU gate/up must be torch.bfloat16")
+    if gate.shape != up.shape or gate.shape[-1] != MLP_INTERMEDIATE_SIZE:
+        raise ValueError("SwiGLU gate/up must share shape [..., 6144]")
+    if not gate.is_contiguous() or not up.is_contiguous():
+        raise ValueError("SwiGLU gate/up must be contiguous")
 
 
 def _validate_gated_rmsnorm_inputs(

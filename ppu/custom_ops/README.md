@@ -29,6 +29,11 @@ RMS reduction 和 weight scaling。每层内部的 attention 边直接融合，M
 thread-local、输入对象身份校验的缓存连接下一层 input norm（最后一层连接 final
 norm）；prefill 和不匹配的 dtype/device/shape 均回退原 forward。
 
+目录还保留一个独立的 BF16 SwiGLU 负实验核。它在 `[1,1,6144]` 上与
+`F.silu(gate) * up` bit-exact，但 128/256/512/1024 线程的最好速度仅为 Torch
+两核的 `0.7901x`，因此没有接入模型 wrapper。后续应争取 acBLAS GEMM epilogue
+fusion，直接避免 gate/up 中间张量，而不是增加独立 HGGC launch。
+
 此外，本目录提供一个不新增 HGGC kernel 的 packed-MLP decode 路径：24 个 MLP 的
 `gate_proj` 和 `up_proj` 权重拼成共享存储 `[12288, 2048]`，decode 时把两次
 `2048→6144` 线性投影合成一次 `2048→12288`，再 split、SiLU、逐元素乘和
@@ -55,6 +60,8 @@ export LD_LIBRARY_PATH="$PPU_SDK/lib:$PPU_SDK/lib64:${LD_LIBRARY_PATH:-}"
 python smoke_gdn_integration.py --tiles-per-head 4 --warmup 50 --iters 1000
 python smoke_causal_conv_integration.py --threads 96 --warmup 50 --iters 1000
 python smoke_rmsnorm_integration.py --threads 512 --warmup 50 --iters 1000
+python smoke_swiglu_integration.py \
+  --library build/libseu_ppu_gdn.so --threads 128 --warmup 50 --iters 1000
 python smoke_gated_rmsnorm_integration.py --threads 128 --warmup 50 --iters 1000
 python smoke_qk_rmsnorm_rope_integration.py --warmup 50 --iters 1000
 python smoke_packed_mlp_integration.py --warmup 32 --iters 400

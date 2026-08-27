@@ -125,6 +125,12 @@
   两轮中位为 1.0159x/1.0233x，CN20 两轮平均吞吐为 100.156→101.616 和
   98.576→101.507 token/s，成对中位 1.0213x/1.0206x、均 14/20 获胜，Accuracy
   均 85% 且 20/20 全文一致。正式 wrapper 真实 PPU smoke 通过，候选仍默认关闭。
+- 独立 BF16 SwiGLU HGGC 核在 `[1,1,6144]` 上四组线程均 bit-exact，但最优仅
+  `0.7901x`，未通过单算子性能门禁；没有运行公开集挑样本，也没有接入 wrapper。
+  后续只考虑 packed gate/up GEMM epilogue fusion。
+- PPU 释放前已完成三份本地快照：实验目录 538 KiB、原始 traces 58 MiB、MMBench
+  188 MiB（压缩后），SHA-256 均与远端一致；Qwen3.5-2B 4.3 GiB 权重本地已有。
+  `/mnt/workspace` 与 `/mnt/cpfs` 为同一 CPFS，远端快照亦已持久化。
 - 当前没有 vLLM 或 `/opt/vllm`，Transformers 提示缺少 GDN/causal-conv fast path；
   eager 正确性可用，但不是最终性能路线。
 - 完整证据见 [PPU 首次真实基线、Profile 与 GEMV](experiments/2026-08-26-ppu-baseline-and-gemv.md)、
@@ -132,7 +138,9 @@
   [packed MLP](experiments/2026-08-27-ppu-packed-mlp.md)、
   [注册式 acBLAS Linear](experiments/2026-08-27-ppu-acblas-gemv.md) 和
   [GDN 输入投影打包](experiments/2026-08-27-ppu-packed-gdn-projections.md)、
-  [residual-add + RMSNorm](experiments/2026-08-27-ppu-residual-rmsnorm.md)。
+  [residual-add + RMSNorm](experiments/2026-08-27-ppu-residual-rmsnorm.md)、
+  [SwiGLU 负实验](experiments/2026-08-27-ppu-swiglu-negative.md)、
+  [资源释放与恢复](ppu-resource-release-handoff.md) 和 [未来路线](ppu-future-roadmap.md)。
 
 ## 尚未完成
 

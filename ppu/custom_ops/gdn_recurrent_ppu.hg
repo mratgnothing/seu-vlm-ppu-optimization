@@ -13,6 +13,7 @@ constexpr int kValueDim = 128;
 constexpr int kConvChannels = 6144;
 constexpr int kConvWidth = 4;
 constexpr int kHiddenSize = 2048;
+constexpr int kMlpIntermediateSize = 6144;
 constexpr int kGatedNormWidth = 128;
 constexpr int kAttentionHeads = 8;
 constexpr int kKeyValueHeads = 2;
@@ -258,6 +259,20 @@ __global__ void residual_rmsnorm_decode_kernel(
   }
 }
 
+__global__ void swiglu_decode_kernel(
+    const __ppu_bfloat16* gate,
+    const __ppu_bfloat16* up,
+    __ppu_bfloat16* output,
+    int elements) {
+  const int index = blockIdx.x * blockDim.x + threadIdx.x;
+  if (index >= elements) return;
+  const float gate_value = __bfloat162float(gate[index]);
+  const float activated = round_to_bf16(
+      gate_value / (1.0F + expf(-gate_value)));
+  output[index] = __float2bfloat16_rn(
+      activated * __bfloat162float(up[index]));
+}
+
 __global__ void gated_rmsnorm_decode_kernel(
     const __ppu_bfloat16* hidden_states,
     const __ppu_bfloat16* gate,
@@ -499,6 +514,27 @@ extern "C" int seu_ppu_residual_rmsnorm_decode_bf16(
       residual_row_stride,
       update_row_stride,
       epsilon);
+  return static_cast<int>(hggcGetLastError());
+}
+
+extern "C" int seu_ppu_swiglu_decode_bf16(
+    const uint16_t* gate,
+    const uint16_t* up,
+    uint16_t* output,
+    int elements,
+    int threads,
+    void* stream_handle) {
+  if (elements <= 0 || elements % kMlpIntermediateSize != 0 ||
+      threads <= 0 || threads > 1024 || threads % 32 != 0) {
+    return static_cast<int>(hggcErrorInvalidValue);
+  }
+  const hggcStream_t stream = reinterpret_cast<hggcStream_t>(stream_handle);
+  const int blocks = (elements + threads - 1) / threads;
+  swiglu_decode_kernel<<<blocks, threads, 0, stream>>>(
+      reinterpret_cast<const __ppu_bfloat16*>(gate),
+      reinterpret_cast<const __ppu_bfloat16*>(up),
+      reinterpret_cast<__ppu_bfloat16*>(output),
+      elements);
   return static_cast<int>(hggcGetLastError());
 }
 

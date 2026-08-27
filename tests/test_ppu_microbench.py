@@ -119,6 +119,9 @@ class PPUMicrobenchContractTest(unittest.TestCase):
         residual_smoke = (
             ROOT / "ppu" / "custom_ops" / "smoke_residual_rmsnorm_integration.py"
         ).read_text(encoding="utf-8")
+        swiglu_smoke = (
+            ROOT / "ppu" / "custom_ops" / "smoke_swiglu_integration.py"
+        ).read_text(encoding="utf-8")
         self.assertIn("stream_handle", kernel)
         self.assertIn("round_to_bf16", kernel)
         for symbol in (
@@ -126,6 +129,7 @@ class PPUMicrobenchContractTest(unittest.TestCase):
             "seu_ppu_causal_conv1d_decode_bf16",
             "seu_ppu_rmsnorm_decode_bf16",
             "seu_ppu_residual_rmsnorm_decode_bf16",
+            "seu_ppu_swiglu_decode_bf16",
             "seu_ppu_gated_rmsnorm_decode_bf16",
             "seu_ppu_qk_rmsnorm_rope_decode_bf16",
         ):
@@ -150,6 +154,8 @@ class PPUMicrobenchContractTest(unittest.TestCase):
         self.assertIn("next_norm=next_norm", integration)
         self.assertIn("residual_exact", residual_smoke)
         self.assertIn("normalized_exact", residual_smoke)
+        self.assertIn("fused_bf16_swiglu", swiglu_smoke)
+        self.assertIn("max_abs_error", swiglu_smoke)
         self.assertIn("Path(sys.executable).parent", extension_builder)
         self.assertIn("exact_output_match", benchmark)
         self.assertIn('"2048x2048": 42', acblas_benchmark)

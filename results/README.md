@@ -115,7 +115,17 @@ step 共减少 720 次设备 launch。正式 wrapper smoke 为真实 Transformer
 - [`ppu-residual-rmsnorm-profile-chain48-ab-20260827.json`](ppu-residual-rmsnorm-profile-chain48-ab-20260827.json)
 - [`ppu-residual-rmsnorm-profile-chain48-baseline-summary-20260827.json`](ppu-residual-rmsnorm-profile-chain48-baseline-summary-20260827.json)
 - [`ppu-residual-rmsnorm-profile-chain48-candidate-summary-20260827.json`](ppu-residual-rmsnorm-profile-chain48-candidate-summary-20260827.json)
+- [`ppu-residual-rmsnorm-profile-chain48-gdn-shapes-20260827.json`](ppu-residual-rmsnorm-profile-chain48-gdn-shapes-20260827.json)（下一轮 GDN 标量路径形状清单）
 - [`ppu-residual-rmsnorm-formal-wrapper-chain48-smoke-20260827.json`](ppu-residual-rmsnorm-formal-wrapper-chain48-smoke-20260827.json)
 
 首版 24-edge profile 的 AB/summary JSON 也保留在同目录，用于解释为何必须补齐跨层
 链；它们不能与最终 48-edge profile 混用。
+
+## PPU SwiGLU 独立融合负实验
+
+`SiLU(gate) * up` 自定义 HGGC 核在随机 BF16 `[1,1,6144]` 上四组线程配置均
+bit-exact，但最优 128-thread 配置为 `0.7901x`，未通过单算子性能门禁。因此没有
+运行公开集挑选样本，也没有接入正式 wrapper。正确后续方向是 GEMM epilogue fusion：
+
+- [`ppu-swiglu-thread-sweep-negative-20260827.json`](ppu-swiglu-thread-sweep-negative-20260827.json)
+- [实验说明](../docs/experiments/2026-08-27-ppu-swiglu-negative.md)

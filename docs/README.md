@@ -102,4 +102,7 @@
 - [2026-08-27 PPU 注册式 acBLAS Linear](experiments/2026-08-27-ppu-acblas-gemv.md)
 - [2026-08-27 PPU GDN 输入投影打包](experiments/2026-08-27-ppu-packed-gdn-projections.md)
 - [2026-08-27 PPU residual-add + RMSNorm](experiments/2026-08-27-ppu-residual-rmsnorm.md)
+- [2026-08-27 PPU SwiGLU 融合负实验](experiments/2026-08-27-ppu-swiglu-negative.md)
+- [PPU 资源释放前快照与恢复手册](ppu-resource-release-handoff.md)
+- [PPU 后续优化路线图](ppu-future-roadmap.md)
 - [实验记录目录](experiments/)

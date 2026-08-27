@@ -119,4 +119,5 @@ GDN/conv/RMSNorm/gated-RMSNorm/qk-RoPE/packed-MLP/grouped-GDN 计数为
 - `results/ppu-residual-rmsnorm-profile-chain48-ab-20260827.json`；
 - `results/ppu-residual-rmsnorm-profile-chain48-baseline-summary-20260827.json`；
 - `results/ppu-residual-rmsnorm-profile-chain48-candidate-summary-20260827.json`；
+- `results/ppu-residual-rmsnorm-profile-chain48-gdn-shapes-20260827.json`；
 - `results/ppu-residual-rmsnorm-formal-wrapper-chain48-smoke-20260827.json`。

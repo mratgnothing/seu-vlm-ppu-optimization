@@ -50,6 +50,11 @@
   `[1,1,2048]` add 与 720 次 kernel launch。CN20 两轮由 `100.156→101.616`、
   `98.576→101.507 token/s`，配对中位均约 `1.021x`、各 14/20 获胜，Accuracy
   均为 85% 且两轮 20/20 全文一致。它同样默认关闭，待完整集门禁。
+- 资源释放前完成独立 SwiGLU HGGC 核负实验：四组线程均 bit-exact，但最好只有
+  `0.7901x`，因此未接入正式 wrapper；后续改走 packed GEMM epilogue fusion。
+- 已将 PPU 源码、编译产物、小型结果、pip/设备清单、全部原始 trace 和 MMBench
+  分别归档到本地 ignored `artifacts/ppu-snapshot-20260827/`，三份 SHA-256 均核对
+  一致；模型权重本地已有完整副本。镜像、CPFS 和恢复步骤见资源释放手册。
 - `dummy` 后端只用于接口冒烟；不得将其结果视为真实模型部署或比赛成绩。
 
 正式性能提升来自公开集固定前 20 条的三次工程复测；完整公开集当前用于 Accuracy
@@ -63,8 +68,11 @@ PPU 侧已完成 SDK、真实模型闭环、20 条稳态基线、算子级 profi
 [PPU acBLAS GEMV 调查](docs/experiments/2026-08-27-ppu-acblas-gemv.md)、
 [PPU GDN 输入投影打包](docs/experiments/2026-08-27-ppu-packed-gdn-projections.md)、
 [PPU residual-add + RMSNorm 跨层融合](docs/experiments/2026-08-27-ppu-residual-rmsnorm.md)、
+[PPU SwiGLU 融合负实验](docs/experiments/2026-08-27-ppu-swiglu-negative.md)、
 [PPU decode 融合算子与问题记录](ppu/custom_ops/README.md)、
 [PPU 兼容性矩阵](docs/ppu-compatibility-matrix.md) 和 [需要向主办方确认的问题](docs/questions-for-organizer.md)。
+资源即将释放时，按 [PPU 镜像与快照恢复手册](docs/ppu-resource-release-handoff.md)
+操作；下一阶段按 [PPU 后续优化路线图](docs/ppu-future-roadmap.md) 推进。
 Qwen3.5-2B 的 GDN、MLP、全注意力与视觉层尺寸见 [关键算子与 PPU kernel 目标](docs/qwen35-kernel-targets.md)。
 三组关键解码尺寸的 [PPU BF16 GEMV 微基准](ppu/microbench/README.md) 已在隔离
 PPU 实测：优化核比 reference 快 1.88--2.08 倍，但仍慢于 `torch.mv`，当前不接入模型。
