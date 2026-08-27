@@ -11,6 +11,8 @@ import statistics
 import sys
 from pathlib import Path
 
+import torch
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
 CUSTOM_OP_DIR = REPO_ROOT / "ppu" / "custom_ops"
 DEFAULT_PPU_SDK = Path("/usr/local/PPU_SDK")
@@ -31,7 +33,7 @@ from benchmark_public import (
     settle_runtime,
 )
 from evaluation_wrapper import VLMModel
-from ppu_gdn import PPUGDNLibrary
+from ppu_gdn import PPUGDNLibrary, pack_qwen35_mlp_module
 
 
 def parse_args() -> argparse.Namespace:
@@ -51,6 +53,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--fuse-gated-rmsnorm", action="store_true")
     parser.add_argument("--gated-rmsnorm-threads", type=int, default=128)
     parser.add_argument("--fuse-qk-rope", action="store_true")
+    parser.add_argument("--pack-mlp", action="store_true")
     return parser.parse_args()
 
 
@@ -188,6 +191,18 @@ def main() -> int:
                 "expected 18 Qwen3.5 gated RMSNorm modules, "
                 f"patched {patched_gated_rmsnorm_modules}"
             )
+    packed_mlp_modules = 0
+    if args.pack_mlp:
+        for module in model._model.modules():
+            if type(module).__name__ != "Qwen3_5MLP":
+                continue
+            module.forward = pack_qwen35_mlp_module(module)
+            packed_mlp_modules += 1
+        if packed_mlp_modules != 24:
+            raise RuntimeError(
+                f"expected 24 Qwen3.5 MLP modules, packed {packed_mlp_modules}"
+            )
+        torch.cuda.empty_cache()
 
     run_once("fused_warmup")
     fused_records = [run_once("fused") for _ in range(args.repeats)]
@@ -211,6 +226,7 @@ def main() -> int:
             args.gated_rmsnorm_threads if args.fuse_gated_rmsnorm else None
         ),
         "fused_qk_rmsnorm_rope_modules": patched_qk_rope_modules,
+        "packed_mlp_modules": packed_mlp_modules,
         "eager": eager,
         "fused": fused,
         "speedup": {

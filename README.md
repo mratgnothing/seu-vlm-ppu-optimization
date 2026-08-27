@@ -27,6 +27,10 @@
   all-five 两次为 93.918/94.889 token/s，相对 eager 49.737 提升
   88.83%/90.78%；Accuracy 均为 85%、20/20 答案一致。仍有 5/20 生成长度变化，
   因此全部融合保持显式 opt-in，待完整集验证。
+- 在五类融合上新增 24 层 MLP gate/up packed projection（图布局优化，不计作第六个
+  HGGC kernel）。固定中文前 20 条两次为 96.506/96.715 token/s，Accuracy 仍为
+  85%；两轮答案、正确性和 token 数逐条完全一致，相对 eager 吞吐提高约
+  94.04%/94.46%。它没有扩大 all-five 已有的 5/20 token 数漂移。
 - `dummy` 后端只用于接口冒烟；不得将其结果视为真实模型部署或比赛成绩。
 
 正式性能提升来自公开集固定前 20 条的三次工程复测；完整公开集当前用于 Accuracy
@@ -36,6 +40,7 @@
 PPU 侧已完成 SDK、真实模型闭环、20 条稳态基线、算子级 profile 和 HGGC GEMV
 迭代。详见 [PPU 首次真实实验](docs/experiments/2026-08-26-ppu-baseline-and-gemv.md)、
 [PPU decode 融合实验](docs/experiments/2026-08-26-ppu-fused-decode-kernels.md)、
+[PPU packed-MLP 实验](docs/experiments/2026-08-27-ppu-packed-mlp.md)、
 [PPU decode 融合算子与问题记录](ppu/custom_ops/README.md)、
 [PPU 兼容性矩阵](docs/ppu-compatibility-matrix.md) 和 [需要向主办方确认的问题](docs/questions-for-organizer.md)。
 Qwen3.5-2B 的 GDN、MLP、全注意力与视觉层尺寸见 [关键算子与 PPU kernel 目标](docs/qwen35-kernel-targets.md)。

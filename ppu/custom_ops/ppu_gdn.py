@@ -20,6 +20,7 @@ ATTENTION_HEADS = 8
 KEY_VALUE_HEADS = 2
 ATTENTION_HEAD_DIM = 256
 ROTARY_DIM = 64
+MLP_INTERMEDIATE_SIZE = 6144
 
 
 class PPUGDNLibrary:
@@ -412,6 +413,50 @@ class PPUGDNLibrary:
             return module.o_proj(attn_output), attn_weights
 
         return fused_attention_forward
+
+
+def pack_qwen35_mlp_module(module) -> Callable[[torch.Tensor], torch.Tensor]:
+    if type(module).__name__ != "Qwen3_5MLP":
+        raise TypeError("packed MLP integration requires Qwen3_5MLP")
+    if module.hidden_size != HIDDEN_SIZE or module.intermediate_size != (
+        MLP_INTERMEDIATE_SIZE
+    ):
+        raise ValueError("packed MLP requires hidden/intermediate size 2048/6144")
+    if module.gate_proj.bias is not None or module.up_proj.bias is not None:
+        raise ValueError("packed MLP requires bias-free gate/up projections")
+    gate_weight = module.gate_proj.weight
+    up_weight = module.up_proj.weight
+    if (
+        gate_weight.shape != (MLP_INTERMEDIATE_SIZE, HIDDEN_SIZE)
+        or up_weight.shape != gate_weight.shape
+    ):
+        raise ValueError("packed MLP gate/up weights must both be [6144, 2048]")
+    if gate_weight.dtype != torch.bfloat16 or up_weight.dtype != torch.bfloat16:
+        raise TypeError("packed MLP gate/up weights must be torch.bfloat16")
+    if gate_weight.device.type != "cuda" or up_weight.device != gate_weight.device:
+        raise ValueError("packed MLP gate/up weights must share the PPU device")
+
+    original_forward = module.forward
+    with torch.no_grad():
+        packed_weight = torch.cat((gate_weight, up_weight), dim=0).contiguous()
+    module.gate_proj.weight.data = packed_weight[:MLP_INTERMEDIATE_SIZE]
+    module.up_proj.weight.data = packed_weight[MLP_INTERMEDIATE_SIZE:]
+    module.register_buffer("_seu_gate_up_weight", packed_weight, persistent=False)
+    packed_storage = packed_weight.untyped_storage().data_ptr()
+    if (
+        module.gate_proj.weight.untyped_storage().data_ptr() != packed_storage
+        or module.up_proj.weight.untyped_storage().data_ptr() != packed_storage
+    ):
+        raise RuntimeError("packed MLP gate/up weights do not alias packed storage")
+
+    def packed_mlp_forward(x: torch.Tensor) -> torch.Tensor:
+        if x.ndim >= 2 and x.shape[-2] == 1 and x.shape[-1] == HIDDEN_SIZE:
+            projected = torch.nn.functional.linear(x, module._seu_gate_up_weight)
+            gate, up = projected.split(MLP_INTERMEDIATE_SIZE, dim=-1)
+            return module.down_proj(module.act_fn(gate) * up)
+        return original_forward(x)
+
+    return packed_mlp_forward
 
 
 def _validate_inputs(

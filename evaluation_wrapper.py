@@ -210,7 +210,7 @@ class VLMModel:
             ).resolve()
             if str(custom_op_dir) not in sys.path:
                 sys.path.insert(0, str(custom_op_dir))
-            from ppu_gdn import PPUGDNLibrary
+            from ppu_gdn import PPUGDNLibrary, pack_qwen35_mlp_module
 
             tiles_per_head = int(os.getenv("SEU_PPU_GDN_TILES", "4"))
             self._ppu_gdn_library = PPUGDNLibrary(
@@ -321,6 +321,19 @@ class VLMModel:
                         "SEU PPU gated RMSNorm expected 18 modules, "
                         f"patched {self._ppu_gated_rmsnorm_patched_modules}"
                     )
+            self._ppu_packed_mlp_modules = 0
+            if os.getenv("SEU_PPU_PACK_MLP_ENABLE", "0") == "1":
+                for module in self._model.modules():
+                    if type(module).__name__ != "Qwen3_5MLP":
+                        continue
+                    module.forward = pack_qwen35_mlp_module(module)
+                    self._ppu_packed_mlp_modules += 1
+                if self._ppu_packed_mlp_modules != 24:
+                    raise RuntimeError(
+                        "SEU PPU packed MLP expected 24 modules, "
+                        f"patched {self._ppu_packed_mlp_modules}"
+                    )
+                torch.cuda.empty_cache()
 
     def _load_dummy_backend(self, reason: str) -> None:
         self._dummy_reason = reason
@@ -444,6 +457,9 @@ class VLMModel:
                 ),
                 "ppu_qk_rope_patched_modules": getattr(
                     self, "_ppu_qk_rope_patched_modules", 0
+                ),
+                "ppu_packed_mlp_modules": getattr(
+                    self, "_ppu_packed_mlp_modules", 0
                 ),
             },
         )

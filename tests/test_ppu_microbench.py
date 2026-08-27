@@ -108,6 +108,7 @@ class PPUMicrobenchContractTest(unittest.TestCase):
         self.assertIn("beta must be torch.bfloat16", wrapper)
         self.assertIn("expected 18 Qwen3.5 GDN modules", benchmark)
         self.assertIn("expected 49 Qwen3.5 RMSNorm modules", benchmark)
+        self.assertIn("expected 24 Qwen3.5 MLP modules", benchmark)
         self.assertIn("exact_output_match", benchmark)
         for variable in (
             "SEU_PPU_GDN_LIBRARY",
@@ -115,6 +116,7 @@ class PPUMicrobenchContractTest(unittest.TestCase):
             "SEU_PPU_RMSNORM_ENABLE",
             "SEU_PPU_GATED_RMSNORM_ENABLE",
             "SEU_PPU_QK_ROPE_ENABLE",
+            "SEU_PPU_PACK_MLP_ENABLE",
         ):
             self.assertIn(variable, integration)
 

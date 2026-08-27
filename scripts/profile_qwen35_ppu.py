@@ -47,6 +47,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--fuse-gated-rmsnorm", action="store_true")
     parser.add_argument("--gated-rmsnorm-threads", type=int, default=128)
     parser.add_argument("--fuse-qk-rope", action="store_true")
+    parser.add_argument("--pack-mlp", action="store_true")
     return parser.parse_args()
 
 
@@ -69,7 +70,7 @@ def main() -> int:
     ).eval()
     patched_gdn_modules = 0
     if args.gdn_library:
-        from ppu_gdn import PPUGDNLibrary
+        from ppu_gdn import PPUGDNLibrary, pack_qwen35_mlp_module
 
         library = PPUGDNLibrary(
             args.gdn_library,
@@ -160,10 +161,23 @@ def main() -> int:
                     "expected 18 Qwen3.5 gated RMSNorm modules, "
                     f"patched {patched_gated_rmsnorm_modules}"
                 )
+        packed_mlp_modules = 0
+        if args.pack_mlp:
+            for module in model.modules():
+                if type(module).__name__ != "Qwen3_5MLP":
+                    continue
+                module.forward = pack_qwen35_mlp_module(module)
+                packed_mlp_modules += 1
+            if packed_mlp_modules != 24:
+                raise RuntimeError(
+                    f"expected 24 Qwen3.5 MLP modules, packed {packed_mlp_modules}"
+                )
+            torch.cuda.empty_cache()
     else:
         patched_qk_rope_modules = 0
         patched_rmsnorm_modules = 0
         patched_gated_rmsnorm_modules = 0
+        packed_mlp_modules = 0
     messages = [{
         "role": "user",
         "content": [
@@ -235,6 +249,7 @@ def main() -> int:
         "fused_rmsnorm_modules": patched_rmsnorm_modules,
         "fused_gated_rmsnorm_modules": patched_gated_rmsnorm_modules,
         "fused_qk_rmsnorm_rope_modules": patched_qk_rope_modules,
+        "packed_mlp_modules": packed_mlp_modules,
         "trace_path": str(trace_path.resolve()),
     }
     (args.output_dir / "summary.json").write_text(
