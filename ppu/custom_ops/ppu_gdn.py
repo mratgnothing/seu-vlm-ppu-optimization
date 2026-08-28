@@ -34,6 +34,7 @@ class PPUGDNLibrary:
         rmsnorm_threads: int = 512,
         gated_rmsnorm_threads: int = 128,
         swiglu_threads: int = 256,
+        raw_stream_query: bool = False,
     ) -> None:
         if library_path is None:
             library_path = Path(__file__).with_name("build") / "libseu_ppu_gdn.so"
@@ -59,6 +60,8 @@ class PPUGDNLibrary:
         if swiglu_threads <= 0 or swiglu_threads > 1024 or swiglu_threads % 32:
             raise ValueError("swiglu_threads must be a multiple of 32 through 1024")
         self.swiglu_threads = swiglu_threads
+        self.raw_stream_query = False
+        self.set_raw_stream_query(raw_stream_query)
         self.library = ctypes.CDLL(str(self.path))
         self.launch = self.library.seu_ppu_gdn_recurrent_decode_bf16
         self.launch.argtypes = [
@@ -192,6 +195,16 @@ class PPUGDNLibrary:
         ]
         self.qk_rmsnorm_rope_launch.restype = ctypes.c_int
 
+    def set_raw_stream_query(self, enabled: bool) -> None:
+        if enabled and not hasattr(torch._C, "_cuda_getCurrentRawStream"):
+            raise RuntimeError("PyTorch runtime lacks _cuda_getCurrentRawStream")
+        self.raw_stream_query = enabled
+
+    def _current_stream_handle(self, device: torch.device) -> int:
+        if self.raw_stream_query:
+            return torch._C._cuda_getCurrentRawStream(device.index or 0)
+        return torch.cuda.current_stream(device).cuda_stream
+
     def recurrent_decode(
         self,
         query: torch.Tensor,
@@ -208,7 +221,7 @@ class PPUGDNLibrary:
             dtype=torch.bfloat16,
             device=query.device,
         )
-        stream = torch.cuda.current_stream(query.device).cuda_stream
+        stream = self._current_stream_handle(query.device)
         status = self.launch(
             query.data_ptr(),
             key.data_ptr(),
@@ -253,7 +266,7 @@ class PPUGDNLibrary:
             g, beta = g_out, beta_out
         else:
             raise ValueError("g_out and beta_out must be provided together")
-        stream = torch.cuda.current_stream(raw_a.device).cuda_stream
+        stream = self._current_stream_handle(raw_a.device)
         status = self.gate_prep_launch(
             raw_a.data_ptr(),
             raw_b.data_ptr(),
@@ -284,7 +297,7 @@ class PPUGDNLibrary:
     ) -> torch.Tensor:
         _validate_conv_inputs(hidden_states, conv_state, weight, bias, activation)
         output = torch.empty_like(hidden_states)
-        stream = torch.cuda.current_stream(hidden_states.device).cuda_stream
+        stream = self._current_stream_handle(hidden_states.device)
         status = self.conv_launch(
             hidden_states.data_ptr(),
             conv_state.data_ptr(),
@@ -310,7 +323,7 @@ class PPUGDNLibrary:
         _validate_rmsnorm_inputs(input_tensor, weight)
         output = torch.empty_like(input_tensor)
         rows = input_tensor.numel() // HIDDEN_SIZE
-        stream = torch.cuda.current_stream(input_tensor.device).cuda_stream
+        stream = self._current_stream_handle(input_tensor.device)
         status = self.rmsnorm_launch(
             input_tensor.data_ptr(),
             weight.data_ptr(),
@@ -335,7 +348,7 @@ class PPUGDNLibrary:
         _validate_gated_rmsnorm_inputs(hidden_states, gate, weight)
         output = torch.empty_like(hidden_states)
         rows = hidden_states.numel() // GATED_NORM_WIDTH
-        stream = torch.cuda.current_stream(hidden_states.device).cuda_stream
+        stream = self._current_stream_handle(hidden_states.device)
         status = self.gated_rmsnorm_launch(
             hidden_states.data_ptr(),
             gate.data_ptr(),
@@ -379,7 +392,7 @@ class PPUGDNLibrary:
                 "normalized_output must be a distinct contiguous tensor matching update"
             )
         rows = update.numel() // HIDDEN_SIZE
-        stream = torch.cuda.current_stream(update.device).cuda_stream
+        stream = self._current_stream_handle(update.device)
         status = self.residual_rmsnorm_launch(
             residual.data_ptr(),
             update.data_ptr(),
@@ -407,7 +420,7 @@ class PPUGDNLibrary:
         if self.swiglu_launch is None:
             raise RuntimeError("PPU GDN library lacks SwiGLU symbol")
         output = torch.empty_like(gate)
-        stream = torch.cuda.current_stream(gate.device).cuda_stream
+        stream = self._current_stream_handle(gate.device)
         status = self.swiglu_launch(
             gate.data_ptr(),
             up.data_ptr(),
@@ -444,7 +457,7 @@ class PPUGDNLibrary:
             dtype=torch.bfloat16,
             device=key.device,
         )
-        stream = torch.cuda.current_stream(query.device).cuda_stream
+        stream = self._current_stream_handle(query.device)
         status = self.qk_rmsnorm_rope_launch(
             query.data_ptr(),
             key.data_ptr(),

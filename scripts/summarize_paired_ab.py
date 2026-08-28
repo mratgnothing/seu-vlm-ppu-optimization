@@ -77,6 +77,15 @@ def main() -> int:
         "max_new_tokens": int(payload["max_new_tokens"]),
         "ab_target": target,
         "projection_backend": payload["projection_backend"],
+        **(
+            {
+                "raw_stream_query_ab_enabled": bool(
+                    payload["raw_stream_query_ab_enabled"]
+                )
+            }
+            if "raw_stream_query_ab_enabled" in payload
+            else {}
+        ),
         "module_counts": {
             "packed_gdn": int(payload["packed_gdn_modules"]),
             "residual_rmsnorm": int(payload["residual_rmsnorm_modules"]),

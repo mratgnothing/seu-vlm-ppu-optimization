@@ -82,6 +82,12 @@
 - residual-RMSNorm 持久输出 scratch 在模块边界相对现有融合为 `1.3373x`，exact 且
   memcheck 0 errors；但当前完整栈固定 128-token 八对仅 `0.9862x`、2/8 获胜，
   已止损且未接正式 wrapper。
+- 新增受版本能力检查保护的 PPU raw-stream 查询候选，减少约 127 次/token 的 Python
+  `Stream` 对象查询。模块路径 `1.2944x`；固定 128-token 两轮中位
+  `1.1055x/1.0961x`，CN20 两轮中位 `1.1026x/1.0855x`，四轮输出均完全一致、
+  Accuracy 不变。中文完整集 4029/4029 exact、Accuracy 均为 3374/4029，平均吞吐
+  `120.383→131.107 token/s`、成对中位 `1.0906x`，3817/4029 获胜；memcheck、
+  profile 和正式入口 smoke 均通过。英文完整集正在执行。
 - 资源释放前完成独立 SwiGLU HGGC 核负实验：四组线程均 bit-exact，但最好只有
   `0.7901x`，因此未接入正式 wrapper；后续改走 packed GEMM epilogue fusion。
 - 已将 PPU 源码、编译产物、小型结果、pip/设备清单、全部原始 trace 和 MMBench
@@ -107,6 +113,7 @@ PPU 侧已完成 SDK、真实模型闭环、20 条稳态基线、算子级 profi
 [PPU Attention Prep 单入口融合](docs/experiments/2026-08-28-ppu-acblas-attention-prep.md)、
 [PPU Graph Capture 能力与止损实验](docs/experiments/2026-08-28-ppu-graph-capture.md)、
 [PPU residual-RMSNorm scratch 负实验](docs/experiments/2026-08-28-ppu-residual-rmsnorm-scratch.md)、
+[PPU raw stream 查询优化](docs/experiments/2026-08-28-ppu-raw-stream-query.md)、
 [PPU SwiGLU 融合负实验](docs/experiments/2026-08-27-ppu-swiglu-negative.md)、
 [PPU decode 融合算子与问题记录](ppu/custom_ops/README.md)、
 [PPU 兼容性矩阵](docs/ppu-compatibility-matrix.md) 和 [需要向主办方确认的问题](docs/questions-for-organizer.md)。

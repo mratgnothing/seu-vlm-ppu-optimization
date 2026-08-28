@@ -60,6 +60,11 @@ def parse_args() -> argparse.Namespace:
         help="Keep fused residual RMSNorm on and A/B persistent output scratch",
     )
     targets.add_argument(
+        "--raw-stream-query-ab",
+        action="store_true",
+        help="Keep the complete optimized stack on and A/B raw stream lookup",
+    )
+    targets.add_argument(
         "--gate-prep-ab",
         action="store_true",
         help="Keep projections/residual RMSNorm on and A/B GDN gate preparation",
@@ -161,6 +166,7 @@ def main() -> int:
     if (
         args.residual_rmsnorm_ab
         or args.residual_rmsnorm_scratch_ab
+        or args.raw_stream_query_ab
         or args.gate_prep_ab
         or args.acblas_packed_mlp_ab
         or args.acblas_attention_prep_ab
@@ -195,6 +201,7 @@ def main() -> int:
     if (
         args.gate_prep_ab
         or args.residual_rmsnorm_scratch_ab
+        or args.raw_stream_query_ab
         or args.acblas_packed_mlp_ab
         or args.acblas_attention_prep_ab
     ):
@@ -212,6 +219,7 @@ def main() -> int:
         args.acblas_packed_mlp_ab
         or args.acblas_attention_prep_ab
         or args.residual_rmsnorm_scratch_ab
+        or args.raw_stream_query_ab
     ):
         if args.acblas_packed_mlp_build_dir is None:
             raise ValueError(
@@ -265,6 +273,7 @@ def main() -> int:
                 if (
                     args.residual_rmsnorm_ab
                     or args.residual_rmsnorm_scratch_ab
+                    or args.raw_stream_query_ab
                     or args.gate_prep_ab
                     or args.acblas_packed_mlp_ab
                     or args.acblas_attention_prep_ab
@@ -274,6 +283,7 @@ def main() -> int:
         if (
             args.residual_rmsnorm_ab
             or args.residual_rmsnorm_scratch_ab
+            or args.raw_stream_query_ab
             or args.gate_prep_ab
             or args.acblas_packed_mlp_ab
             or args.acblas_attention_prep_ab
@@ -284,6 +294,7 @@ def main() -> int:
                     True
                     if (
                         args.residual_rmsnorm_scratch_ab
+                        or args.raw_stream_query_ab
                         or args.gate_prep_ab
                         or args.acblas_packed_mlp_ab
                         or args.acblas_attention_prep_ab
@@ -296,6 +307,7 @@ def main() -> int:
         if (
             args.gate_prep_ab
             or args.residual_rmsnorm_scratch_ab
+            or args.raw_stream_query_ab
             or args.acblas_packed_mlp_ab
             or args.acblas_attention_prep_ab
         ):
@@ -309,10 +321,15 @@ def main() -> int:
                         args.acblas_packed_mlp_ab
                         or args.acblas_attention_prep_ab
                         or args.residual_rmsnorm_scratch_ab
+                        or args.raw_stream_query_ab
                     )
                     else enabled,
                 )
-        if args.acblas_packed_mlp_ab or args.residual_rmsnorm_scratch_ab:
+        if (
+            args.acblas_packed_mlp_ab
+            or args.residual_rmsnorm_scratch_ab
+            or args.raw_stream_query_ab
+        ):
             for module in acblas_packed_mlp_modules:
                 module.forward = module._seu_acblas_packed_mlp_forward
         if args.acblas_attention_prep_ab:
@@ -322,6 +339,9 @@ def main() -> int:
                 module._seu_attention_prep_decode = (
                     module._seu_acblas_attention_prep_forward if enabled else None
                 )
+        model._ppu_gdn_library.set_raw_stream_query(
+            enabled if args.raw_stream_query_ab else False
+        )
 
     def run_sample(sample, enabled: bool, pair_index: int) -> dict[str, object]:
         set_enabled(enabled)
@@ -347,6 +367,8 @@ def main() -> int:
                 if enabled and args.gate_prep_ab
                 else "residual_rmsnorm_scratch"
                 if enabled and args.residual_rmsnorm_scratch_ab
+                else "raw_stream_query"
+                if enabled and args.raw_stream_query_ab
                 else "residual_rmsnorm"
                 if enabled and args.residual_rmsnorm_ab
                 else "packed_gdn"
@@ -437,6 +459,8 @@ def main() -> int:
         if args.gate_prep_ab
         else "residual_rmsnorm_scratch"
         if args.residual_rmsnorm_scratch_ab
+        else "raw_stream_query"
+        if args.raw_stream_query_ab
         else "residual_rmsnorm"
         if args.residual_rmsnorm_ab
         else "packed_gdn"
@@ -457,6 +481,7 @@ def main() -> int:
         "residual_rmsnorm_scratch_modules": (
             len(residual_modules) if args.residual_rmsnorm_scratch_ab else 0
         ),
+        "raw_stream_query_ab_enabled": args.raw_stream_query_ab,
         "gdn_gate_prep_modules": len(gate_prep_modules),
         "acblas_packed_mlp_modules": len(acblas_packed_mlp_modules),
         "acblas_packed_mlp_swiglu_threads": (
@@ -465,6 +490,7 @@ def main() -> int:
                 args.acblas_packed_mlp_ab
                 or args.acblas_attention_prep_ab
                 or args.residual_rmsnorm_scratch_ab
+                or args.raw_stream_query_ab
             )
             else None
         ),

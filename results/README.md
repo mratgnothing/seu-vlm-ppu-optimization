@@ -222,6 +222,30 @@ packed-MLP 只有 `0.044214→0.043336 ms`（`1.0203x`），加入动态输入�
 - [`residual-rmsnorm-scratch-ab128-20260828.json`](residual-rmsnorm-scratch-ab128-20260828.json)
 - [实验说明](../docs/experiments/2026-08-28-ppu-residual-rmsnorm-scratch.md)
 
+## PPU raw stream 查询优化
+
+把每次 ctypes 算子提交的 `torch.cuda.current_stream(...).cuda_stream` 改为受能力检查
+保护的 raw stream handle 查询。模块路径 `1.2944x`；固定 128-token 两轮成对中位
+`1.1055x/1.0961x`，CN20 两轮成对中位 `1.1026x/1.0855x`。四轮均全文一致，
+CN20 两路 Accuracy 均为 85%。中文完整集 4029/4029 文本、答案和 token 数一致，
+两路 Accuracy 均为 3374/4029；平均吞吐 `120.383→131.107 token/s`，成对中位
+`1.0906x`，3817/4029 获胜。memcheck 0 errors、profile exact 和正式 wrapper
+smoke 均通过。英文 20 条两轮也 20/20 exact、Accuracy 90% 不变，英文完整集在运行。
+
+- [`raw-stream-query-ab128-r1-20260828.json`](raw-stream-query-ab128-r1-20260828.json)
+- [`raw-stream-query-ab128-r2-20260828.json`](raw-stream-query-ab128-r2-20260828.json)
+- [`raw-stream-query-cn20-r1-20260828.json`](raw-stream-query-cn20-r1-20260828.json)
+- [`raw-stream-query-cn20-r2-20260828.json`](raw-stream-query-cn20-r2-20260828.json)
+- [`raw-stream-query-en20-r1-20260828.json`](raw-stream-query-en20-r1-20260828.json)
+- [`raw-stream-query-en20-r2-20260828.json`](raw-stream-query-en20-r2-20260828.json)
+- [`raw-stream-query-cn4029-summary-20260828.json`](raw-stream-query-cn4029-summary-20260828.json)
+- [`raw-stream-query-profile-ab-20260828.json`](raw-stream-query-profile-ab-20260828.json)
+- [`raw-stream-query-profile-baseline-summary-20260828.json`](raw-stream-query-profile-baseline-summary-20260828.json)
+- [`raw-stream-query-profile-candidate-summary-20260828.json`](raw-stream-query-profile-candidate-summary-20260828.json)
+- [`raw-stream-query-memcheck-20260828.txt`](raw-stream-query-memcheck-20260828.txt)
+- [`raw-stream-query-formal-wrapper-smoke-20260828.json`](raw-stream-query-formal-wrapper-smoke-20260828.json)
+- [实验说明](../docs/experiments/2026-08-28-ppu-raw-stream-query.md)
+
 ## PPU acBLASLt Matmul 负实验
 
 SDK 正式 epilogue 没有 SiLU/SwiGLU。四个 decode 主形状各扫描 32 个 bit-exact

@@ -79,6 +79,9 @@ def main() -> int:
         scratch_updates = [
             update_source.clone() for _ in range(args.warmup + args.iters)
         ]
+        raw_stream_updates = [
+            update_source.clone() for _ in range(args.warmup + args.iters)
+        ]
 
         def baseline(update: torch.Tensor) -> torch.Tensor:
             added = residual + update
@@ -103,6 +106,17 @@ def main() -> int:
         scratch_ms = measure(
             scratch_candidate, scratch_updates, args.warmup, args.iters
         )
+        object_stream = torch.cuda.current_stream(device).cuda_stream
+        raw_stream = torch._C._cuda_getCurrentRawStream(device.index or 0)
+        library.set_raw_stream_query(True)
+        raw_stream_update = update_source.clone()
+        _, raw_stream_actual = library.residual_rmsnorm_decode(
+            residual, raw_stream_update, weight, epsilon
+        )
+        raw_stream_ms = measure(
+            candidate, raw_stream_updates, args.warmup, args.iters
+        )
+        library.set_raw_stream_query(False)
         first_ptr = scratch_candidate(update_source.clone()).data_ptr()
         second_ptr = scratch_candidate(update_source.clone()).data_ptr()
 
@@ -116,6 +130,10 @@ def main() -> int:
         "speedup": baseline_ms / candidate_ms,
         "scratch_ms": scratch_ms,
         "scratch_over_candidate_speedup": candidate_ms / scratch_ms,
+        "raw_stream_ms": raw_stream_ms,
+        "raw_stream_query_speedup": candidate_ms / raw_stream_ms,
+        "raw_stream_handle_matches": raw_stream == object_stream,
+        "raw_stream_exact": torch.equal(expected_normalized, raw_stream_actual),
         "residual_exact": residual_exact,
         "normalized_exact": normalized_exact,
         "inplace_update": actual_residual.data_ptr() == actual_update.data_ptr(),
@@ -126,6 +144,8 @@ def main() -> int:
         and normalized_exact
         and payload["inplace_update"]
         and payload["normalized_scratch_reused"]
+        and payload["raw_stream_handle_matches"]
+        and payload["raw_stream_exact"]
     )
     print("RESULT " + json.dumps(payload, sort_keys=True))
     return 0 if payload["passed"] else 1

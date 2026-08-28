@@ -205,6 +205,7 @@ class VLMModel:
         self._ppu_gdn_gate_prep_modules = 0
         self._ppu_acblas_packed_mlp_modules = 0
         self._ppu_acblas_attention_prep_modules = 0
+        self._ppu_raw_stream_query_enabled = False
         self._ppu_gdn_projection_backend = "disabled"
         self._ppu_gdn_projection_groups = "disabled"
         gdn_library_path = os.getenv("SEU_PPU_GDN_LIBRARY")
@@ -245,6 +246,12 @@ class VLMModel:
                 gated_rmsnorm_threads=int(
                     os.getenv("SEU_PPU_GATED_RMSNORM_THREADS", "128")
                 ),
+                raw_stream_query=(
+                    os.getenv("SEU_PPU_RAW_STREAM_QUERY_ENABLE", "0") == "1"
+                ),
+            )
+            self._ppu_raw_stream_query_enabled = (
+                self._ppu_gdn_library.raw_stream_query
             )
             fused_callable = self._ppu_gdn_library.transformers_callable()
             fuse_causal_conv = os.getenv("SEU_PPU_CONV_ENABLE", "0") == "1"
@@ -661,6 +668,9 @@ class VLMModel:
                 ),
                 "ppu_gdn_gate_prep_modules": getattr(
                     self, "_ppu_gdn_gate_prep_modules", 0
+                ),
+                "ppu_raw_stream_query_enabled": getattr(
+                    self, "_ppu_raw_stream_query_enabled", False
                 ),
             },
         )

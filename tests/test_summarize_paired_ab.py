@@ -51,6 +51,7 @@ class SummarizePairedABTest(unittest.TestCase):
             "max_new_tokens": 64,
             "ab_target": "candidate",
             "projection_backend": "test",
+            "raw_stream_query_ab_enabled": True,
             "packed_gdn_modules": 18,
             "residual_rmsnorm_modules": 24,
             "gdn_gate_prep_modules": 18,
@@ -101,6 +102,7 @@ class SummarizePairedABTest(unittest.TestCase):
         self.assertEqual(summary["pair_consistency"]["same_token_count"], 2)
         self.assertEqual(summary["module_counts"]["acblas_packed_mlp"], 24)
         self.assertEqual(summary["module_counts"]["acblas_attention_prep"], 6)
+        self.assertTrue(summary["raw_stream_query_ab_enabled"])
         self.assertTrue(summary["performance_gate_required"])
         self.assertFalse(summary["performance_passed"])
         self.assertEqual(

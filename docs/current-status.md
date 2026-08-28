@@ -160,6 +160,11 @@
 - residual-RMSNorm 输出 scratch 模块级相对现有融合 `1.3373x`，bit-exact、复用地址
   和 memcheck 均通过；但当前推荐栈固定 128-token 八对中位 `0.9862x`、仅 2/8
   获胜，已停止 CN20/profile，正式 wrapper 不启用。
+- raw-stream 查询直接取得当前流整数句柄，避免当前推荐栈约 127 次/token 的 Python
+  Stream 对象查询。固定 128-token 与中英文 20 条双轮均 exact 且性能门禁通过；
+  中文完整集 4029/4029 exact、Accuracy 均为 3374/4029，平均吞吐
+  `120.383→131.107 token/s`、成对中位 `1.0906x`，3817/4029 获胜。
+  memcheck 0 errors、profile exact、正式 wrapper/meta 均通过；英文完整集正在运行。
 - 最终正式 wrapper 单样本 smoke 为真实 Transformers/PPU backend、公开校验通过，
   模块计数为 `18/18/49/18/6/24/24/18/24/18`；46 项无模型单元测试全部通过。
 - 独立 BF16 SwiGLU HGGC 核在 `[1,1,6144]` 上四组线程均 bit-exact，但最优仅
@@ -181,6 +186,7 @@
   [Attention Prep 单入口融合](experiments/2026-08-28-ppu-acblas-attention-prep.md)、
   [Graph Capture 能力与止损](experiments/2026-08-28-ppu-graph-capture.md)、
   [residual-RMSNorm scratch 负实验](experiments/2026-08-28-ppu-residual-rmsnorm-scratch.md)、
+  [raw stream 查询优化](experiments/2026-08-28-ppu-raw-stream-query.md)、
   [acBLASLt Matmul 负实验](experiments/2026-08-28-ppu-acblaslt-matmul.md)、
   [SwiGLU 负实验](experiments/2026-08-27-ppu-swiglu-negative.md)、
   [资源释放与恢复](ppu-resource-release-handoff.md) 和 [未来路线](ppu-future-roadmap.md)。

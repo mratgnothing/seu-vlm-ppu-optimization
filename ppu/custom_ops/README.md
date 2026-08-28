@@ -162,6 +162,9 @@ export SEU_PPU_PACK_MLP_ENABLE=1
 export SEU_PPU_RESIDUAL_RMSNORM_ENABLE=1
 # 缓存 A 并融合 GDN gate-prep；只覆盖 batch=1 cached decode。
 export SEU_PPU_GDN_GATE_PREP_ENABLE=1
+# 可选：直接查询当前 raw stream handle，减少每次 ctypes 提交的 Python 开销。
+# 依赖当前 PPU PyTorch 的私有 API；不支持时显式启用会立即报错。
+export SEU_PPU_RAW_STREAM_QUERY_ENABLE=1
 # 激进候选；CN20 有 1/20 完整文本漂移，默认必须保持关闭。
 export SEU_PPU_PACK_GDN_PROJECTIONS_ENABLE=1
 export SEU_PPU_PACK_GDN_PROJECTIONS_GROUPS=4

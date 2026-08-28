@@ -196,6 +196,9 @@ class PPUMicrobenchContractTest(unittest.TestCase):
         self.assertIn("normalized_exact", residual_smoke)
         self.assertIn("normalized_scratch_reused", residual_smoke)
         self.assertIn("scratch_over_candidate_speedup", residual_smoke)
+        self.assertIn("raw_stream_query_speedup", residual_smoke)
+        self.assertIn("_cuda_getCurrentRawStream", wrapper)
+        self.assertIn("set_raw_stream_query", wrapper)
         self.assertIn("fused_bf16_swiglu", swiglu_smoke)
         self.assertIn("max_abs_error", swiglu_smoke)
         self.assertIn("g_exact", gate_prep_smoke)
@@ -240,6 +243,8 @@ class PPUMicrobenchContractTest(unittest.TestCase):
         self.assertIn("projection_group_sizes", packed_gdn_benchmark)
         self.assertIn("--acblas-attention-prep-ab", packed_gdn_benchmark)
         self.assertIn("--residual-rmsnorm-scratch-ab", packed_gdn_benchmark)
+        self.assertIn("--raw-stream-query-ab", packed_gdn_benchmark)
+        self.assertIn("raw_stream_query_ab_enabled", packed_gdn_benchmark)
         self.assertIn("residual_rmsnorm_scratch_modules", packed_gdn_benchmark)
         self.assertIn("--require-speedup", packed_gdn_benchmark)
         self.assertIn("performance_passed", packed_gdn_benchmark)
@@ -268,6 +273,7 @@ class PPUMicrobenchContractTest(unittest.TestCase):
             "SEU_PPU_ACBLAS_GDN_ALGORITHM",
             "SEU_PPU_RESIDUAL_RMSNORM_ENABLE",
             "SEU_PPU_GDN_GATE_PREP_ENABLE",
+            "SEU_PPU_RAW_STREAM_QUERY_ENABLE",
             "SEU_PPU_ACBLAS_PACKED_MLP_BUILD_DIR",
             "SEU_PPU_ACBLAS_PACKED_MLP_SWIGLU_THREADS",
             "SEU_PPU_ACBLAS_ATTENTION_PREP_BUILD_DIR",
@@ -276,6 +282,7 @@ class PPUMicrobenchContractTest(unittest.TestCase):
             self.assertIn(variable, integration)
         self.assertIn("GDN projection backends are mutually exclusive", integration)
         self.assertIn('self._ppu_gdn_projection_backend = "acblas-grouped"', integration)
+        self.assertIn('"ppu_raw_stream_query_enabled"', integration)
 
 
 if __name__ == "__main__":
