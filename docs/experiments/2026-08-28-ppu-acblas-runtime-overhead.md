@@ -115,6 +115,10 @@ weight-only 仍需厂商 acext/PPU-vLLM 后端。
 `SEU_PPU_ACBLAS_GDN_BA_GEMV_ENABLE=1`，且与 single-GEMV 性能档互斥。当前只把它列为
 精度优先小增量；完整中英文 4029 门禁前不宣称全量无损。
 正式 wrapper 已验证 18/18 个 GDN 层启用，模块 memcheck 为 0 errors。
+资源关闭前已将 multi-sample 入口改为真正可恢复的 `--resume-pair-log`：恢复时校验索引
+连续性和 baseline/candidate 样本 ID，实测可从 CN100 的 100 对 JSONL 直接重建相同汇总，
+不会清空或重复样本。受资源窗口限制，本轮在 CN100 后冻结，未启动中英文 4029，故完整
+公开集仍是下一实例的必要门禁。
 
 ## 8224 行算法与 GemmEx 替代负实验
 

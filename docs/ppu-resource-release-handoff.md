@@ -59,19 +59,37 @@ acBLASLt heuristic JSONL 和四份原始 profile trace；源码、小型聚合 J
 /mnt/workspace/seu/submission-source-20260828.zip
 ```
 
+2026-08-29 无镜像权限收尾新增以下清单到 `/mnt/workspace/seu/archives/`：
+
+- `ppu-python-freeze-20260829.txt`：171 个 Python 分发包；
+- `ppu-runtime-manifest-20260829.txt`：OS、Python、PPU 编译器、`ppu-smi` 与关键目录大小；
+- `ppu-build-result-sha256-20260829.txt`：最新扩展和 CN100 结果校验值。
+
+| 对象 | SHA-256 |
+|---|---|
+| `seu_acblas_linear_ext.so` | `aaf6993f4598bf9b86cfd59e0301d9b5aa70414cf46c8da1423cfbb1ea71c461` |
+| `libseu_ppu_gdn.so` | `e742c999fd5f9df4197b864a8ce90a95efef2ed213978cebc2b42d66ae0c80fb` |
+| `seu_acblas_packed_mlp_ext.so` | `86aaf036ad80b02e7c6b183fe3cf7fb6da95f3f2ec9a4b4b7bc05ae8f0a72c8d` |
+| b/a-GEMV CN100 JSON | `c0d0250cd54666dbbc2a2867c995a36982fa4093adc9fde45bddfe5ce88e14cf` |
+
 最终源码白名单包在所有文档与代码冻结后重新生成并验证；最终文件数和 SHA-256
 记录在本地 ignored 的 `artifacts/ppu-snapshot-20260828/SHA256SUMS-final.txt`，并以
 CPFS 上对同名文件执行 `sha256sum` 的结果交叉核验。这里不内嵌源码包自身哈希，避免
 包内文档自引用导致哈希随记录值再次改变。
 
 释放计算实例前不要删除 CPFS 文件系统；创建下一台 DSW 时把同一 CPFS 根目录重新
-挂载到 `/mnt/workspace`。镜像负责系统环境，CPFS 负责代码、venv、模型、数据和结果，
-两者缺一不可。
+挂载到 `/mnt/workspace`。自定义镜像可加速系统环境恢复；无权限时使用同版本官方 PPU
+镜像，并以 CPFS 中的 venv、代码、模型、数据、结果和环境清单恢复。
 
 ## 2. 在 PAI DSW 控制台制作镜像
 
 阿里云官方步骤见：[制作 DSW 实例镜像](https://help.aliyun.com/zh/pai/create-a-dsw-instance-image)
 和 [访问与管理 DSW 实例](https://help.aliyun.com/zh/pai/access-dsw-instance)。
+
+> 2026-08-29 当前比赛账号没有制作 DSW 镜像/写入 ACR 的权限，因此本次不把镜像作为
+> 释放前置条件。恢复基线改为“同版本官方 PPU 镜像 + 原 CPFS + CPFS venv + Git 提交 +
+> 已保存源码/构建快照”。禁止因没有镜像权限而删除 CPFS；若后续获得权限，再按下列步骤
+> 补做镜像。
 
 1. 保持 DSW 实例状态为 **运行中**；停止后“制作镜像”按钮会变灰。
 2. 在与当前 DSW **完全相同地域**的容器镜像服务 ACR 中，先创建实例、命名空间和
@@ -137,7 +155,7 @@ python smoke_gdn_gate_prep_integration.py \
 
 ## 4. 释放前人工确认清单
 
-- [ ] ACR 镜像状态成功，记录完整镜像地址和 tag；
+- [!] ACR 镜像：当前账号无制作权限，已记录为外部权限限制；使用官方镜像 + CPFS 恢复；
 - [ ] CPFS 文件系统仍存在，且快照归档 SHA-256 可读取；
 - [x] 本地 2026-08-27 三份归档和 2026-08-28 三份归档 SHA-256 全部匹配；
 - [ ] 本地 Qwen 权重哈希匹配；

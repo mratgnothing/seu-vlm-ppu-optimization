@@ -259,6 +259,8 @@ class PPUMicrobenchContractTest(unittest.TestCase):
         self.assertIn("--acblas-workspace-ab", packed_gdn_benchmark)
         self.assertIn("--acblas-gdn-single-gemv-ab", packed_gdn_benchmark)
         self.assertIn("--acblas-gdn-ba-gemv-ab", packed_gdn_benchmark)
+        self.assertIn("--resume-pair-log", packed_gdn_benchmark)
+        self.assertIn("pair log sample mismatch", packed_gdn_benchmark)
         self.assertIn("--acblas-gdn-ba-batched-ab", packed_gdn_fixed_benchmark)
         self.assertIn("--acblas-gdn-single-gemv-ab", packed_gdn_fixed_benchmark)
         self.assertIn("--acblas-gdn-ba-gemv-ab", packed_gdn_fixed_benchmark)

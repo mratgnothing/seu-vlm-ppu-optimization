@@ -24,6 +24,10 @@
 - `acblas-gemv-api-probes-20260829.json`：8224 行算法扫描与 GemmEx-for-GemvEx
   负实验，二者均未改变主要运行时事件。
 
+长 paired A/B 使用 `--pair-log <path> --resume-pair-log` 保存与恢复逐题检查点。恢复器会
+拒绝不连续索引或样本 ID 不匹配的 JSONL。b/a GEMV 当前完成到 CN100；中英文 4029 尚未
+在本轮资源窗口内运行，不能把 CN100 exact 外推为完整集结论。
+
 ## 当前可公开精度结果
 
 - 中文固定前 20 条：Accuracy 85%，公开校验通过。

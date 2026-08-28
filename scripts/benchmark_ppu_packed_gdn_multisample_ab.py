@@ -32,6 +32,11 @@ def parse_args() -> argparse.Namespace:
         type=Path,
         help="Optional append-only JSONL checkpoint written after every completed pair",
     )
+    parser.add_argument(
+        "--resume-pair-log",
+        action="store_true",
+        help="Resume a contiguous checkpoint instead of truncating --pair-log",
+    )
     parser.add_argument("--progress-every", type=int, default=100)
     parser.add_argument(
         "--group-sizes",
@@ -465,8 +470,51 @@ def main() -> int:
     exact_pairs = 0
     if args.pair_log is not None:
         args.pair_log.parent.mkdir(parents=True, exist_ok=True)
-        args.pair_log.write_text("", encoding="utf-8")
+        if args.resume_pair_log and args.pair_log.is_file():
+            for line_number, line in enumerate(
+                args.pair_log.read_text(encoding="utf-8").splitlines(), start=1
+            ):
+                if not line.strip():
+                    continue
+                checkpoint = json.loads(line)
+                index = len(baseline_records)
+                if checkpoint.get("index") != index:
+                    raise ValueError(
+                        f"pair log line {line_number} is not contiguous at index {index}"
+                    )
+                if index >= len(samples):
+                    raise ValueError("pair log contains more records than requested samples")
+                baseline = checkpoint["baseline"]
+                candidate = checkpoint["candidate"]
+                expected_sample_id = samples[index].sample_id
+                if (
+                    baseline.get("sample_id") != expected_sample_id
+                    or candidate.get("sample_id") != expected_sample_id
+                ):
+                    raise ValueError(
+                        f"pair log sample mismatch at index {index}: {expected_sample_id}"
+                    )
+                baseline_records.append(baseline)
+                candidate_records.append(candidate)
+                pair_ratios.append(float(checkpoint["speedup"]))
+                exact_pairs += bool(checkpoint["exact"])
+            print(
+                json.dumps(
+                    {
+                        "resumed_pairs": len(baseline_records),
+                        "total": len(samples),
+                        "exact_pairs": exact_pairs,
+                    }
+                ),
+                flush=True,
+            )
+        else:
+            args.pair_log.write_text("", encoding="utf-8")
+    elif args.resume_pair_log:
+        raise ValueError("--resume-pair-log requires --pair-log")
     for index, sample in enumerate(samples):
+        if index < len(baseline_records):
+            continue
         order = (False, True) if index % 2 == 0 else (True, False)
         pair: dict[bool, dict[str, object]] = {}
         for enabled in order:
