@@ -33,6 +33,9 @@
 - Attention Prep 单入口候选已通过模块 exact、prefill 回退、scratch 复用、异流保护和
   memcheck，模块边界 `4.1006x`；但 CN20 两轮性能方向相反，第二轮中位 `0.9852x`，
   已按规则停止并作为默认关闭的负实验保留。
+- HGGC Graph Capture 已在当前 PPU/PyTorch 上通过输入更新与 exact replay；合成链
+  `1.8303x`，但现有单入口 packed-MLP 仅 `1.0203x`，含输入 copy 为 `0.9316x`，
+  因此未进入整模门禁。
 
 ## 模块进度
 
@@ -119,6 +122,7 @@
 - [2026-08-28 PPU acBLASLt Matmul 负实验](experiments/2026-08-28-ppu-acblaslt-matmul.md)
 - [2026-08-28 PPU 单入口 acBLAS packed-MLP](experiments/2026-08-28-ppu-acblas-packed-mlp.md)
 - [2026-08-28 PPU Attention Prep 单入口融合](experiments/2026-08-28-ppu-acblas-attention-prep.md)
+- [2026-08-28 PPU Graph Capture 能力与止损实验](experiments/2026-08-28-ppu-graph-capture.md)
 - [2026-08-27 PPU SwiGLU 融合负实验](experiments/2026-08-27-ppu-swiglu-negative.md)
 - [PPU 资源释放前快照与恢复手册](ppu-resource-release-handoff.md)
 - [PPU 后续优化路线图](ppu-future-roadmap.md)

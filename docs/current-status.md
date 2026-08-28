@@ -154,6 +154,9 @@
   `0.080652→0.019668 ms`（`4.1006x`）。然而固定 128-token 56 对合并中位仅
   `1.0047x`，CN20 两轮中位为 `1.0158x/0.9852x`，第二轮严格性能门禁失败。
   按规则停止 profile 与完整集，候选保持默认关闭。
+- HGGC Graph Capture 在 PyTorch PPU 端已实测可用，固定 16 段 elementwise 子图
+  `1.8303x` 且 exact；但 graph-backed 单入口 packed-MLP 的稳定地址收益仅 `1.0203x`，
+  动态地址加 input copy 后为 `0.9316x`。按 3% 低层晋级余量止损，未改变正式配置。
 - 最终正式 wrapper 单样本 smoke 为真实 Transformers/PPU backend、公开校验通过，
   模块计数为 `18/18/49/18/6/24/24/18/24/18`；46 项无模型单元测试全部通过。
 - 独立 BF16 SwiGLU HGGC 核在 `[1,1,6144]` 上四组线程均 bit-exact，但最优仅
@@ -173,6 +176,7 @@
   [GDN gate-prep](experiments/2026-08-28-ppu-gdn-gate-prep.md)、
   [单入口 acBLAS packed-MLP](experiments/2026-08-28-ppu-acblas-packed-mlp.md)、
   [Attention Prep 单入口融合](experiments/2026-08-28-ppu-acblas-attention-prep.md)、
+  [Graph Capture 能力与止损](experiments/2026-08-28-ppu-graph-capture.md)、
   [acBLASLt Matmul 负实验](experiments/2026-08-28-ppu-acblaslt-matmul.md)、
   [SwiGLU 负实验](experiments/2026-08-27-ppu-swiglu-negative.md)、
   [资源释放与恢复](ppu-resource-release-handoff.md) 和 [未来路线](ppu-future-roadmap.md)。

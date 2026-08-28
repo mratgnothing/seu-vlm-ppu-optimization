@@ -75,6 +75,10 @@
   通过，memcheck 0 errors，模块边界 `4.1006x`；但固定 128-token 56 对合并中位仅
   `1.0047x`，CN20 两轮中位为 `1.0158x/0.9852x`，第二轮性能门禁失败。因此停止
   profile/完整集，默认关闭并作为“局部快不等于整模快”的负实验保留。
+- 验证 HGGC Graph Capture 在当前 PyTorch PPU 运行时真实可用：16 段 elementwise
+  固定子图为 `1.8303x` 且 exact；但套在已聚合的单入口 packed-MLP 上，稳定地址仅
+  `1.0203x`，加入真实 input copy 后为 `0.9316x`。低于 3% 晋级余量，故不改造
+  residual scratch、不进入整模门禁，等待官方固定 KV/page 或更大 decode 图边界。
 - 资源释放前完成独立 SwiGLU HGGC 核负实验：四组线程均 bit-exact，但最好只有
   `0.7901x`，因此未接入正式 wrapper；后续改走 packed GEMM epilogue fusion。
 - 已将 PPU 源码、编译产物、小型结果、pip/设备清单、全部原始 trace 和 MMBench
@@ -98,6 +102,7 @@ PPU 侧已完成 SDK、真实模型闭环、20 条稳态基线、算子级 profi
 [PPU acBLASLt Matmul 负实验](docs/experiments/2026-08-28-ppu-acblaslt-matmul.md)、
 [PPU 单入口 acBLAS packed-MLP](docs/experiments/2026-08-28-ppu-acblas-packed-mlp.md)、
 [PPU Attention Prep 单入口融合](docs/experiments/2026-08-28-ppu-acblas-attention-prep.md)、
+[PPU Graph Capture 能力与止损实验](docs/experiments/2026-08-28-ppu-graph-capture.md)、
 [PPU SwiGLU 融合负实验](docs/experiments/2026-08-27-ppu-swiglu-negative.md)、
 [PPU decode 融合算子与问题记录](ppu/custom_ops/README.md)、
 [PPU 兼容性矩阵](docs/ppu-compatibility-matrix.md) 和 [需要向主办方确认的问题](docs/questions-for-organizer.md)。

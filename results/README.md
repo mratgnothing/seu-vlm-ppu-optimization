@@ -199,6 +199,17 @@ CN20 r1 为 `1.0158x`，r2 为 `0.9852x`，第二轮严格门禁失败。候选�
 - [`acblas-attention-prep-cn20-r2-20260828.json`](acblas-attention-prep-cn20-r2-20260828.json)
 - [实验说明](../docs/experiments/2026-08-28-ppu-acblas-attention-prep.md)
 
+## PPU Graph Capture 能力与 packed-MLP 止损
+
+当前 PyTorch PPU 已支持 HGGC Graph Capture。65,536 元素、16 段 SiLU 固定链从
+`0.153274→0.083743 ms`（`1.8303x`）且更新输入后 exact replay；但已聚合的单入口
+packed-MLP 只有 `0.044214→0.043336 ms`（`1.0203x`），加入动态输入地址所需 copy
+后为 `0.047462 ms`（`0.9316x`）。候选低于 3% 晋级余量，未进入整模评测。
+
+- [`ppu-graph-capture-probe-20260828.json`](ppu-graph-capture-probe-20260828.json)
+- [`acblas-packed-mlp-graph-smoke-20260828.json`](acblas-packed-mlp-graph-smoke-20260828.json)
+- [实验说明](../docs/experiments/2026-08-28-ppu-graph-capture.md)
+
 ## PPU acBLASLt Matmul 负实验
 
 SDK 正式 epilogue 没有 SiLU/SwiGLU。四个 decode 主形状各扫描 32 个 bit-exact

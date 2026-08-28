@@ -51,8 +51,9 @@ bit-exact、memcheck 0 errors，并以 patch-time stream guard 明确限制为�
 
 1. 把多次 ctypes/Python 调用聚合到一个 C++/pybind decode step，减少 dispatcher、
    device-property 查询和 handle/stream 设置；grouped-acBLAS 已证明主机调度可带来收益。
-2. 验证 PPU 是否支持安全的 graph capture。动态 KV 长度、cache 更新和输出停止条件是
-   主要障碍，可先捕获单层固定形状子图，不能假定 CUDA Graph 语义完全兼容。
+2. PPU Graph Capture 已完成最小验证：固定 16 段 elementwise 子图 `1.8303x`；但
+   已聚合 packed-MLP 仅 `1.0203x`，含动态输入 copy 为 `0.9316x`。当前不改正式路径；
+   只有固定 KV/page 地址或完整 decoder-layer/多层图边界出现后才重启该方向。
 3. 获取主办方 PPU-vLLM/FLA fast path，与当前 Transformers eager 在相同计时口径下
    对照；若官方实现成熟，优先迁移自定义核到其 custom-op 接口。
 

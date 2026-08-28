@@ -130,6 +130,8 @@ bit-exact，GDN 最大 state/output 误差为 `5.96e-8 / 0`。
 | packed MLP gate/up projection | 0.04537 | 0.03997 | 1.135x |
 | 单入口 packed MLP（两 GEMV + SwiGLU） | 0.041666 | 0.033907 | 1.229x |
 | 单入口 Attention Prep（Q/K/V + QK Norm/RoPE） | 0.080652 | 0.019668 | 4.101x |
+| graph-backed 单入口 packed-MLP（稳定输入地址） | 0.044214 | 0.043336 | 1.020x |
+| graph-backed 单入口 packed-MLP（含 input copy） | 0.044214 | 0.047462 | 0.932x |
 
 packed-MLP smoke 的 decode/prefill 均 bit-exact，gate/up 两个参数均确认复用 packed
 storage，重打包后的常驻显存增量为 20 KiB（allocator 元数据/对齐量级）。

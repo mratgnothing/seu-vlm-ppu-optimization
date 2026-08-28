@@ -152,6 +152,12 @@ class PPUMicrobenchContractTest(unittest.TestCase):
         attention_gate = (
             ROOT / "ppu" / "microbench" / "run_acblas_attention_prep_gate.sh"
         ).read_text(encoding="utf-8")
+        graph_probe = (
+            ROOT / "ppu" / "microbench" / "probe_ppu_graph_capture.py"
+        ).read_text(encoding="utf-8")
+        packed_mlp_graph_smoke = (
+            ROOT / "ppu" / "custom_ops" / "smoke_acblas_packed_mlp_graph.py"
+        ).read_text(encoding="utf-8")
         self.assertIn("stream_handle", kernel)
         self.assertIn("round_to_bf16", kernel)
         for symbol in (
@@ -198,6 +204,9 @@ class PPUMicrobenchContractTest(unittest.TestCase):
         self.assertIn("not torch.is_grad_enabled()", packed_mlp_python)
         self.assertIn("_seu_acblas_packed_output", packed_mlp_python)
         self.assertIn("expected_stream", packed_mlp_python)
+        self.assertIn("capture_module_graph", packed_mlp_python)
+        self.assertIn("_cuda_getCurrentRawStream", packed_mlp_python)
+        self.assertIn("input_tensor.data_ptr() == static_input.data_ptr()", packed_mlp_python)
         self.assertIn("seu_acblas_attention_prep_bf16", attention_prep_bridge)
         self.assertIn(
             "seu_ppu_qk_rmsnorm_rope_decode_bf16", attention_prep_bridge
@@ -235,6 +244,10 @@ class PPUMicrobenchContractTest(unittest.TestCase):
         self.assertIn("benchmark_ppu_packed_gdn_multisample_ab.py", attention_gate)
         self.assertIn("--acblas-attention-prep-ab", attention_gate)
         self.assertIn("--require-speedup", attention_gate)
+        self.assertIn("torch.cuda.CUDAGraph", graph_probe)
+        self.assertIn("replay_uses_updated_input", graph_probe)
+        self.assertIn("graph_with_input_copy_speedup", packed_mlp_graph_smoke)
+        self.assertIn("alternate_stream_rejected", packed_mlp_graph_smoke)
         for variable in (
             "SEU_PPU_GDN_LIBRARY",
             "SEU_PPU_CONV_ENABLE",
