@@ -125,6 +125,15 @@ class PPUMicrobenchContractTest(unittest.TestCase):
         gate_prep_smoke = (
             ROOT / "ppu" / "custom_ops" / "smoke_gdn_gate_prep_integration.py"
         ).read_text(encoding="utf-8")
+        packed_mlp_bridge = (
+            ROOT / "ppu" / "custom_ops" / "acblas_packed_mlp_wrapper.cpp"
+        ).read_text(encoding="utf-8")
+        packed_mlp_extension = (
+            ROOT / "ppu" / "custom_ops" / "acblas_packed_mlp_extension.cpp"
+        ).read_text(encoding="utf-8")
+        packed_mlp_python = (
+            ROOT / "ppu" / "custom_ops" / "ppu_acblas_packed_mlp.py"
+        ).read_text(encoding="utf-8")
         self.assertIn("stream_handle", kernel)
         self.assertIn("round_to_bf16", kernel)
         for symbol in (
@@ -162,6 +171,13 @@ class PPUMicrobenchContractTest(unittest.TestCase):
         self.assertIn("max_abs_error", swiglu_smoke)
         self.assertIn("g_exact", gate_prep_smoke)
         self.assertIn("beta_exact", gate_prep_smoke)
+        self.assertIn("seu_acblas_packed_mlp_bf16", packed_mlp_bridge)
+        self.assertEqual(packed_mlp_bridge.count("run_gemv("), 3)
+        self.assertIn("seu_ppu_swiglu_decode_bf16", packed_mlp_bridge)
+        self.assertIn("getCurrentCUDAStream", packed_mlp_extension)
+        self.assertIn("packed_mlp_bf16_into", packed_mlp_extension)
+        self.assertIn("not torch.is_grad_enabled()", packed_mlp_python)
+        self.assertIn("_seu_acblas_packed_output", packed_mlp_python)
         self.assertIn("pack_qwen35_gdn_gate_prep", wrapper)
         self.assertIn("threading.local()", wrapper)
         self.assertIn("Path(sys.executable).parent", extension_builder)
@@ -191,6 +207,8 @@ class PPUMicrobenchContractTest(unittest.TestCase):
             "SEU_PPU_ACBLAS_GDN_ALGORITHM",
             "SEU_PPU_RESIDUAL_RMSNORM_ENABLE",
             "SEU_PPU_GDN_GATE_PREP_ENABLE",
+            "SEU_PPU_ACBLAS_PACKED_MLP_BUILD_DIR",
+            "SEU_PPU_ACBLAS_PACKED_MLP_SWIGLU_THREADS",
         ):
             self.assertIn(variable, integration)
         self.assertIn("GDN projection backends are mutually exclusive", integration)

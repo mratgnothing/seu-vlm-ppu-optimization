@@ -31,6 +31,7 @@ acBLASLt heuristic JSONL 和四份原始 profile trace；源码、小型聚合 J
 |---|---|---|
 | `ppu-final-evidence-20260828.tar.gz` | 实验源码、构建产物、完整集原始结果和小型证据；排除巨型 trace/log | `b581bbc957ddbedc1ab4ab08e0a8e8efd84a1fb02bda3c190f0db39c839cdfcb` |
 | `ppu-acblaslt-traces-20260828.tar.gz` | acBLASLt 方阵负实验两份原始 trace | `ba237680986179ea14d95ea0aa970693fdc404133e347e46cce23fc76589705c` |
+| `ppu-acblas-packed-mlp-evidence-20260828.tar.gz` | 最终 extension、两份 packed-MLP 原始 profile trace、4029 原始结果/检查点及最终 smoke/memcheck | `8451b9392faec9702c6d30a9003474f8989985bf65321a57e2cb0158592e7c15` |
 
 逐文件哈希见 `artifacts/ppu-snapshot-20260828/SHA256SUMS-final.txt`；本地值已与服务器
 源文件逐项匹配，不覆盖上表 2026-08-27 三份已核验快照。
@@ -54,6 +55,7 @@ acBLASLt heuristic JSONL 和四份原始 profile trace；源码、小型聚合 J
 /mnt/workspace/seu/mmbench-local-copy-20260827.tar.gz
 /mnt/workspace/seu/ppu-final-evidence-20260828.tar.gz
 /mnt/workspace/seu/ppu-acblaslt-traces-20260828.tar.gz
+/mnt/workspace/seu/ppu-acblas-packed-mlp-evidence-20260828.tar.gz
 /mnt/workspace/seu/submission-source-20260828.zip
 ```
 
@@ -137,10 +139,10 @@ python smoke_gdn_gate_prep_integration.py \
 
 - [ ] ACR 镜像状态成功，记录完整镜像地址和 tag；
 - [ ] CPFS 文件系统仍存在，且快照归档 SHA-256 可读取；
-- [x] 本地 2026-08-27 三份归档和 2026-08-28 两份归档 SHA-256 全部匹配；
+- [x] 本地 2026-08-27 三份归档和 2026-08-28 三份归档 SHA-256 全部匹配；
 - [ ] 本地 Qwen 权重哈希匹配；
 - [ ] `5070ti` 本地分支提交存在，已 push 并核对远端哈希；
-- [x] `SEU_PPU_GDN_GATE_PREP_ENABLE=1` 时 meta 记录 18 个 gate-prep module；最终
-  正式 smoke 的完整计数为 `18/18/49/18/6/24/18/24/18`；
+- [x] `SEU_PPU_GDN_GATE_PREP_ENABLE=1` 时 meta 记录 18 个 gate-prep module；
+  最终正式 smoke 的完整计数为 `18/18/49/18/6/24/24/18/24/18`；
 - [ ] 用新镜像 + 同一 CPFS 创建的新实例通过 device、单算子、单样本三层 smoke；
 - [ ] 上述全部完成后才释放旧实例。

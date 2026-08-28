@@ -228,6 +228,7 @@ Torch extension + C-ABI acBLAS bridge 也完成了 ABI 隔离和 102 个 Linear 
 | + grouped-acBLAS GDN r1/r2 | 98.028 / 99.601 | 85% | +97.10% / +100.26% |
 | + 48-edge residual-RMSNorm r1/r2 | 101.616 / 101.507 | 85% | +104.31% / +104.09% |
 | + GDN gate-prep r1/r2 | 109.275 / 107.083 | 85% | +119.71% / +115.31% |
+| + 单入口 acBLAS packed-MLP r1/r2 | 122.350 / 121.297 | 85% | +145.99% / +143.88% |
 
 最终线程隔离版 packed-GDN 的同模型逐样本 AB/BA 中，基线/候选为
 94.099/98.430 token/s，成对速度比中位数 1.0355x，20 条赢 15 条；Accuracy 都是
@@ -269,6 +270,18 @@ gate/up、MLP down 和 GDN qkv 最佳仅 1.0121x/1.0269x/1.0191x；2048 方阵�
 1.0577x，配合 per-module scratch 后模块级为 1.2797x。但完整模型固定 128-token
 八对成对中位 0.9898x、仅 3/8 获胜。Profile 显示 `aten::linear/mm` 各减少 360 次，
 主 `gemvt_op` 却增加 270 次，因此不接入正式 wrapper。
+
+继续 GEMM 迭代时，不再替换任意方阵 Linear，而是把完整 decode MLP 作为提交边界：
+一次 C++ extension 入口依次调用 packed gate/up `acblasGemvEx`、bit-exact HGGC
+SwiGLU 和 down `acblasGemvEx`，并为 24 层各复用 projected/activated/output scratch。
+模块级为 1.2288x；固定 128-token 八对 8/8 获胜、成对中位 1.1336x。CN20 两轮
+平均吞吐分别为 108.451→122.350 和 109.652→121.297 token/s，成对中位
+1.1212x/1.1122x，两轮均 20/20 获胜、20/20 全文一致、Accuracy 85%。Profile 中
+`aten::linear/mm` 各减少 720 次，`cudaLaunchKernel` 减少 360 次，三类 GEMV 数
+保持不变；这证明收益来自正确的调度/内存边界，而非改变矩阵数学。中文完整公开集
+两路 Accuracy 均为 3374/4029，4029/4029 文本、答案和 token 数一致；平均吞吐
+109.993→122.445 token/s，成对中位 1.1125x、平均 1.1146x，3939/4029 获胜。
+最终重编译后的 memcheck 和正式 wrapper smoke 均通过。
 
 ### 7.3 当前边界
 

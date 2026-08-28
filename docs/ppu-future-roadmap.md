@@ -8,21 +8,23 @@
 
 ## P0：恢复与精度门禁
 
-1. 用保存镜像 + CPFS 在新 PPU 实例复现最新 gate-prep 提交；核对设备/SDK/torch、
-   模型与数据哈希、18/18/49/18/6/24/18/24/18 模块计数。
-2. grouped-acBLAS GDN + 48-edge residual-RMSNorm + gate-prep 的中文完整公开集已
-   4029/4029 exact；下一步补英文公开集或直接按主办方要求进入私有集门禁。
+1. 用保存镜像 + CPFS 在新 PPU 实例复现最新提交；核对设备/SDK/torch、模型与数据
+   哈希，并按名称核对 GDN 18、conv 18、RMSNorm 49、gated norm 18、qk-RoPE 6、
+   packed MLP 24、单入口 acBLAS packed-MLP 24、grouped-GDN 18、decoder 24、
+   gate-prep 18。
+2. grouped-acBLAS GDN + 48-edge residual-RMSNorm + gate-prep + 单入口 packed-MLP 的
+   中文完整公开集已 4029/4029 exact；下一步补英文公开集或按主办方要求进入私有集门禁。
 3. 获取主办方私有门禁和最终镜像，固定一次“提交候选”而不是继续追逐小样本噪声。
 
 ## P1：真正减少内存中间量和 launch
 
 ### GEMM epilogue SwiGLU
 
-本轮独立 HGGC SwiGLU 核虽 bit-exact，但最好仅 0.7901x。下一步不是继续调线程，而是
-SDK 2.1.1 公开 acBLASLt epilogue 已确认只有 Bias/ReLU/GELU，没有 SiLU。后续需向
-厂商请求自定义 epilogue：packed gate/up GEMM 直接产出 `SiLU(gate)*up`，避免
-12288 维投影中间张量落地、split、独立 SiLU 和 mul。它对所有 SwiGLU Transformer
-通用，预期收益也比单独 elementwise 核更可靠。
+独立 HGGC SwiGLU 核虽 bit-exact，但最好仅 0.7901x；将它与前后两次 GEMV 放进一次
+C++ extension 入口后，固定长和 CN20 两轮已得到 11%--13% 的稳定端到端收益。这一
+版本仍落地 12288 维 projected scratch 和 6144 维 activated scratch。SDK 2.1.1
+公开 acBLASLt epilogue 只有 Bias/ReLU/GELU，没有 SiLU；若厂商开放自定义 epilogue，
+下一步让 packed gate/up GEMM 直接产出 `SiLU(gate)*up`，才能继续消除中间张量。
 
 ### GDN raw-gate 与常量折叠（已完成独立 gate-prep）
 
@@ -33,9 +35,10 @@ GEMM 路线受阻，不再为省一次 launch 把它强行并入 recurrent kerne
 
 ### Decode scratch arena
 
-最终 gate-prep profile 仍有 `empty_like=3982`、`empty_strided=4391`、`cudaFree=3259` 和大量
-clone/copy。为固定 batch=1 decode 建立每层 scratch arena，复用 qkv、gate、norm 和
-projection buffer；先检查 cache/stream 生命周期和 alias，再逐个替换临时分配。
+单入口 packed-MLP 已为 24 层建立 projected/activated/output scratch，总计约
+0.94 MiB，并通过 memcheck。最终 profile 仍有 `empty_like=3982`、
+`empty_strided=4391`、`cudaFree=3259` 和大量 clone/copy；下一步继续扩展到 qkv、
+gate 和 norm，但必须先验证多请求并发下的 stream/alias 生命周期。
 
 ## P2：运行时与调度
 
@@ -55,14 +58,15 @@ projection buffer；先检查 cache/stream 生命周期和 alias，再逐个替�
 3. 评估将 causal-conv、raw gate preparation、recurrent update 合成一层 decode
    pipeline；只有当中间 q/k/v 不再落地时，融合才可能抵消更复杂的 launch 成本。
 
-## 下一轮唯一主线：GEMM/GEMV
+## 下一轮 GEMM/GEMV 主线
 
-gate-prep 与 acBLASLt heuristic 调查均已完成。公开 epilogue 没有 SiLU，四个真实
-形状扫参只有方阵过 3% 低层门槛，且整模最终为负。下一轮只在厂商开放自定义
-epilogue、grouped/batched GEMV 与权重预打包接口后继续；首选目标是 packed gate/up GEMM
-直接产生 `SiLU(gate) * up`，其次才是 2048→6144、6144→2048 的 batch=1 decode
-GEMV。独立 SwiGLU、自写通用 GEMV、通用 acBLAS Linear 和 acBLASLt 方阵均已有负
-结果，不重复做线程或 heuristic 盲搜。
+gate-prep 与 acBLASLt heuristic 调查均已完成；方阵整模负实验已止损。当前正收益
+来自单入口 packed-MLP：不减少 GEMV 数，但消除 720 次 Linear/ATen 入口和 360 次
+elementwise launch；4029 门禁已以 4029/4029 exact、成对中位 `1.1125x` 通过。
+下一优先级是厂商自定义 SwiGLU epilogue，直接消除 projected/activated 中间张量；
+其次才是 grouped/batched GEMV 或权重预打包。
+独立 SwiGLU、自写通用 GEMV、通用 acBLAS Linear 和 acBLASLt 方阵均已有负结果，
+不重复线程或 heuristic 盲搜。
 
 ## P4：量化与低精度
 

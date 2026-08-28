@@ -203,9 +203,17 @@ class VLMModel:
         self._ppu_packed_gdn_projection_modules = 0
         self._ppu_residual_rmsnorm_modules = 0
         self._ppu_gdn_gate_prep_modules = 0
+        self._ppu_acblas_packed_mlp_modules = 0
         self._ppu_gdn_projection_backend = "disabled"
         self._ppu_gdn_projection_groups = "disabled"
         gdn_library_path = os.getenv("SEU_PPU_GDN_LIBRARY")
+        acblas_packed_mlp_build_dir = os.getenv(
+            "SEU_PPU_ACBLAS_PACKED_MLP_BUILD_DIR"
+        )
+        if acblas_packed_mlp_build_dir and not gdn_library_path:
+            raise RuntimeError(
+                "SEU PPU acBLAS packed MLP requires SEU_PPU_GDN_LIBRARY"
+            )
         if gdn_library_path:
             custom_op_dir = Path(
                 os.getenv(
@@ -342,6 +350,45 @@ class VLMModel:
                     raise RuntimeError(
                         "SEU PPU packed MLP expected 24 modules, "
                         f"patched {self._ppu_packed_mlp_modules}"
+                    )
+                torch.cuda.empty_cache()
+            if acblas_packed_mlp_build_dir:
+                if self._ppu_packed_mlp_modules != 24:
+                    raise RuntimeError(
+                        "SEU PPU acBLAS packed MLP requires "
+                        "SEU_PPU_PACK_MLP_ENABLE=1"
+                    )
+                from ppu_acblas_packed_mlp import (
+                    PPUACBLASPackedMLPExtension,
+                )
+
+                mlp_extension = PPUACBLASPackedMLPExtension(
+                    acblas_packed_mlp_build_dir,
+                    gate_up_algorithm=int(
+                        os.getenv(
+                            "SEU_PPU_ACBLAS_PACKED_MLP_GATE_UP_ALGORITHM", "-1"
+                        )
+                    ),
+                    down_algorithm=int(
+                        os.getenv(
+                            "SEU_PPU_ACBLAS_PACKED_MLP_DOWN_ALGORITHM", "-1"
+                        )
+                    ),
+                    swiglu_threads=int(
+                        os.getenv(
+                            "SEU_PPU_ACBLAS_PACKED_MLP_SWIGLU_THREADS", "128"
+                        )
+                    ),
+                )
+                for module in self._model.modules():
+                    if type(module).__name__ != "Qwen3_5MLP":
+                        continue
+                    mlp_extension.patch_module(module)
+                    self._ppu_acblas_packed_mlp_modules += 1
+                if self._ppu_acblas_packed_mlp_modules != 24:
+                    raise RuntimeError(
+                        "SEU PPU acBLAS packed MLP expected 24 modules, "
+                        f"patched {self._ppu_acblas_packed_mlp_modules}"
                     )
                 torch.cuda.empty_cache()
             pack_gdn_projections = (
@@ -558,6 +605,9 @@ class VLMModel:
                 ),
                 "ppu_packed_mlp_modules": getattr(
                     self, "_ppu_packed_mlp_modules", 0
+                ),
+                "ppu_acblas_packed_mlp_modules": getattr(
+                    self, "_ppu_acblas_packed_mlp_modules", 0
                 ),
                 "ppu_packed_gdn_projection_modules": getattr(
                     self, "_ppu_packed_gdn_projection_modules", 0

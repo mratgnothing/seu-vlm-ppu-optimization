@@ -150,6 +150,30 @@ Add、Softplus、Mul/Neg 合为一个 HGGC kernel，并用 thread-local scratch 
 - [`ppu-final-formal-wrapper-smoke-20260828.json`](ppu-final-formal-wrapper-smoke-20260828.json)
 - [实验说明](../docs/experiments/2026-08-28-ppu-gdn-gate-prep.md)
 
+## PPU 单入口 acBLAS packed-MLP
+
+在完整 grouped-GDN/residual-RMSNorm/gate-prep 栈上，一次 extension 入口依次提交
+packed gate/up GEMV、HGGC SwiGLU 和 down GEMV。固定 128-token 八对 8/8 获胜，
+成对中位 `1.1336x`；CN20 两轮均 20/20 全文一致、20/20 获胜、Accuracy 85%，
+成对中位为 `1.1212x/1.1122x`。Profile 中 GEMV 数不变，但 `aten::linear/mm`
+各减少 720 次、`cudaLaunchKernel` 减少 360 次。全量 4029 paired 门禁中，两路
+Accuracy 均为 3374/4029，4029/4029 文本、答案和 token 数一致；平均吞吐
+`109.993→122.445 token/s`，成对中位 `1.1125x`、3939/4029 获胜。
+
+- [`acblas-packed-mlp-smoke-20260828.json`](acblas-packed-mlp-smoke-20260828.json)
+- [`acblas-packed-mlp-memcheck-20260828.txt`](acblas-packed-mlp-memcheck-20260828.txt)
+- [`acblas-packed-mlp-ab128-20260828.json`](acblas-packed-mlp-ab128-20260828.json)
+- [`acblas-packed-mlp-cn20-r1-20260828.json`](acblas-packed-mlp-cn20-r1-20260828.json)
+- [`acblas-packed-mlp-cn20-r2-20260828.json`](acblas-packed-mlp-cn20-r2-20260828.json)
+- [`acblas-packed-mlp-profile-ab-20260828.json`](acblas-packed-mlp-profile-ab-20260828.json)
+- [`acblas-packed-mlp-profile-baseline-summary-20260828.json`](acblas-packed-mlp-profile-baseline-summary-20260828.json)
+- [`acblas-packed-mlp-profile-candidate-summary-20260828.json`](acblas-packed-mlp-profile-candidate-summary-20260828.json)
+- [`acblas-packed-mlp-formal-wrapper-smoke-20260828.json`](acblas-packed-mlp-formal-wrapper-smoke-20260828.json)
+- [`acblas-packed-mlp-cn-full4029-summary.json`](acblas-packed-mlp-cn-full4029-summary.json)
+- [`acblas-packed-mlp-final-formal-wrapper-smoke-20260828.json`](acblas-packed-mlp-final-formal-wrapper-smoke-20260828.json)
+- [`acblas-packed-mlp-final-memcheck-20260828.txt`](acblas-packed-mlp-final-memcheck-20260828.txt)
+- [实验说明](../docs/experiments/2026-08-28-ppu-acblas-packed-mlp.md)
+
 ## PPU acBLASLt Matmul 负实验
 
 SDK 正式 epilogue 没有 SiLU/SwiGLU。四个 decode 主形状各扫描 32 个 bit-exact

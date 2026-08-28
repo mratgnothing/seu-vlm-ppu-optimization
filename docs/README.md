@@ -25,6 +25,10 @@
   token 数 4029/4029 一致，配对中位 `1.0862x`。
 - acBLASLt 四形状 heuristic 扫描与方阵 scratch 集成已完成；方阵模块级虽为
   `1.2797x`，整模固定长仅 `0.9898x`，因此明确作为负实验保留。
+- 单入口 acBLAS packed-MLP 在固定 128-token 八对和 CN20 两轮均稳定正收益；CN20
+  两轮均 20/20 全文一致、20/20 获胜，成对中位 `1.1212x/1.1122x`。完整中文
+  4029 条两路 Accuracy 均为 3374/4029，4029/4029 文本、答案和 token 数一致，
+  成对中位 `1.1125x`、3939/4029 获胜。
 
 ## 模块进度
 
@@ -37,7 +41,7 @@
 | 输出解析鲁棒性 | 已完成 | Markdown 选项、截断结论规范化和整块复测 | 继续记录新格式边界，禁止按题号修补 | [英文全量修复记录](experiments/2026-07-26-en-full-n4029.md) |
 | CUDA 热点定位 | 已完成 | GEMV/GEMM 占 self CUDA time 86.18%，显存峰值已记录 | 映射到 PPU kernel/profile | [CUDA Profile](experiments/2026-07-24-o2-cuda-profile.md) |
 | PPU 工具链 | 已完成首轮闭环 | SDK、驱动、HGGC、定制 PyTorch、模型驻留、真实样本与 20 条基线 | 获取比赛 PPU-vLLM/v1.2，固定最终镜像 | [首次实验](experiments/2026-08-26-ppu-baseline-and-gemv.md)、[首次上机手册](ppu-first-validation.md) |
-| PPU 关键算子 | 七类核与图融合已验证 | GDN/conv/norm/qk-RoPE、packed MLP、grouped-acBLAS GDN、48-edge residual-RMSNorm、GDN gate-prep；最终组合公开中文 4029/4029 exact | 私有门限；等待厂商 SwiGLU epilogue/grouped GEMV | [融合实验](experiments/2026-08-26-ppu-fused-decode-kernels.md)、[packed MLP](experiments/2026-08-27-ppu-packed-mlp.md)、[packed GDN](experiments/2026-08-27-ppu-packed-gdn-projections.md)、[residual-RMSNorm](experiments/2026-08-27-ppu-residual-rmsnorm.md)、[GDN gate-prep](experiments/2026-08-28-ppu-gdn-gate-prep.md)、[acBLASLt 负实验](experiments/2026-08-28-ppu-acblaslt-matmul.md) |
+| PPU 关键算子 | 七类核与图融合已验证 | GDN/conv/norm/qk-RoPE、packed MLP、grouped-acBLAS GDN、48-edge residual-RMSNorm、GDN gate-prep、单入口 acBLAS packed-MLP；新候选 4029 门禁通过 | 私有集门限 | [融合实验](experiments/2026-08-26-ppu-fused-decode-kernels.md)、[packed MLP](experiments/2026-08-27-ppu-packed-mlp.md)、[packed GDN](experiments/2026-08-27-ppu-packed-gdn-projections.md)、[residual-RMSNorm](experiments/2026-08-27-ppu-residual-rmsnorm.md)、[GDN gate-prep](experiments/2026-08-28-ppu-gdn-gate-prep.md)、[单入口 packed-MLP](experiments/2026-08-28-ppu-acblas-packed-mlp.md)、[acBLASLt 负实验](experiments/2026-08-28-ppu-acblaslt-matmul.md) |
 | 技术报告 | 初稿完成 | 方法、指标、结果和真实性边界已整理 | 补 PPU 真实实验、最终复现命令 | [初赛技术报告](preliminary-technical-report.md) |
 | 源码交付 | 候选包可用 | 白名单打包、敏感扫描、可复现 ZIP | 按主办方最终目录要求定稿 | [根目录 README](../README.md) |
 
@@ -109,6 +113,7 @@
 - [2026-08-27 PPU residual-add + RMSNorm](experiments/2026-08-27-ppu-residual-rmsnorm.md)
 - [2026-08-28 PPU GDN gate-prep](experiments/2026-08-28-ppu-gdn-gate-prep.md)
 - [2026-08-28 PPU acBLASLt Matmul 负实验](experiments/2026-08-28-ppu-acblaslt-matmul.md)
+- [2026-08-28 PPU 单入口 acBLAS packed-MLP](experiments/2026-08-28-ppu-acblas-packed-mlp.md)
 - [2026-08-27 PPU SwiGLU 融合负实验](experiments/2026-08-27-ppu-swiglu-negative.md)
 - [PPU 资源释放前快照与恢复手册](ppu-resource-release-handoff.md)
 - [PPU 后续优化路线图](ppu-future-roadmap.md)

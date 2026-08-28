@@ -23,6 +23,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--num-samples", type=int, default=20)
     parser.add_argument("--max-new-tokens", type=int, default=64)
     parser.add_argument(
+        "--pair-log",
+        type=Path,
+        help="Optional append-only JSONL checkpoint written after every completed pair",
+    )
+    parser.add_argument("--progress-every", type=int, default=100)
+    parser.add_argument(
         "--group-sizes",
         default="4",
         help="Comma-separated consecutive projection groups, for example 2,1,1",
@@ -33,6 +39,8 @@ def parse_args() -> argparse.Namespace:
         default="torch-packed",
     )
     parser.add_argument("--acblas-build-dir", type=Path)
+    parser.add_argument("--acblas-packed-mlp-build-dir", type=Path)
+    parser.add_argument("--acblas-packed-mlp-swiglu-threads", type=int, default=128)
     targets = parser.add_mutually_exclusive_group()
     targets.add_argument(
         "--residual-rmsnorm-ab",
@@ -44,11 +52,18 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Keep projections/residual RMSNorm on and A/B GDN gate preparation",
     )
+    targets.add_argument(
+        "--acblas-packed-mlp-ab",
+        action="store_true",
+        help="Keep gate-prep stack on and A/B the one-entry packed MLP path",
+    )
     return parser.parse_args()
 
 
 def main() -> int:
     args = parse_args()
+    if args.progress_every <= 0:
+        raise ValueError("--progress-every must be positive")
     group_sizes = tuple(int(value) for value in args.group_sizes.split(","))
     repo_root = args.repo_root.resolve()
     custom_op_dir = repo_root / "ppu" / "custom_ops"
@@ -126,7 +141,11 @@ def main() -> int:
     if len(packed_modules) != 18:
         raise RuntimeError(f"expected 18 packed GDN modules, got {len(packed_modules)}")
     residual_modules = []
-    if args.residual_rmsnorm_ab or args.gate_prep_ab:
+    if (
+        args.residual_rmsnorm_ab
+        or args.gate_prep_ab
+        or args.acblas_packed_mlp_ab
+    ):
         from ppu_gdn import (
             pack_qwen35_decoder_residual_rmsnorm,
             set_qwen35_decoder_residual_rmsnorm,
@@ -153,7 +172,7 @@ def main() -> int:
                 f"expected 24 residual RMSNorm modules, got {len(residual_modules)}"
             )
     gate_prep_modules = []
-    if args.gate_prep_ab:
+    if args.gate_prep_ab or args.acblas_packed_mlp_ab:
         from ppu_gdn import pack_qwen35_gdn_gate_prep
 
         for module in packed_modules:
@@ -163,24 +182,68 @@ def main() -> int:
             raise RuntimeError(
                 f"expected 18 GDN gate-prep modules, got {len(gate_prep_modules)}"
             )
+    acblas_packed_mlp_modules = []
+    if args.acblas_packed_mlp_ab:
+        if args.acblas_packed_mlp_build_dir is None:
+            raise ValueError(
+                "--acblas-packed-mlp-build-dir is required for "
+                "--acblas-packed-mlp-ab"
+            )
+        from ppu_acblas_packed_mlp import PPUACBLASPackedMLPExtension
+
+        mlp_extension = PPUACBLASPackedMLPExtension(
+            args.acblas_packed_mlp_build_dir,
+            swiglu_threads=args.acblas_packed_mlp_swiglu_threads,
+        )
+        for module in model._model.modules():
+            if type(module).__name__ == "Qwen3_5MLP":
+                mlp_extension.patch_module(module)
+                acblas_packed_mlp_modules.append(module)
+        if len(acblas_packed_mlp_modules) != 24:
+            raise RuntimeError(
+                "expected 24 acBLAS packed MLP modules, got "
+                f"{len(acblas_packed_mlp_modules)}"
+            )
     torch.cuda.empty_cache()
 
     def set_enabled(enabled: bool) -> None:
         for module in packed_modules:
             set_packed_qwen35_gdn_input_projections(
                 module,
-                True if args.residual_rmsnorm_ab or args.gate_prep_ab else enabled,
+                True
+                if (
+                    args.residual_rmsnorm_ab
+                    or args.gate_prep_ab
+                    or args.acblas_packed_mlp_ab
+                )
+                else enabled,
             )
-        if args.residual_rmsnorm_ab or args.gate_prep_ab:
+        if (
+            args.residual_rmsnorm_ab
+            or args.gate_prep_ab
+            or args.acblas_packed_mlp_ab
+        ):
             for module in residual_modules:
                 set_qwen35_decoder_residual_rmsnorm(
-                    module, True if args.gate_prep_ab else enabled
+                    module,
+                    True
+                    if args.gate_prep_ab or args.acblas_packed_mlp_ab
+                    else enabled,
                 )
-        if args.gate_prep_ab:
+        if args.gate_prep_ab or args.acblas_packed_mlp_ab:
             from ppu_gdn import set_qwen35_gdn_gate_prep
 
             for module in gate_prep_modules:
-                set_qwen35_gdn_gate_prep(module, enabled)
+                set_qwen35_gdn_gate_prep(
+                    module, True if args.acblas_packed_mlp_ab else enabled
+                )
+        if args.acblas_packed_mlp_ab:
+            for module in acblas_packed_mlp_modules:
+                module.forward = (
+                    module._seu_acblas_packed_mlp_forward
+                    if enabled
+                    else module._seu_acblas_packed_mlp_original_forward
+                )
 
     def run_sample(sample, enabled: bool, pair_index: int) -> dict[str, object]:
         set_enabled(enabled)
@@ -198,7 +261,9 @@ def main() -> int:
             "pair_index": pair_index,
             "pair_order": "AB" if pair_index % 2 == 0 else "BA",
             "mode": (
-                "gdn_gate_prep"
+                "acblas_packed_mlp"
+                if enabled and args.acblas_packed_mlp_ab
+                else "gdn_gate_prep"
                 if enabled and args.gate_prep_ab
                 else "residual_rmsnorm"
                 if enabled and args.residual_rmsnorm_ab
@@ -224,6 +289,9 @@ def main() -> int:
     candidate_records: list[dict[str, object]] = []
     pair_ratios: list[float] = []
     exact_pairs = 0
+    if args.pair_log is not None:
+        args.pair_log.parent.mkdir(parents=True, exist_ok=True)
+        args.pair_log.write_text("", encoding="utf-8")
     for index, sample in enumerate(samples):
         order = (False, True) if index % 2 == 0 else (True, False)
         pair: dict[bool, dict[str, object]] = {}
@@ -236,6 +304,38 @@ def main() -> int:
             / float(pair[False]["throughput_tokens_per_sec"])
         )
         exact_pairs += pair[True]["text_sha256"] == pair[False]["text_sha256"]
+        if args.pair_log is not None:
+            with args.pair_log.open("a", encoding="utf-8") as handle:
+                handle.write(
+                    json.dumps(
+                        {
+                            "index": index,
+                            "baseline": pair[False],
+                            "candidate": pair[True],
+                            "speedup": pair_ratios[-1],
+                            "exact": (
+                                pair[True]["text_sha256"]
+                                == pair[False]["text_sha256"]
+                            ),
+                        },
+                        ensure_ascii=False,
+                    )
+                    + "\n"
+                )
+        completed = index + 1
+        if completed % args.progress_every == 0 or completed == len(samples):
+            print(
+                json.dumps(
+                    {
+                        "progress": completed,
+                        "total": len(samples),
+                        "exact_pairs": exact_pairs,
+                        "wins": sum(value > 1.0 for value in pair_ratios),
+                        "median_speedup": statistics.median(pair_ratios),
+                    }
+                ),
+                flush=True,
+            )
 
     def mean_metric(records, key: str) -> float:
         return statistics.fmean(float(record[key]) for record in records)
@@ -247,7 +347,9 @@ def main() -> int:
         bool(record["correct"]) for record in candidate_records
     )
     candidate_label = (
-        "gdn_gate_prep"
+        "acblas_packed_mlp"
+        if args.acblas_packed_mlp_ab
+        else "gdn_gate_prep"
         if args.gate_prep_ab
         else "residual_rmsnorm"
         if args.residual_rmsnorm_ab
@@ -264,6 +366,12 @@ def main() -> int:
         "ab_target": candidate_label,
         "residual_rmsnorm_modules": len(residual_modules),
         "gdn_gate_prep_modules": len(gate_prep_modules),
+        "acblas_packed_mlp_modules": len(acblas_packed_mlp_modules),
+        "acblas_packed_mlp_swiglu_threads": (
+            args.acblas_packed_mlp_swiglu_threads
+            if args.acblas_packed_mlp_ab
+            else None
+        ),
         "baseline": {
             "avg_ttft_ms": mean_metric(baseline_records, "ttft_ms"),
             "avg_throughput_tokens_per_sec": mean_metric(

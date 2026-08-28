@@ -46,6 +46,12 @@ decode 形状的 32 heuristic 扫描中，只有 2048 方阵超过 3%；它配�
 不接入正式 wrapper。详见
 [`2026-08-28-ppu-acblaslt-matmul.md`](../../docs/experiments/2026-08-28-ppu-acblaslt-matmul.md)。
 
+随后把优化边界提升到完整 decode MLP：一次 C++ extension 入口按原顺序提交 packed
+gate/up GEMV、bit-exact HGGC SwiGLU 和 down GEMV，并复用每层三个 scratch。它在
+固定 128-token 八对中 8/8 获胜、成对中位 `1.1336x`；CN20 两轮均 20/20 全文一致
+和 20/20 获胜，成对中位 `1.1212x/1.1122x`。该候选已接入显式 wrapper 开关，详见
+[`2026-08-28-ppu-acblas-packed-mlp.md`](../../docs/experiments/2026-08-28-ppu-acblas-packed-mlp.md)。
+
 此外，本目录提供一个不新增 HGGC kernel 的 packed-MLP decode 路径：24 个 MLP 的
 `gate_proj` 和 `up_proj` 权重拼成共享存储 `[12288, 2048]`，decode 时把两次
 `2048→6144` 线性投影合成一次 `2048→12288`，再 split、SiLU、逐元素乘和
@@ -87,6 +93,10 @@ python smoke_acblas_linear_module.py \
 python smoke_acblas_gdn_projection.py \
   --build-dir build/acblas_linear_extension \
   --warmup 32 --iters 400
+python build_acblas_packed_mlp_extension.py
+python smoke_acblas_packed_mlp_module.py \
+  --build-dir build/acblas_packed_mlp_extension \
+  --warmup 10 --iters 100
 ```
 
 每个 smoke 都先与当前 Transformers eager 逐元素比较，再计时；数值失败时返回非零。
@@ -104,6 +114,7 @@ bit-exact，GDN 最大 state/output 误差为 `5.96e-8 / 0`。
 | gated RMSNorm，128 threads | 0.06298 | 0.014572 | 4.32x |
 | q/k RMSNorm+RoPE，真实 query stride | 0.20616 | 0.026680 | 7.73x |
 | packed MLP gate/up projection | 0.04537 | 0.03997 | 1.135x |
+| 单入口 packed MLP（两 GEMV + SwiGLU） | 0.041666 | 0.033907 | 1.229x |
 
 packed-MLP smoke 的 decode/prefill 均 bit-exact，gate/up 两个参数均确认复用 packed
 storage，重打包后的常驻显存增量为 20 KiB（allocator 元数据/对齐量级）。
@@ -146,12 +157,20 @@ export SEU_PPU_ACBLAS_GDN_BUILD_DIR="$PWD/ppu/custom_ops/build/acblas_linear_ext
 export SEU_PPU_ACBLAS_GDN_ALGORITHM=-1
 ```
 
+在精度优先 grouped-GDN/gate-prep 栈上启用单入口 packed-MLP：
+
+```bash
+export SEU_PPU_ACBLAS_PACKED_MLP_BUILD_DIR="$PWD/ppu/custom_ops/build/acblas_packed_mlp_extension"
+export SEU_PPU_ACBLAS_PACKED_MLP_SWIGLU_THREADS=128
+```
+
 两种 GDN projection backend 互斥；同时设置时 wrapper 会立即报错。
 
 随后照常运行 `benchmark_public.py`。`GenerationResult.meta` 会记录实际挂载的
 GDN/conv/RMSNorm/gated-RMSNorm/qk-RoPE/packed-MLP/packed-GDN 模块数，预期分别为
 `18/18/49/18/6/24/18`。启用跨层融合时另应得到 24 个 decoder patch；启用
 gate-prep 时还应得到 18 个 gate-prep module patch。
+启用单入口 packed-MLP 时还应得到 24 个 `ppu_acblas_packed_mlp_modules`。
 grouped-acBLAS + residual-RMSNorm 正式单样本冒烟已得到完整计数，且
 `ppu_gdn_projection_backend` 为 `acblas-grouped`、公开校验无错误。
 
@@ -174,6 +193,8 @@ grouped-acBLAS + residual-RMSNorm 正式单样本冒烟已得到完整计数，�
 | 上项 + 48-edge residual-RMSNorm r2 | 120.807 | 101.507 | 85% | +104.09% |
 | 上项 + GDN gate-prep r1 | 121.477 | 109.275 | 85% | +119.71% |
 | 上项 + GDN gate-prep r2 | 120.096 | 107.083 | 85% | +115.31% |
+| 上项 + 单入口 packed-MLP r1 | 118.023 | 122.350 | 85% | +145.99% |
+| 上项 + 单入口 packed-MLP r2 | - | 121.297 | 85% | +143.88% |
 
 20 条中各路径的解析答案和正确性均一致。GDN-only 有 3 条 token 数变化，
 all-four 有 5 条；因此这些结果证明小样本无 Accuracy 回退，不等于已经证明完整公开集

@@ -70,6 +70,15 @@ def main() -> int:
             "packed_gdn": int(payload["packed_gdn_modules"]),
             "residual_rmsnorm": int(payload["residual_rmsnorm_modules"]),
             "gdn_gate_prep": int(payload["gdn_gate_prep_modules"]),
+            **(
+                {
+                    "acblas_packed_mlp": int(
+                        payload["acblas_packed_mlp_modules"]
+                    )
+                }
+                if "acblas_packed_mlp_modules" in payload
+                else {}
+            ),
         },
         "baseline": compact_mode("baseline", baseline_records),
         target: compact_mode(target, candidate_records),

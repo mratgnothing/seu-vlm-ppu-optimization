@@ -27,7 +27,7 @@
 - Transformers 5.14.1
 - NVIDIA GeForce RTX 5070 Ti Laptop GPU，约 11.94 GiB 显存
 - CUDA runtime 13.0，驱动 591.97，BF16 可用
-- 45 项无模型测试通过
+- 46 项无模型测试通过
 - Qwen3.5-2B 锁定 revision 已通过完整性校验和真实加载冒烟；617 个参数张量均在
   `cuda:0`，模型报告内存占用 4,426,483,648 bytes（约 4.12 GiB）
 - 当前 Transformers 未安装可选的 fast-path 依赖，加载时会回退到 PyTorch 实现；
@@ -64,7 +64,7 @@
 - 英文完整公开集原始 Accuracy 79.72%（3212/4029），有 1 条截断输出未解析；通用结论规范化经完整 200 条异常分块复测后，仅恢复该样本，最终 Accuracy 79.75%（3213/4029），公开接口校验全部通过。
 - O2 单样本 CUDA profiler 已完成：GEMV/GEMM 占 self CUDA time 86.18%，elementwise/copy 调用数高。
 - Profiler 口径 peak allocated/reserved 为 4.19/4.21 GiB。
-- 原基线代码通过 25 项测试；当前 `5070ti` 工作分支扩展后通过 45 项测试。源码候选包生成器可自动排除模型、数据、原始结果、密钥与本地配置。
+- 原基线代码通过 25 项测试；当前 `5070ti` 工作分支扩展后通过 46 项测试。源码候选包生成器可自动排除模型、数据、原始结果、密钥与本地配置。
 - 当前正式性能数据使用首个生成 token 计时，只覆盖固定前 20 条；中英文 Accuracy 均已扩展到完整公开集。完整集单次运行只作为精度证据，不进入正式性能表，也不代表私有评测成绩。
 
 ## PPU 状态
@@ -138,8 +138,16 @@
   down、GDN qkv 最高仅 1.0121x/1.0269x/1.0191x，止损。2048 方阵低层 1.0577x，
   配合 scratch 模块级 1.2797x，但整模固定 128-token 八对仅 0.9898x、3/8 获胜。
   Profile 显示主 `gemvt_op` 增加 270 次，故作为负实验保留，不接入 wrapper。
+- 单入口 acBLAS packed-MLP 将 packed gate/up GEMV、HGGC SwiGLU 和 down GEMV 放入
+  一次 C++ extension 入口，并为每层复用三个 BF16 scratch。模块级 `1.2288x`；
+  固定 128-token 八对 8/8 获胜、成对中位 `1.1336x`；CN20 两轮均 20/20
+  全文一致、20/20 获胜、Accuracy 85%，成对中位 `1.1212x/1.1122x`。Profile
+  中 `aten::linear/mm` 各减少 720 次、launch 减少 360 次，GEMV 数保持不变；
+  中文完整集两路 Accuracy 均为 3374/4029，4029/4029 文本、答案和 token 数一致，
+  平均吞吐 `109.993→122.445 token/s`、成对中位 `1.1125x`，3939/4029 获胜。
+  最终重编译的 memcheck 为 0 errors，正式 wrapper meta 记录 24 个新模块。
 - 最终正式 wrapper 单样本 smoke 为真实 Transformers/PPU backend、公开校验通过，
-  模块计数为 `18/18/49/18/6/24/18/24/18`；45 项无模型单元测试全部通过。
+  模块计数为 `18/18/49/18/6/24/24/18/24/18`；46 项无模型单元测试全部通过。
 - 独立 BF16 SwiGLU HGGC 核在 `[1,1,6144]` 上四组线程均 bit-exact，但最优仅
   `0.7901x`，未通过单算子性能门禁；没有运行公开集挑样本，也没有接入 wrapper。
   后续只考虑 packed gate/up GEMM epilogue fusion。
@@ -155,6 +163,7 @@
   [GDN 输入投影打包](experiments/2026-08-27-ppu-packed-gdn-projections.md)、
   [residual-add + RMSNorm](experiments/2026-08-27-ppu-residual-rmsnorm.md)、
   [GDN gate-prep](experiments/2026-08-28-ppu-gdn-gate-prep.md)、
+  [单入口 acBLAS packed-MLP](experiments/2026-08-28-ppu-acblas-packed-mlp.md)、
   [acBLASLt Matmul 负实验](experiments/2026-08-28-ppu-acblaslt-matmul.md)、
   [SwiGLU 负实验](experiments/2026-08-27-ppu-swiglu-negative.md)、
   [资源释放与恢复](ppu-resource-release-handoff.md) 和 [未来路线](ppu-future-roadmap.md)。

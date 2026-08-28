@@ -1,0 +1,46 @@
+{
+  "source": "results/acblas-packed-mlp-cn-full4029-20260828.json",
+  "sample_offset": 0,
+  "sample_count": 4029,
+  "max_new_tokens": 64,
+  "ab_target": "acblas_packed_mlp",
+  "projection_backend": "acblas-grouped",
+  "module_counts": {
+    "packed_gdn": 18,
+    "residual_rmsnorm": 24,
+    "gdn_gate_prep": 18,
+    "acblas_packed_mlp": 24
+  },
+  "baseline": {
+    "avg_ttft_ms": 119.06742786944523,
+    "avg_throughput_tokens_per_sec": 109.99336799364819,
+    "accuracy": 0.8374286423430132,
+    "correct": 3374
+  },
+  "acblas_packed_mlp": {
+    "avg_ttft_ms": 119.29458910603252,
+    "avg_throughput_tokens_per_sec": 122.44521780347051,
+    "accuracy": 0.8374286423430132,
+    "correct": 3374
+  },
+  "paired_decode": {
+    "mean_speedup": 1.1145946177663566,
+    "median_speedup": 1.112471881143032,
+    "p05_speedup": 1.031377169952565,
+    "p25_speedup": 1.0855451272694718,
+    "p75_speedup": 1.1415946710021216,
+    "p95_speedup": 1.2015585915423004,
+    "min_speedup": 0.7102466280329667,
+    "max_speedup": 1.7490880027325244,
+    "wins": 3939,
+    "ties": 0,
+    "losses": 90
+  },
+  "pair_consistency": {
+    "exact_text": 4029,
+    "same_answer": 4029,
+    "same_token_count": 4029,
+    "total": 4029
+  },
+  "passed": true
+}

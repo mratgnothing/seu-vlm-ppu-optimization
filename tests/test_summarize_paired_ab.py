@@ -53,6 +53,7 @@ class SummarizePairedABTest(unittest.TestCase):
             "packed_gdn_modules": 18,
             "residual_rmsnorm_modules": 24,
             "gdn_gate_prep_modules": 18,
+            "acblas_packed_mlp_modules": 24,
             "baseline": {
                 "avg_ttft_ms": 10.0,
                 "avg_throughput_tokens_per_sec": 90.0,
@@ -93,6 +94,7 @@ class SummarizePairedABTest(unittest.TestCase):
         self.assertEqual(summary["pair_consistency"]["exact_text"], 2)
         self.assertEqual(summary["pair_consistency"]["same_answer"], 2)
         self.assertEqual(summary["pair_consistency"]["same_token_count"], 2)
+        self.assertEqual(summary["module_counts"]["acblas_packed_mlp"], 24)
 
 
 if __name__ == "__main__":

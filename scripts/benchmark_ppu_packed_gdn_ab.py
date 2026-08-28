@@ -38,6 +38,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--acblas-build-dir", type=Path)
     parser.add_argument("--acblaslt-build-dir", type=Path)
     parser.add_argument("--acblaslt-heuristic-index", type=int, default=25)
+    parser.add_argument("--acblas-packed-mlp-build-dir", type=Path)
+    parser.add_argument("--acblas-packed-mlp-swiglu-threads", type=int, default=128)
     targets = parser.add_mutually_exclusive_group()
     targets.add_argument(
         "--residual-rmsnorm-ab",
@@ -53,6 +55,11 @@ def parse_args() -> argparse.Namespace:
         "--acblaslt-square-ab",
         action="store_true",
         help="Keep gate-prep stack on and A/B acBLASLt 2048-square Linears",
+    )
+    targets.add_argument(
+        "--acblas-packed-mlp-ab",
+        action="store_true",
+        help="Keep gate-prep stack on and A/B the one-entry packed MLP path",
     )
     return parser.parse_args()
 
@@ -148,7 +155,12 @@ def main() -> int:
     if len(packed_modules) != 18:
         raise RuntimeError(f"expected 18 packed GDN modules, got {len(packed_modules)}")
     residual_modules = []
-    if args.residual_rmsnorm_ab or args.gate_prep_ab or args.acblaslt_square_ab:
+    if (
+        args.residual_rmsnorm_ab
+        or args.gate_prep_ab
+        or args.acblaslt_square_ab
+        or args.acblas_packed_mlp_ab
+    ):
         from ppu_gdn import (
             pack_qwen35_decoder_residual_rmsnorm,
             set_qwen35_decoder_residual_rmsnorm,
@@ -175,7 +187,7 @@ def main() -> int:
                 f"expected 24 residual RMSNorm modules, got {len(residual_modules)}"
             )
     gate_prep_modules = []
-    if args.gate_prep_ab or args.acblaslt_square_ab:
+    if args.gate_prep_ab or args.acblaslt_square_ab or args.acblas_packed_mlp_ab:
         from ppu_gdn import pack_qwen35_gdn_gate_prep
 
         for module in packed_modules:
@@ -208,6 +220,28 @@ def main() -> int:
             )
         named_modules = dict(model._model.named_modules())
         acblaslt_square_modules = [named_modules[name] for name in square_names]
+    acblas_packed_mlp_modules = []
+    if args.acblas_packed_mlp_ab:
+        if args.acblas_packed_mlp_build_dir is None:
+            raise ValueError(
+                "--acblas-packed-mlp-build-dir is required for "
+                "--acblas-packed-mlp-ab"
+            )
+        from ppu_acblas_packed_mlp import PPUACBLASPackedMLPExtension
+
+        mlp_extension = PPUACBLASPackedMLPExtension(
+            args.acblas_packed_mlp_build_dir,
+            swiglu_threads=args.acblas_packed_mlp_swiglu_threads,
+        )
+        for module in model._model.modules():
+            if type(module).__name__ == "Qwen3_5MLP":
+                mlp_extension.patch_module(module)
+                acblas_packed_mlp_modules.append(module)
+        if len(acblas_packed_mlp_modules) != 24:
+            raise RuntimeError(
+                "expected 24 acBLAS packed MLP modules, got "
+                f"{len(acblas_packed_mlp_modules)}"
+            )
     torch.cuda.empty_cache()
 
     def set_enabled(enabled: bool) -> None:
@@ -219,21 +253,40 @@ def main() -> int:
                     args.residual_rmsnorm_ab
                     or args.gate_prep_ab
                     or args.acblaslt_square_ab
+                    or args.acblas_packed_mlp_ab
                 )
                 else enabled,
             )
-        if args.residual_rmsnorm_ab or args.gate_prep_ab or args.acblaslt_square_ab:
+        if (
+            args.residual_rmsnorm_ab
+            or args.gate_prep_ab
+            or args.acblaslt_square_ab
+            or args.acblas_packed_mlp_ab
+        ):
             for module in residual_modules:
                 set_qwen35_decoder_residual_rmsnorm(
                     module,
-                    True if args.gate_prep_ab or args.acblaslt_square_ab else enabled,
+                    True
+                    if (
+                        args.gate_prep_ab
+                        or args.acblaslt_square_ab
+                        or args.acblas_packed_mlp_ab
+                    )
+                    else enabled,
                 )
-        if args.gate_prep_ab or args.acblaslt_square_ab:
+        if (
+            args.gate_prep_ab
+            or args.acblaslt_square_ab
+            or args.acblas_packed_mlp_ab
+        ):
             from ppu_gdn import set_qwen35_gdn_gate_prep
 
             for module in gate_prep_modules:
                 set_qwen35_gdn_gate_prep(
-                    module, True if args.acblaslt_square_ab else enabled
+                    module,
+                    True
+                    if args.acblaslt_square_ab or args.acblas_packed_mlp_ab
+                    else enabled,
                 )
         if args.acblaslt_square_ab:
             for module in acblaslt_square_modules:
@@ -241,6 +294,13 @@ def main() -> int:
                     module._seu_acblaslt_square_forward
                     if enabled
                     else module._seu_acblaslt_square_original_forward
+                )
+        if args.acblas_packed_mlp_ab:
+            for module in acblas_packed_mlp_modules:
+                module.forward = (
+                    module._seu_acblas_packed_mlp_forward
+                    if enabled
+                    else module._seu_acblas_packed_mlp_original_forward
                 )
 
     def run_once(enabled: bool, pair_index: int) -> dict[str, object]:
@@ -255,7 +315,9 @@ def main() -> int:
         )
         return {
             "mode": (
-                "acblaslt_square"
+                "acblas_packed_mlp"
+                if enabled and args.acblas_packed_mlp_ab
+                else "acblaslt_square"
                 if enabled and args.acblaslt_square_ab
                 else "gdn_gate_prep"
                 if enabled and args.gate_prep_ab
@@ -300,7 +362,9 @@ def main() -> int:
     candidate_hashes = {str(r["text_sha256"]) for r in candidate_records}
     exact = len(baseline_hashes) == 1 and baseline_hashes == candidate_hashes
     candidate_label = (
-        "acblaslt_square"
+        "acblas_packed_mlp"
+        if args.acblas_packed_mlp_ab
+        else "acblaslt_square"
         if args.acblaslt_square_ab
         else "gdn_gate_prep"
         if args.gate_prep_ab
@@ -323,6 +387,12 @@ def main() -> int:
         "acblaslt_square_shape_counts": acblaslt_square_shape_counts,
         "acblaslt_heuristic_index": (
             args.acblaslt_heuristic_index if args.acblaslt_square_ab else None
+        ),
+        "acblas_packed_mlp_modules": len(acblas_packed_mlp_modules),
+        "acblas_packed_mlp_swiglu_threads": (
+            args.acblas_packed_mlp_swiglu_threads
+            if args.acblas_packed_mlp_ab
+            else None
         ),
         "baseline": baseline,
         "paired_decode": {
