@@ -2,7 +2,20 @@
 
 更新时间：2026-08-28
 
-## 1. 已完成的三层备份
+## 1. 当前恢复原则与历史快照
+
+自 2026-08-29 起，工程文件采用以下唯一权威链路：
+
+1. 本机 `5070ti` 工作区保存完整开发状态；
+2. 每个可恢复节点提交并 push 到 GitHub `5070ti`；
+3. PPU 服务器只从 GitHub 临时 clone、编译和运行，服务器/CPFS 上的工程副本、venv
+   和 `.so` 均不作为交付或下一次恢复来源；
+4. 新实例使用官方镜像和仓库内 `scripts/bootstrap_ppu_env.sh` 重建环境，不依赖自定义
+   镜像；
+5. 模型、数据和不可提交的大结果另存本机，按各自许可证与比赛规则管理。
+
+下文的 CPFS 路径和归档是此前实验的历史证据，不再代表当前工程恢复方案。不要因
+切换方案而自动删除其中数据；删除属于单独的破坏性操作，必须人工确认。
 
 ### Git 可公开层
 
@@ -118,45 +131,37 @@ CPFS 上对同名文件执行 `sha256sum` 的结果交叉核验。这里不内�
 ## 3. 新实例恢复与最小验收
 
 ```bash
-test -f /mnt/workspace/seu/Qwen3.5-2B/config.json
-test -f /mnt/workspace/seu/acblas-extension-work-20260827/gdn_recurrent_ppu.hg
-source /mnt/workspace/seu/envs/seu-vlm-ppu-20260826/bin/activate
-
-export PPU_SDK=/usr/local/PPU_SDK
-export PPU_HOME=/usr/local/PPU_SDK
-export LD_LIBRARY_PATH="$PPU_SDK/lib:$PPU_SDK/lib64:${LD_LIBRARY_PATH:-}"
-
-python - <<'PY'
-import torch
-print(torch.__version__)
-print(torch.cuda.is_available())
-print(torch.cuda.get_device_name(0))
-PY
-
-sha256sum /mnt/workspace/seu/Qwen3.5-2B/model.safetensors-00001-of-00001.safetensors
-sha256sum /mnt/workspace/seu/datasets/mmbench/mmbench_dev_cn.tsv
+cd /tmp
+git clone --branch 5070ti --single-branch \
+  https://github.com/mratgnothing/seu-vlm-ppu-optimization.git
+cd seu-vlm-ppu-optimization
+bash scripts/bootstrap_ppu_env.sh --check-only
+bash scripts/bootstrap_ppu_env.sh
+source scripts/activate_ppu_env.sh
 ```
 
-然后先运行单算子 smoke，再运行正式 wrapper 单样本；禁止直接以完整公开集开局：
+脚本已经重编译 recurrent GDN、acBLAS Linear、单入口 packed-MLP 三个扩展，并完成
+设备与三条扩展路径的短 smoke。它不会安装 `torch`，且会拒绝 venv 覆盖官方镜像的
+PPU 定制 Torch。需要离线部署时传入 `--wheelhouse PATH`；只重建不跑设备 smoke 时
+传入 `--skip-smoke`。
+
+随后给出模型和数据的外部路径，先运行正式 wrapper 单样本；禁止直接以完整公开集
+开局：
 
 ```bash
-cd /mnt/workspace/seu/acblas-extension-work-20260827
-python smoke_residual_rmsnorm_integration.py \
-  --library build/residual-rmsnorm/libseu_ppu_gdn.so \
-  --threads 512 --warmup 5 --iters 20
-
-python smoke_gdn_gate_prep_integration.py \
-  --library build/gate-prep/libseu_ppu_gdn.so \
-  --warmup 50 --iters 1000 --repeats 5
+scripts/run_ppu_first_validation.sh \
+  --model-path /external/path/Qwen3.5-2B \
+  --dataset-path /external/path/mmbench_dev_cn.tsv \
+  --run-device-smoke --run-model-load --run-single-sample
 ```
 
-若自定义 `.so` 因新镜像 ABI 变化无法加载，使用保存的 `gdn_recurrent_ppu.hg` 和
-`build_gdn_shared.sh` 在新实例重新编译，不要复制其他机器的系统库。
+若官方镜像中的 Torch/SDK ABI 变化，部署脚本会在编译或 smoke 阶段失败。此时保留
+完整日志并修正 GitHub 中的源码/脚本；不要从旧服务器复制 `.so` 或系统库绕过重编译。
 
 ## 4. 释放前人工确认清单
 
 - [!] ACR 镜像：当前账号无制作权限，已记录为外部权限限制；使用官方镜像 + CPFS 恢复；
-- [ ] CPFS 文件系统仍存在，且快照归档 SHA-256 可读取；
+- [x] 工程权威副本改为本机 + GitHub；服务器/CPFS 不再承担工程恢复职责；
 - [x] 本地 2026-08-27 三份归档和 2026-08-28 三份归档 SHA-256 全部匹配；
 - [ ] 本地 Qwen 权重哈希匹配；
 - [ ] `5070ti` 本地分支提交存在，已 push 并核对远端哈希；

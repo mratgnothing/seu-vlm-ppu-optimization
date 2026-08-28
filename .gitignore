@@ -58,6 +58,7 @@ configs/local.psd1
 
 # Python
 .venv/
+.venv-ppu/
 venv/
 __pycache__/
 *.py[cod]

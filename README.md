@@ -137,6 +137,41 @@ PPU 实测：优化核比 reference 快 1.88--2.08 倍，但仍慢于 `torch.mv`
 
 ## PPU 服务器首次验证
 
+### 新实例一键恢复
+
+工程源码的权威副本只有两份：本机 Git 工作区和 GitHub `5070ti` 分支。PPU
+服务器只是可随时销毁的执行节点，不把服务器/CPFS 中的代码、虚拟环境或编译产物
+当作恢复来源。新官方镜像启动后，在临时工作目录从 GitHub 拉取并部署：
+
+```bash
+cd /tmp
+git clone --branch 5070ti --single-branch \
+  https://github.com/mratgnothing/seu-vlm-ppu-optimization.git
+cd seu-vlm-ppu-optimization
+
+# 先只读核对官方镜像是否包含 PPU SDK 和定制 torch。
+bash scripts/bootstrap_ppu_env.sh --check-only
+
+# 创建仓库外的独立 venv、安装非 Torch 依赖、重编译三个扩展并做短 smoke。
+bash scripts/bootstrap_ppu_env.sh
+source scripts/activate_ppu_env.sh
+```
+
+部署脚本默认使用 `/usr/local/bin/python3`、`/usr/local/PPU_SDK` 和
+`~/.cache/seu-vlm-ppu/venv`。它通过 `--system-site-packages` 复用官方镜像的
+PPU 定制 Torch，且会比较部署前后的 Torch 版本与加载路径；
+[`requirements-ppu.txt`](requirements-ppu.txt) 故意不包含 `torch/torchvision`，
+防止 CUDA/PyPI wheel 覆盖 PPU 运行时。无外网时可先准备 wheel 目录，再传入
+`--wheelhouse /path/to/wheels`。完整参数见：
+
+```bash
+bash scripts/bootstrap_ppu_env.sh --help
+```
+
+模型权重、公开数据和原始大结果仍不进 Git；使用时通过路径参数挂载/读取，本机保留
+独立副本。服务器上产生的结果必须在实例释放前下载到本机，筛除敏感与巨型文件后，
+仅将可公开的小型结果和文档提交 GitHub。
+
 获得主办方允许上传代码的隔离 PPU 节点后，先运行只读预检：
 
 ```bash
@@ -187,6 +222,7 @@ BF16 GEMV。完整分级步骤、结构指纹和故障定位见
 ├─ benchmark_public.py       # 主办方 v1.1 公开评测入口
 ├─ evaluation_wrapper.py     # 主要优化入口
 ├─ requirements.txt          # 主办方基础依赖
+├─ requirements-ppu.txt      # PPU 用户态依赖；故意不含官方定制 Torch
 ├─ README_ORGANIZER.md       # 主办方 v1.1 说明
 ├─ configs/                  # 可复现实验配置
 ├─ data/                     # 本地数据说明，数据文件不入库
