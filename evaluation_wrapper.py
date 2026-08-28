@@ -206,6 +206,7 @@ class VLMModel:
         self._ppu_acblas_packed_mlp_modules = 0
         self._ppu_acblas_attention_prep_modules = 0
         self._ppu_raw_stream_query_enabled = False
+        self._ppu_acblas_workspace_bytes_per_handle = 0
         self._ppu_gdn_projection_backend = "disabled"
         self._ppu_gdn_projection_groups = "disabled"
         gdn_library_path = os.getenv("SEU_PPU_GDN_LIBRARY")
@@ -222,6 +223,10 @@ class VLMModel:
                 "SEU PPU acBLAS fused extensions require SEU_PPU_GDN_LIBRARY"
             )
         if gdn_library_path:
+            workspace_mib = int(os.getenv("SEU_PPU_ACBLAS_WORKSPACE_MIB", "0"))
+            if workspace_mib < 0:
+                raise ValueError("SEU_PPU_ACBLAS_WORKSPACE_MIB must be non-negative")
+            self._ppu_acblas_workspace_bytes_per_handle = workspace_mib * 1024 * 1024
             custom_op_dir = Path(
                 os.getenv(
                     "SEU_PPU_GDN_PYTHON_DIR",
@@ -421,6 +426,7 @@ class VLMModel:
                             "SEU_PPU_ACBLAS_PACKED_MLP_SWIGLU_THREADS", "128"
                         )
                     ),
+                    workspace_bytes=self._ppu_acblas_workspace_bytes_per_handle,
                 )
                 for module in self._model.modules():
                     if type(module).__name__ != "Qwen3_5MLP":
@@ -449,6 +455,7 @@ class VLMModel:
                 extension = PPUACBLASGDNProjectionExtension(
                     acblas_gdn_build_dir,
                     algorithm=int(os.getenv("SEU_PPU_ACBLAS_GDN_ALGORITHM", "-1")),
+                    workspace_bytes=self._ppu_acblas_workspace_bytes_per_handle,
                 )
                 for module in self._model.modules():
                     if type(module).__name__ != "Qwen3_5GatedDeltaNet":
@@ -671,6 +678,9 @@ class VLMModel:
                 ),
                 "ppu_raw_stream_query_enabled": getattr(
                     self, "_ppu_raw_stream_query_enabled", False
+                ),
+                "ppu_acblas_workspace_bytes_per_handle": getattr(
+                    self, "_ppu_acblas_workspace_bytes_per_handle", 0
                 ),
             },
         )

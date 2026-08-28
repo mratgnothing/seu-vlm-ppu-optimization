@@ -1,6 +1,7 @@
 #include <torch/extension.h>
 #include <ATen/cuda/CUDAContext.h>
 
+#include <cstddef>
 #include <cstdint>
 
 extern "C" int seu_acblas_packed_mlp_bf16(
@@ -14,8 +15,28 @@ extern "C" int seu_acblas_packed_mlp_bf16(
     int down_algorithm,
     int swiglu_threads,
     void* stream_handle);
+extern "C" int seu_acblas_packed_mlp_set_workspace(
+    void* workspace,
+    size_t workspace_bytes);
 
 namespace {
+
+void set_workspace(const torch::Tensor& workspace) {
+  TORCH_CHECK(workspace.is_cuda(), "workspace must be on PPU");
+  TORCH_CHECK(workspace.scalar_type() == torch::kUInt8,
+              "workspace must be uint8");
+  TORCH_CHECK(workspace.dim() == 1 && workspace.numel() > 0,
+              "workspace must be a non-empty 1D tensor");
+  TORCH_CHECK(workspace.is_contiguous(), "workspace must be contiguous");
+  const int status = seu_acblas_packed_mlp_set_workspace(
+      workspace.data_ptr(), static_cast<size_t>(workspace.numel()));
+  TORCH_CHECK(status == 0, "acBLAS packed MLP workspace setup failed: ", status);
+}
+
+void clear_workspace() {
+  const int status = seu_acblas_packed_mlp_set_workspace(nullptr, 0);
+  TORCH_CHECK(status == 0, "acBLAS packed MLP workspace clear failed: ", status);
+}
 
 torch::Tensor packed_mlp_bf16_into(
     const torch::Tensor& input,
@@ -90,6 +111,8 @@ torch::Tensor packed_mlp_bf16_into(
 }  // namespace
 
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, module) {
+  module.def("set_workspace", &set_workspace, "Set persistent acBLAS workspace");
+  module.def("clear_workspace", &clear_workspace, "Clear acBLAS workspace");
   module.def(
       "packed_mlp_bf16_into",
       &packed_mlp_bf16_into,

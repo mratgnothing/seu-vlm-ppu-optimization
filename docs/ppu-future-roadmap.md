@@ -71,9 +71,13 @@ bit-exact、memcheck 0 errors，并以 patch-time stream guard 明确限制为�
    grouped GEMV。下一轮先给两个进程级 handle 配置持久 workspace 做低风险 A/B；
    若内部查询/释放次数不降，再评估 `acblasGemmBatchedEx` 表达同形状 BF16 GEMV，
    不把 qkv/z/b/a 不同 N 的矩阵强行塞入同一批次。
-   门禁顺序固定为：4/16/64 MiB workspace 模块扫描 → profiler 中上述 3600/1800
-   次查询/释放是否显著下降 → 固定 128-token 两轮 exact 且成对中位/均值均大于 1。
-   若 workspace 只改变计数但整模收益低于 3%，立即记负实验，不跑公开完整集。
+   该调查现已完成：4/16/64 MiB workspace 未改变设备查询、释放或 kernel 数，固定长
+   中位 `0.9846x`；把同形状 b/a 合成 strided-batched GEMM 虽将设备查询
+   `5705→4895`、释放 `3259→2989`，kernel 数仍不变且固定长中位 `0.9852x`；GDN
+   持久输出 scratch 两轮中位 `1.0105x/0.9934x`、方向不一致。三项均作为负实验停止，
+   详见 `docs/experiments/2026-08-28-ppu-acblas-runtime-overhead.md`。
+   当前主要矛盾是每 token 120 个 memory-bound BF16 小 GEMV；下一主线改为厂商 acext
+   A16W8/A16W4 `WeightOnlyBatchedGemv` 或官方 PPU-vLLM，但当前镜像未包含 acext。
 2. PPU Graph Capture 已完成最小验证：固定 16 段 elementwise 子图 `1.8303x`；但
    已聚合 packed-MLP 仅 `1.0203x`，含动态输入 copy 为 `0.9316x`。当前不改正式路径；
    只有固定 KV/page 地址或完整 decoder-layer/多层图边界出现后才重启该方向。

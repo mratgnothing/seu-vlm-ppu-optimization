@@ -115,6 +115,9 @@ class PPUMicrobenchContractTest(unittest.TestCase):
         packed_gdn_benchmark = (
             ROOT / "scripts" / "benchmark_ppu_packed_gdn_multisample_ab.py"
         ).read_text(encoding="utf-8")
+        packed_gdn_fixed_benchmark = (
+            ROOT / "scripts" / "benchmark_ppu_packed_gdn_ab.py"
+        ).read_text(encoding="utf-8")
         integration = (ROOT / "evaluation_wrapper.py").read_text(encoding="utf-8")
         residual_smoke = (
             ROOT / "ppu" / "custom_ops" / "smoke_residual_rmsnorm_integration.py"
@@ -181,9 +184,12 @@ class PPUMicrobenchContractTest(unittest.TestCase):
         self.assertIn("batch=1 single-token decode", linear_wrapper)
         self.assertIn("seu_acblas_linear_bf16", linear_extension)
         self.assertIn("seu_acblas_gdn_projections_bf16", linear_extension)
+        self.assertIn("gdn_projections_bf16_into", linear_extension)
         self.assertIn("acblasGemvEx", acblas_bridge)
         self.assertIn("seu_acblas_gdn_projections_bf16", acblas_bridge)
         self.assertIn("kOutputOffsets[] = {0, 6144, 8192, 8208}", acblas_bridge)
+        self.assertIn("acblasGemmStridedBatchedEx", acblas_bridge)
+        self.assertIn("acblasSetWorkspace", acblas_bridge)
         self.assertIn("std::lock_guard<std::mutex>", acblas_bridge)
         self.assertIn("getCurrentCUDAStream", linear_extension)
         self.assertIn("residual_rmsnorm_decode", wrapper)
@@ -238,12 +244,21 @@ class PPUMicrobenchContractTest(unittest.TestCase):
         self.assertIn("threading.local()", acblas_grouped_gdn)
         self.assertIn("gdn_projections_bf16", acblas_grouped_gdn)
         self.assertIn("_seu_acblas_gdn_weight", acblas_grouped_gdn)
+        self.assertIn("_seu_acblas_gdn_output", acblas_grouped_gdn)
+        self.assertIn("set_output_scratch", acblas_grouped_gdn)
+        self.assertIn("set_batched_ba", acblas_grouped_gdn)
         self.assertIn("weights do not alias packed storage", acblas_grouped_gdn)
         self.assertIn("exact_output_pairs", packed_gdn_benchmark)
         self.assertIn("projection_group_sizes", packed_gdn_benchmark)
         self.assertIn("--acblas-attention-prep-ab", packed_gdn_benchmark)
         self.assertIn("--residual-rmsnorm-scratch-ab", packed_gdn_benchmark)
         self.assertIn("--raw-stream-query-ab", packed_gdn_benchmark)
+        self.assertIn("--acblas-workspace-ab", packed_gdn_benchmark)
+        self.assertIn("--acblas-gdn-ba-batched-ab", packed_gdn_fixed_benchmark)
+        self.assertIn(
+            "--acblas-gdn-output-scratch-ab", packed_gdn_fixed_benchmark
+        )
+        self.assertIn("acblas_workspace_bytes_per_handle", packed_gdn_benchmark)
         self.assertIn("raw_stream_query_ab_enabled", packed_gdn_benchmark)
         self.assertIn("residual_rmsnorm_scratch_modules", packed_gdn_benchmark)
         self.assertIn("--require-speedup", packed_gdn_benchmark)
@@ -274,6 +289,7 @@ class PPUMicrobenchContractTest(unittest.TestCase):
             "SEU_PPU_RESIDUAL_RMSNORM_ENABLE",
             "SEU_PPU_GDN_GATE_PREP_ENABLE",
             "SEU_PPU_RAW_STREAM_QUERY_ENABLE",
+            "SEU_PPU_ACBLAS_WORKSPACE_MIB",
             "SEU_PPU_ACBLAS_PACKED_MLP_BUILD_DIR",
             "SEU_PPU_ACBLAS_PACKED_MLP_SWIGLU_THREADS",
             "SEU_PPU_ACBLAS_ATTENTION_PREP_BUILD_DIR",
@@ -283,6 +299,7 @@ class PPUMicrobenchContractTest(unittest.TestCase):
         self.assertIn("GDN projection backends are mutually exclusive", integration)
         self.assertIn('self._ppu_gdn_projection_backend = "acblas-grouped"', integration)
         self.assertIn('"ppu_raw_stream_query_enabled"', integration)
+        self.assertIn('"ppu_acblas_workspace_bytes_per_handle"', integration)
 
 
 if __name__ == "__main__":

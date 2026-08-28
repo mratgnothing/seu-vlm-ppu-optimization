@@ -5,6 +5,12 @@
 
 所有结论应能追溯到原始结果、配置和代码提交。
 
+2026-08-28 的 acBLAS runtime 三个候选固定长结果：
+
+- `acblas-workspace-fixed128-r1-20260828.json`：workspace 负实验；
+- `acblas-gdn-ba-batched-fixed128-r1-20260828.json`：b/a batched 负实验；
+- `acblas-gdn-output-scratch-fixed128-r1-20260828.json` 与 `r2`：两轮方向不一致。
+
 ## 当前可公开精度结果
 
 - 中文固定前 20 条：Accuracy 85%，公开校验通过。

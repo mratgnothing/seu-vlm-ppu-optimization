@@ -45,6 +45,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--acblaslt-heuristic-index", type=int, default=25)
     parser.add_argument("--acblas-packed-mlp-build-dir", type=Path)
     parser.add_argument("--acblas-packed-mlp-swiglu-threads", type=int, default=128)
+    parser.add_argument("--acblas-workspace-mib", type=int, default=16)
     parser.add_argument("--acblas-attention-prep-build-dir", type=Path)
     parser.add_argument("--acblas-attention-prep-algorithm", type=int, default=-1)
     targets = parser.add_mutually_exclusive_group()
@@ -62,6 +63,21 @@ def parse_args() -> argparse.Namespace:
         "--raw-stream-query-ab",
         action="store_true",
         help="Keep the complete optimized stack on and A/B raw stream lookup",
+    )
+    targets.add_argument(
+        "--acblas-workspace-ab",
+        action="store_true",
+        help="Keep the raw-stream stack on and A/B persistent acBLAS workspaces",
+    )
+    targets.add_argument(
+        "--acblas-gdn-ba-batched-ab",
+        action="store_true",
+        help="Keep the raw-stream stack on and A/B batched GDN b/a projections",
+    )
+    targets.add_argument(
+        "--acblas-gdn-output-scratch-ab",
+        action="store_true",
+        help="Keep the raw-stream stack on and A/B persistent grouped-GDN output",
     )
     targets.add_argument(
         "--gate-prep-ab",
@@ -100,6 +116,8 @@ def summarize(records: list[dict[str, object]]) -> dict[str, object]:
 
 def main() -> int:
     args = parse_args()
+    if args.acblas_workspace_mib <= 0:
+        raise ValueError("--acblas-workspace-mib must be positive")
     group_sizes = tuple(int(value) for value in args.group_sizes.split(","))
     repo_root = args.repo_root.resolve()
     custom_op_dir = repo_root / "ppu" / "custom_ops"
@@ -152,6 +170,7 @@ def main() -> int:
     prompt = build_prompt(sample)
 
     packed_modules = []
+    gdn_projection_extension = None
     if args.projection_backend == "acblas-grouped":
         if args.acblas_build_dir is None:
             raise ValueError("--acblas-build-dir is required for acblas-grouped")
@@ -159,9 +178,16 @@ def main() -> int:
             raise ValueError("acblas-grouped implements the complete four-way group")
         from ppu_acblas_gdn_projection import PPUACBLASGDNProjectionExtension
 
-        projection_packer = PPUACBLASGDNProjectionExtension(
-            args.acblas_build_dir
-        ).pack_module
+        gdn_projection_extension = PPUACBLASGDNProjectionExtension(
+            args.acblas_build_dir,
+            workspace_bytes=(
+                args.acblas_workspace_mib * 1024 * 1024
+                if args.acblas_workspace_ab
+                else 0
+            ),
+            workspace_enabled=False,
+        )
+        projection_packer = gdn_projection_extension.pack_module
     else:
         from ppu_gdn_projection_pack import pack_qwen35_gdn_input_projections
 
@@ -181,6 +207,9 @@ def main() -> int:
         args.residual_rmsnorm_ab
         or args.residual_rmsnorm_scratch_ab
         or args.raw_stream_query_ab
+        or args.acblas_workspace_ab
+        or args.acblas_gdn_ba_batched_ab
+        or args.acblas_gdn_output_scratch_ab
         or args.gate_prep_ab
         or args.acblaslt_square_ab
         or args.acblas_packed_mlp_ab
@@ -217,6 +246,9 @@ def main() -> int:
         args.gate_prep_ab
         or args.residual_rmsnorm_scratch_ab
         or args.raw_stream_query_ab
+        or args.acblas_workspace_ab
+        or args.acblas_gdn_ba_batched_ab
+        or args.acblas_gdn_output_scratch_ab
         or args.acblaslt_square_ab
         or args.acblas_packed_mlp_ab
         or args.acblas_attention_prep_ab
@@ -259,6 +291,9 @@ def main() -> int:
         or args.acblas_attention_prep_ab
         or args.residual_rmsnorm_scratch_ab
         or args.raw_stream_query_ab
+        or args.acblas_workspace_ab
+        or args.acblas_gdn_ba_batched_ab
+        or args.acblas_gdn_output_scratch_ab
     ):
         if args.acblas_packed_mlp_build_dir is None:
             raise ValueError(
@@ -270,6 +305,12 @@ def main() -> int:
         mlp_extension = PPUACBLASPackedMLPExtension(
             args.acblas_packed_mlp_build_dir,
             swiglu_threads=args.acblas_packed_mlp_swiglu_threads,
+            workspace_bytes=(
+                args.acblas_workspace_mib * 1024 * 1024
+                if args.acblas_workspace_ab
+                else 0
+            ),
+            workspace_enabled=False,
         )
         for module in model._model.modules():
             if type(module).__name__ == "Qwen3_5MLP":
@@ -313,6 +354,9 @@ def main() -> int:
                     args.residual_rmsnorm_ab
                     or args.residual_rmsnorm_scratch_ab
                     or args.raw_stream_query_ab
+                    or args.acblas_workspace_ab
+                    or args.acblas_gdn_ba_batched_ab
+                    or args.acblas_gdn_output_scratch_ab
                     or args.gate_prep_ab
                     or args.acblaslt_square_ab
                     or args.acblas_packed_mlp_ab
@@ -324,6 +368,9 @@ def main() -> int:
             args.residual_rmsnorm_ab
             or args.residual_rmsnorm_scratch_ab
             or args.raw_stream_query_ab
+            or args.acblas_workspace_ab
+            or args.acblas_gdn_ba_batched_ab
+            or args.acblas_gdn_output_scratch_ab
             or args.gate_prep_ab
             or args.acblaslt_square_ab
             or args.acblas_packed_mlp_ab
@@ -336,6 +383,9 @@ def main() -> int:
                     if (
                         args.residual_rmsnorm_scratch_ab
                         or args.raw_stream_query_ab
+                        or args.acblas_workspace_ab
+                        or args.acblas_gdn_ba_batched_ab
+                        or args.acblas_gdn_output_scratch_ab
                         or args.gate_prep_ab
                         or args.acblaslt_square_ab
                         or args.acblas_packed_mlp_ab
@@ -350,6 +400,9 @@ def main() -> int:
             args.gate_prep_ab
             or args.residual_rmsnorm_scratch_ab
             or args.raw_stream_query_ab
+            or args.acblas_workspace_ab
+            or args.acblas_gdn_ba_batched_ab
+            or args.acblas_gdn_output_scratch_ab
             or args.acblaslt_square_ab
             or args.acblas_packed_mlp_ab
             or args.acblas_attention_prep_ab
@@ -366,6 +419,9 @@ def main() -> int:
                         or args.acblas_attention_prep_ab
                         or args.residual_rmsnorm_scratch_ab
                         or args.raw_stream_query_ab
+                        or args.acblas_workspace_ab
+                        or args.acblas_gdn_ba_batched_ab
+                        or args.acblas_gdn_output_scratch_ab
                     )
                     else enabled,
                 )
@@ -380,6 +436,9 @@ def main() -> int:
             args.acblas_packed_mlp_ab
             or args.residual_rmsnorm_scratch_ab
             or args.raw_stream_query_ab
+            or args.acblas_workspace_ab
+            or args.acblas_gdn_ba_batched_ab
+            or args.acblas_gdn_output_scratch_ab
         ):
             for module in acblas_packed_mlp_modules:
                 module.forward = module._seu_acblas_packed_mlp_forward
@@ -390,8 +449,30 @@ def main() -> int:
                 module._seu_attention_prep_decode = (
                     module._seu_acblas_attention_prep_forward if enabled else None
                 )
+        if args.acblas_workspace_ab:
+            if gdn_projection_extension is None:
+                raise RuntimeError("workspace A/B requires acblas-grouped projections")
+            gdn_projection_extension.set_workspace_enabled(enabled)
+            mlp_extension.set_workspace_enabled(enabled)
+        if args.acblas_gdn_ba_batched_ab:
+            if gdn_projection_extension is None:
+                raise RuntimeError("batched b/a A/B requires acblas-grouped projections")
+            gdn_projection_extension.set_batched_ba(enabled)
+        if args.acblas_gdn_output_scratch_ab:
+            if gdn_projection_extension is None:
+                raise RuntimeError("GDN output scratch A/B requires acblas-grouped")
+            for module in packed_modules:
+                gdn_projection_extension.set_output_scratch(module, enabled)
         model._ppu_gdn_library.set_raw_stream_query(
-            enabled if args.raw_stream_query_ab else False
+            True
+            if (
+                args.acblas_workspace_ab
+                or args.acblas_gdn_ba_batched_ab
+                or args.acblas_gdn_output_scratch_ab
+            )
+            else enabled
+            if args.raw_stream_query_ab
+            else False
         )
 
     def run_once(enabled: bool, pair_index: int) -> dict[str, object]:
@@ -418,6 +499,12 @@ def main() -> int:
                 if enabled and args.residual_rmsnorm_scratch_ab
                 else "raw_stream_query"
                 if enabled and args.raw_stream_query_ab
+                else "acblas_workspace"
+                if enabled and args.acblas_workspace_ab
+                else "acblas_gdn_ba_batched"
+                if enabled and args.acblas_gdn_ba_batched_ab
+                else "acblas_gdn_output_scratch"
+                if enabled and args.acblas_gdn_output_scratch_ab
                 else "residual_rmsnorm"
                 if enabled and args.residual_rmsnorm_ab
                 else "packed_gdn"
@@ -474,6 +561,12 @@ def main() -> int:
         if args.residual_rmsnorm_scratch_ab
         else "raw_stream_query"
         if args.raw_stream_query_ab
+        else "acblas_workspace"
+        if args.acblas_workspace_ab
+        else "acblas_gdn_ba_batched"
+        if args.acblas_gdn_ba_batched_ab
+        else "acblas_gdn_output_scratch"
+        if args.acblas_gdn_output_scratch_ab
         else "residual_rmsnorm"
         if args.residual_rmsnorm_ab
         else "packed_gdn"
@@ -492,6 +585,16 @@ def main() -> int:
             len(residual_modules) if args.residual_rmsnorm_scratch_ab else 0
         ),
         "raw_stream_query_ab_enabled": args.raw_stream_query_ab,
+        "acblas_workspace_ab_enabled": args.acblas_workspace_ab,
+        "acblas_gdn_ba_batched_ab_enabled": args.acblas_gdn_ba_batched_ab,
+        "acblas_gdn_output_scratch_ab_enabled": (
+            args.acblas_gdn_output_scratch_ab
+        ),
+        "acblas_workspace_bytes_per_handle": (
+            args.acblas_workspace_mib * 1024 * 1024
+            if args.acblas_workspace_ab
+            else 0
+        ),
         "gdn_gate_prep_modules": len(gate_prep_modules),
         "acblaslt_square_modules": len(acblaslt_square_modules),
         "acblaslt_square_shape_counts": acblaslt_square_shape_counts,
@@ -506,6 +609,9 @@ def main() -> int:
                 or args.acblas_attention_prep_ab
                 or args.residual_rmsnorm_scratch_ab
                 or args.raw_stream_query_ab
+                or args.acblas_workspace_ab
+                or args.acblas_gdn_ba_batched_ab
+                or args.acblas_gdn_output_scratch_ab
             )
             else None
         ),

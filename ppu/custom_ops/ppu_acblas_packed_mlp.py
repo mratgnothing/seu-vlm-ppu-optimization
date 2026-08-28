@@ -22,9 +22,15 @@ class PPUACBLASPackedMLPExtension:
         gate_up_algorithm: int = -1,
         down_algorithm: int = -1,
         swiglu_threads: int = 128,
+        workspace_bytes: int = 0,
+        workspace_enabled: bool = True,
     ) -> None:
         if swiglu_threads <= 0 or swiglu_threads > 1024 or swiglu_threads % 32:
             raise ValueError("swiglu_threads must be a multiple of 32 through 1024")
+        if workspace_bytes < 0:
+            raise ValueError("workspace_bytes must be non-negative")
+        if workspace_enabled and workspace_bytes == 0:
+            workspace_enabled = False
         build_dir = Path(build_dir).resolve()
         if str(build_dir) not in sys.path:
             sys.path.insert(0, str(build_dir))
@@ -32,6 +38,32 @@ class PPUACBLASPackedMLPExtension:
         self.gate_up_algorithm = gate_up_algorithm
         self.down_algorithm = down_algorithm
         self.swiglu_threads = swiglu_threads
+        self.workspace_bytes = workspace_bytes
+        self.workspace_enabled = workspace_enabled
+        self.workspace: torch.Tensor | None = None
+
+    def _ensure_workspace(self, device: torch.device) -> None:
+        if self.workspace_bytes == 0 or self.workspace is not None:
+            return
+        self.workspace = torch.empty(
+            self.workspace_bytes, dtype=torch.uint8, device=device
+        )
+        self.set_workspace_enabled(self.workspace_enabled)
+
+    def set_workspace_enabled(self, enabled: bool) -> None:
+        if self.workspace_bytes == 0:
+            if enabled:
+                raise RuntimeError("no acBLAS packed MLP workspace was allocated")
+            self.workspace_enabled = False
+            return
+        if self.workspace is None:
+            self.workspace_enabled = enabled
+            return
+        if enabled:
+            self.module.set_workspace(self.workspace)
+        else:
+            self.module.clear_workspace()
+        self.workspace_enabled = enabled
 
     def patch_module(self, module) -> Callable[[torch.Tensor], torch.Tensor]:
         if type(module).__name__ != "Qwen3_5MLP":
@@ -50,6 +82,10 @@ class PPUACBLASPackedMLPExtension:
             or module.down_proj.weight.device != packed_weight.device
         ):
             raise TypeError("packed MLP weights must be BF16 on one PPU device")
+
+        self._ensure_workspace(packed_weight.device)
+        # The native handle does not own the pointer passed to SetWorkspace.
+        module._seu_acblas_packed_mlp_workspace = self.workspace
 
         options = {"device": packed_weight.device, "dtype": torch.bfloat16}
         module.register_buffer(

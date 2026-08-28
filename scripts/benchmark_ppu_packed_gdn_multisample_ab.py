@@ -46,6 +46,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--acblas-build-dir", type=Path)
     parser.add_argument("--acblas-packed-mlp-build-dir", type=Path)
     parser.add_argument("--acblas-packed-mlp-swiglu-threads", type=int, default=128)
+    parser.add_argument("--acblas-workspace-mib", type=int, default=16)
     parser.add_argument("--acblas-attention-prep-build-dir", type=Path)
     parser.add_argument("--acblas-attention-prep-algorithm", type=int, default=-1)
     targets = parser.add_mutually_exclusive_group()
@@ -63,6 +64,11 @@ def parse_args() -> argparse.Namespace:
         "--raw-stream-query-ab",
         action="store_true",
         help="Keep the complete optimized stack on and A/B raw stream lookup",
+    )
+    targets.add_argument(
+        "--acblas-workspace-ab",
+        action="store_true",
+        help="Keep the raw-stream stack on and A/B persistent acBLAS workspaces",
     )
     targets.add_argument(
         "--gate-prep-ab",
@@ -84,6 +90,8 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
+    if args.acblas_workspace_mib <= 0:
+        raise ValueError("--acblas-workspace-mib must be positive")
     if args.progress_every <= 0:
         raise ValueError("--progress-every must be positive")
     group_sizes = tuple(int(value) for value in args.group_sizes.split(","))
@@ -138,6 +146,7 @@ def main() -> int:
     config = fixed_generation_config()
     config.max_new_tokens = args.max_new_tokens
     packed_modules = []
+    gdn_projection_extension = None
     if args.projection_backend == "acblas-grouped":
         if args.acblas_build_dir is None:
             raise ValueError("--acblas-build-dir is required for acblas-grouped")
@@ -145,9 +154,16 @@ def main() -> int:
             raise ValueError("acblas-grouped implements the complete four-way group")
         from ppu_acblas_gdn_projection import PPUACBLASGDNProjectionExtension
 
-        projection_packer = PPUACBLASGDNProjectionExtension(
-            args.acblas_build_dir
-        ).pack_module
+        gdn_projection_extension = PPUACBLASGDNProjectionExtension(
+            args.acblas_build_dir,
+            workspace_bytes=(
+                args.acblas_workspace_mib * 1024 * 1024
+                if args.acblas_workspace_ab
+                else 0
+            ),
+            workspace_enabled=False,
+        )
+        projection_packer = gdn_projection_extension.pack_module
     else:
         from ppu_gdn_projection_pack import pack_qwen35_gdn_input_projections
 
@@ -167,6 +183,7 @@ def main() -> int:
         args.residual_rmsnorm_ab
         or args.residual_rmsnorm_scratch_ab
         or args.raw_stream_query_ab
+        or args.acblas_workspace_ab
         or args.gate_prep_ab
         or args.acblas_packed_mlp_ab
         or args.acblas_attention_prep_ab
@@ -202,6 +219,7 @@ def main() -> int:
         args.gate_prep_ab
         or args.residual_rmsnorm_scratch_ab
         or args.raw_stream_query_ab
+        or args.acblas_workspace_ab
         or args.acblas_packed_mlp_ab
         or args.acblas_attention_prep_ab
     ):
@@ -220,6 +238,7 @@ def main() -> int:
         or args.acblas_attention_prep_ab
         or args.residual_rmsnorm_scratch_ab
         or args.raw_stream_query_ab
+        or args.acblas_workspace_ab
     ):
         if args.acblas_packed_mlp_build_dir is None:
             raise ValueError(
@@ -231,6 +250,12 @@ def main() -> int:
         mlp_extension = PPUACBLASPackedMLPExtension(
             args.acblas_packed_mlp_build_dir,
             swiglu_threads=args.acblas_packed_mlp_swiglu_threads,
+            workspace_bytes=(
+                args.acblas_workspace_mib * 1024 * 1024
+                if args.acblas_workspace_ab
+                else 0
+            ),
+            workspace_enabled=False,
         )
         for module in model._model.modules():
             if type(module).__name__ == "Qwen3_5MLP":
@@ -274,6 +299,7 @@ def main() -> int:
                     args.residual_rmsnorm_ab
                     or args.residual_rmsnorm_scratch_ab
                     or args.raw_stream_query_ab
+                    or args.acblas_workspace_ab
                     or args.gate_prep_ab
                     or args.acblas_packed_mlp_ab
                     or args.acblas_attention_prep_ab
@@ -284,6 +310,7 @@ def main() -> int:
             args.residual_rmsnorm_ab
             or args.residual_rmsnorm_scratch_ab
             or args.raw_stream_query_ab
+            or args.acblas_workspace_ab
             or args.gate_prep_ab
             or args.acblas_packed_mlp_ab
             or args.acblas_attention_prep_ab
@@ -295,6 +322,7 @@ def main() -> int:
                     if (
                         args.residual_rmsnorm_scratch_ab
                         or args.raw_stream_query_ab
+                        or args.acblas_workspace_ab
                         or args.gate_prep_ab
                         or args.acblas_packed_mlp_ab
                         or args.acblas_attention_prep_ab
@@ -308,6 +336,7 @@ def main() -> int:
             args.gate_prep_ab
             or args.residual_rmsnorm_scratch_ab
             or args.raw_stream_query_ab
+            or args.acblas_workspace_ab
             or args.acblas_packed_mlp_ab
             or args.acblas_attention_prep_ab
         ):
@@ -322,6 +351,7 @@ def main() -> int:
                         or args.acblas_attention_prep_ab
                         or args.residual_rmsnorm_scratch_ab
                         or args.raw_stream_query_ab
+                        or args.acblas_workspace_ab
                     )
                     else enabled,
                 )
@@ -329,6 +359,7 @@ def main() -> int:
             args.acblas_packed_mlp_ab
             or args.residual_rmsnorm_scratch_ab
             or args.raw_stream_query_ab
+            or args.acblas_workspace_ab
         ):
             for module in acblas_packed_mlp_modules:
                 module.forward = module._seu_acblas_packed_mlp_forward
@@ -339,8 +370,17 @@ def main() -> int:
                 module._seu_attention_prep_decode = (
                     module._seu_acblas_attention_prep_forward if enabled else None
                 )
+        if args.acblas_workspace_ab:
+            if gdn_projection_extension is None:
+                raise RuntimeError("workspace A/B requires acblas-grouped projections")
+            gdn_projection_extension.set_workspace_enabled(enabled)
+            mlp_extension.set_workspace_enabled(enabled)
         model._ppu_gdn_library.set_raw_stream_query(
-            enabled if args.raw_stream_query_ab else False
+            True
+            if args.acblas_workspace_ab
+            else enabled
+            if args.raw_stream_query_ab
+            else False
         )
 
     def run_sample(sample, enabled: bool, pair_index: int) -> dict[str, object]:
@@ -369,6 +409,8 @@ def main() -> int:
                 if enabled and args.residual_rmsnorm_scratch_ab
                 else "raw_stream_query"
                 if enabled and args.raw_stream_query_ab
+                else "acblas_workspace"
+                if enabled and args.acblas_workspace_ab
                 else "residual_rmsnorm"
                 if enabled and args.residual_rmsnorm_ab
                 else "packed_gdn"
@@ -461,6 +503,8 @@ def main() -> int:
         if args.residual_rmsnorm_scratch_ab
         else "raw_stream_query"
         if args.raw_stream_query_ab
+        else "acblas_workspace"
+        if args.acblas_workspace_ab
         else "residual_rmsnorm"
         if args.residual_rmsnorm_ab
         else "packed_gdn"
@@ -482,6 +526,12 @@ def main() -> int:
             len(residual_modules) if args.residual_rmsnorm_scratch_ab else 0
         ),
         "raw_stream_query_ab_enabled": args.raw_stream_query_ab,
+        "acblas_workspace_ab_enabled": args.acblas_workspace_ab,
+        "acblas_workspace_bytes_per_handle": (
+            args.acblas_workspace_mib * 1024 * 1024
+            if args.acblas_workspace_ab
+            else 0
+        ),
         "gdn_gate_prep_modules": len(gate_prep_modules),
         "acblas_packed_mlp_modules": len(acblas_packed_mlp_modules),
         "acblas_packed_mlp_swiglu_threads": (
@@ -491,6 +541,7 @@ def main() -> int:
                 or args.acblas_attention_prep_ab
                 or args.residual_rmsnorm_scratch_ab
                 or args.raw_stream_query_ab
+                or args.acblas_workspace_ab
             )
             else None
         ),

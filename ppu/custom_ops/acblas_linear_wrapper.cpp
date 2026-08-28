@@ -1,6 +1,7 @@
 #include <acblas_v2.h>
 
 #include <cstdint>
+#include <cstddef>
 #include <mutex>
 
 namespace {
@@ -18,6 +19,11 @@ acblasHandle_t get_handle(acblasStatus_t* status) {
 std::mutex& get_handle_mutex() {
   static std::mutex mutex;
   return mutex;
+}
+
+bool& use_batched_ba() {
+  static bool enabled = false;
+  return enabled;
 }
 
 acblasStatus_t run_gemv(
@@ -50,6 +56,25 @@ acblasStatus_t run_gemv(
 }
 
 }  // namespace
+
+extern "C" int seu_acblas_linear_set_workspace(
+    void* workspace,
+    size_t workspace_bytes) {
+  if ((workspace == nullptr) != (workspace_bytes == 0)) {
+    return static_cast<int>(ACBLAS_STATUS_INVALID_VALUE);
+  }
+  acblasStatus_t status = ACBLAS_STATUS_SUCCESS;
+  std::lock_guard<std::mutex> lock(get_handle_mutex());
+  acblasHandle_t handle = get_handle(&status);
+  if (status != ACBLAS_STATUS_SUCCESS) return static_cast<int>(status);
+  return static_cast<int>(
+      acblasSetWorkspace(handle, workspace, workspace_bytes));
+}
+
+extern "C" void seu_acblas_gdn_set_batched_ba(int enabled) {
+  std::lock_guard<std::mutex> lock(get_handle_mutex());
+  use_batched_ba() = enabled != 0;
+}
 
 extern "C" int seu_acblas_linear_bf16(
     const uint16_t* row_major_weight,
@@ -107,7 +132,8 @@ extern "C" int seu_acblas_gdn_projections_bf16(
       handle, reinterpret_cast<hggcStream_t>(stream_handle));
   if (status != ACBLAS_STATUS_SUCCESS) return static_cast<int>(status);
 
-  for (int index = 0; index < 4; ++index) {
+  const int independent_count = use_batched_ba() ? 2 : 4;
+  for (int index = 0; index < independent_count; ++index) {
     const int offset = kOutputOffsets[index];
     status = run_gemv(
         handle,
@@ -117,6 +143,37 @@ extern "C" int seu_acblas_gdn_projections_bf16(
         kOutputFeatures[index],
         kInputFeatures,
         algorithm);
+    if (status != ACBLAS_STATUS_SUCCESS) return static_cast<int>(status);
+  }
+  if (use_batched_ba()) {
+    const float alpha = 1.0F;
+    const float beta = 0.0F;
+    constexpr int kSmallOutputFeatures = 16;
+    constexpr int kBatchCount = 2;
+    status = acblasGemmStridedBatchedEx(
+        handle,
+        ACBLAS_OP_T,
+        ACBLAS_OP_N,
+        kSmallOutputFeatures,
+        1,
+        kInputFeatures,
+        &alpha,
+        packed_weight + static_cast<int64_t>(kOutputOffsets[2]) * kInputFeatures,
+        HGGC_R_16BF,
+        kInputFeatures,
+        static_cast<int64_t>(kSmallOutputFeatures) * kInputFeatures,
+        input,
+        HGGC_R_16BF,
+        kInputFeatures,
+        0,
+        &beta,
+        packed_output + kOutputOffsets[2],
+        HGGC_R_16BF,
+        kSmallOutputFeatures,
+        kSmallOutputFeatures,
+        kBatchCount,
+        ACBLAS_COMPUTE_32F,
+        static_cast<acblasGemmAlgo_t>(algorithm));
     if (status != ACBLAS_STATUS_SUCCESS) return static_cast<int>(status);
   }
   return static_cast<int>(ACBLAS_STATUS_SUCCESS);

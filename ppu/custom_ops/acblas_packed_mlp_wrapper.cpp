@@ -1,6 +1,7 @@
 #include <acblas_v2.h>
 
 #include <cstdint>
+#include <cstddef>
 #include <mutex>
 
 // Exported by libseu_ppu_gdn.so.  Keep the ABI in integer/opaque-pointer
@@ -64,6 +65,20 @@ acblasStatus_t run_gemv(
 }
 
 }  // namespace
+
+extern "C" int seu_acblas_packed_mlp_set_workspace(
+    void* workspace,
+    size_t workspace_bytes) {
+  if ((workspace == nullptr) != (workspace_bytes == 0)) {
+    return static_cast<int>(ACBLAS_STATUS_INVALID_VALUE);
+  }
+  acblasStatus_t status = ACBLAS_STATUS_SUCCESS;
+  std::lock_guard<std::mutex> lock(get_handle_mutex());
+  acblasHandle_t handle = get_handle(&status);
+  if (status != ACBLAS_STATUS_SUCCESS) return static_cast<int>(status);
+  return static_cast<int>(
+      acblasSetWorkspace(handle, workspace, workspace_bytes));
+}
 
 extern "C" int seu_acblas_packed_mlp_bf16(
     const uint16_t* packed_gate_up_weight,
