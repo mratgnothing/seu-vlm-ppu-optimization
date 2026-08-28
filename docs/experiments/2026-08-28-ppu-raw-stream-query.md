@@ -59,7 +59,11 @@ acBLAS packed-MLP，仅切换 stream 查询方法。
 - P05/P95 为 `0.9987x/1.1828x`，212 个单样本受运行噪声影响回落；
 - 平均 TTFT 轻微波动 `+0.12%`，候选收益明确来自 decode，不宣称改善 TTFT。
 
-英文完整 4029 样本正在运行；完成前只把中文完整集视为正式证据。
+英文完整 4029 样本也通过：两路 Accuracy 均为 3214/4029（79.7717%），
+4029/4029 完整文本、答案和 token 数一致；平均吞吐
+`118.577→129.398 token/s`，成对中位/均值 `1.0901x/1.0972x`，3704/4029 获胜。
+平均 TTFT `118.911→118.950 ms` 基本不变（`+0.03%`）。中英文完整集共同证明候选
+不改变精度，并在两种语言上提供约 9% 的 decode 增量。
 
 ## Profile、安全与正式入口
 
@@ -68,6 +72,10 @@ acBLAS packed-MLP，仅切换 stream 查询方法。
 - profile 中 `aten::to/_to_copy/empty_strided` 次数不变，累计 CPU 时间分别从
   `35.87/34.98/46.33 ms` 降至 `13.19/12.31/24.32 ms`；该插桩数据只解释趋势，
   性能结论以 4029 对未插桩评测为准。
+- 候选 trace 仍有 5705 次 `cudaGetDeviceProperties_v2`。其中 2105 次能归因到
+  `aten::mm/bmm/addmm`；另 3600 次组成 1800 对连续查询并紧邻 `cudaFree`，与
+  15 个 decode step × 每 step 120 次 acBLAS GEMV 完全吻合（grouped-GDN 72、
+  packed-MLP 48）。这把下一主线收敛到 acBLAS workspace/handle 或跨层 grouped API。
 - `hggc-memcheck` 返回 0，报告 `ERROR SUMMARY: 0 errors`；raw handle 与原
   Stream 对象句柄一致，输出 bit-exact。
 - 正式 `benchmark_public.py` 单样本真实 Transformers/PPU smoke 通过公开校验；
@@ -83,6 +91,16 @@ export SEU_PPU_RAW_STREAM_QUERY_ENABLE=1
 
 开关默认关闭并带运行时能力检查；当前锁定的 PPU PyTorch 通过全部门禁后推荐显式启用。
 
+## 与最初 baseline 的口径
+
+早期所说“约 80%”实际指 all-five 融合栈相对同一 CN20 eager 稳态基线
+`49.737 token/s` 的提升；两轮 `93.918/94.889 token/s` 对应 `+88.83%/+90.78%`，
+并不是本轮单项收益。本轮 raw-stream 的严格增量基线已经包含 grouped-GDN、
+residual-RMSNorm、gate-prep 和单入口 packed-MLP，CN20 两轮平均吞吐从
+`119.715→130.260`、`121.953→133.139 token/s`，即单项约 `+8.81%/+9.17%`。
+若只作阶段性累计参考，当前两轮相对最初 `49.737 token/s` 为 `+161.91%/+167.68%`；
+该累计比较不是同一次 paired run，因此正式性能结论仍采用上面的逐样本成对门禁。
+
 ## 证据
 
 - `results/raw-stream-query-ab128-r1-20260828.json`
@@ -92,6 +110,7 @@ export SEU_PPU_RAW_STREAM_QUERY_ENABLE=1
 - `results/raw-stream-query-en20-r1-20260828.json`
 - `results/raw-stream-query-en20-r2-20260828.json`
 - `results/raw-stream-query-cn4029-summary-20260828.json`
+- `results/raw-stream-query-en4029-summary-20260828.json`
 - `results/raw-stream-query-profile-ab-20260828.json`
 - `results/raw-stream-query-profile-baseline-summary-20260828.json`
 - `results/raw-stream-query-profile-candidate-summary-20260828.json`

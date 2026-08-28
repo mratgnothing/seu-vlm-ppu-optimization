@@ -87,7 +87,9 @@
   `1.1055x/1.0961x`，CN20 两轮中位 `1.1026x/1.0855x`，四轮输出均完全一致、
   Accuracy 不变。中文完整集 4029/4029 exact、Accuracy 均为 3374/4029，平均吞吐
   `120.383→131.107 token/s`、成对中位 `1.0906x`，3817/4029 获胜；memcheck、
-  profile 和正式入口 smoke 均通过。英文完整集正在执行。
+  profile 和正式入口 smoke 均通过。英文完整集同样 4029/4029 exact、Accuracy
+  均为 3214/4029，平均吞吐 `118.577→129.398 token/s`、成对中位 `1.0901x`，
+  3704/4029 获胜。
 - 资源释放前完成独立 SwiGLU HGGC 核负实验：四组线程均 bit-exact，但最好只有
   `0.7901x`，因此未接入正式 wrapper；后续改走 packed GEMM epilogue fusion。
 - 已将 PPU 源码、编译产物、小型结果、pip/设备清单、全部原始 trace 和 MMBench

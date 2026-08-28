@@ -283,12 +283,23 @@ SwiGLU 和 down `acblasGemvEx`，并为 24 层各复用 projected/activated/outp
 109.993→122.445 token/s，成对中位 1.1125x、平均 1.1146x，3939/4029 获胜。
 最终重编译后的 memcheck 和正式 wrapper smoke 均通过。
 
+最后对 host 提交固定开销做单变量优化。原 ctypes 路径每次用
+`torch.cuda.current_stream(...).cuda_stream` 获取流对象；当前完整栈约执行 127 次/token。
+改用带运行时能力检查的 `_cuda_getCurrentRawStream` 后，不改变任何 kernel、launch
+数量、张量或数值顺序。中文完整集两路 Accuracy 均为 3374/4029，4029/4029 exact，
+平均吞吐 `120.383→131.107 token/s`、成对中位 `1.0906x`，3817/4029 获胜；英文
+完整集两路 Accuracy 均为 3214/4029，4029/4029 exact，平均吞吐
+`118.577→129.398 token/s`、成对中位 `1.0901x`，3704/4029 获胜。Profile 两路
+`cudaLaunchKernel` 均为 14,118，memcheck 0 errors，正式入口 meta 也记录该开关。
+
 ### 7.3 当前边界
 
 全部自定义路径只有显式环境变量才挂载。五类融合的 reduction 顺序使
 all-five 相对 eager 有 5/20 生成长度变化，packed-GDN 又相对 packed 基线新增 1/20
-文本漂移；最终 grouped-acBLAS + residual-RMSNorm + gate-prep 组合已通过中文公开
-完整集严格一致性门禁，但主办方私有集仍需保持相同 Accuracy/文本护栏。
+文本漂移；最终 grouped-acBLAS + residual-RMSNorm + gate-prep + 单入口 packed-MLP
+及 raw-stream 组合已通过中英文公开完整集严格一致性门禁，但主办方私有集仍需保持
+相同 Accuracy/文本护栏。raw-stream 依赖当前 PPU PyTorch 私有 API，默认关闭并在
+显式启用时做能力检查。
 
 ## 8. 可复现性
 
@@ -314,7 +325,9 @@ O1 已在本地固定中英文样本上取得稳定、无精度变化的 TTFT �
 79.75%，结果完整性均已独立审计。Profile 说明后续优化应集中于 decode
 GEMV/GEMM、GDN 和 causal conv，而非在缺少证据时广泛改动。
 
-当前最高性能候选已在 PPU 完成编译、模型 A/B、profile 和 CN20 精度闭环。剩余外部
+当前最高性能候选已在 PPU 完成编译、模型 A/B、profile、memcheck 和中英文各 4029
+条精度/一致性门禁。下一 profile 热点指向 acBLAS 每次 GEMV 的设备属性查询与释放，
+下一轮先验证 SDK 已导出的 `acblasSetWorkspace_v2`。剩余外部
 依赖是主办方明确：
 
 1. 支持 Qwen3.5-2B 的 PPU Python/vLLM 镜像及版本；

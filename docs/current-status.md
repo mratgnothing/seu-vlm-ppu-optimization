@@ -164,7 +164,9 @@
   Stream 对象查询。固定 128-token 与中英文 20 条双轮均 exact 且性能门禁通过；
   中文完整集 4029/4029 exact、Accuracy 均为 3374/4029，平均吞吐
   `120.383→131.107 token/s`、成对中位 `1.0906x`，3817/4029 获胜。
-  memcheck 0 errors、profile exact、正式 wrapper/meta 均通过；英文完整集正在运行。
+  英文完整集也 4029/4029 exact、Accuracy 均为 3214/4029，平均吞吐
+  `118.577→129.398 token/s`、成对中位 `1.0901x`，3704/4029 获胜。
+  memcheck 0 errors、profile exact、正式 wrapper/meta 均通过。
 - 最终正式 wrapper 单样本 smoke 为真实 Transformers/PPU backend、公开校验通过，
   模块计数为 `18/18/49/18/6/24/24/18/24/18`；46 项无模型单元测试全部通过。
 - 独立 BF16 SwiGLU HGGC 核在 `[1,1,6144]` 上四组线程均 bit-exact，但最优仅

@@ -230,7 +230,9 @@ packed-MLP 只有 `0.044214→0.043336 ms`（`1.0203x`），加入动态输入�
 CN20 两路 Accuracy 均为 85%。中文完整集 4029/4029 文本、答案和 token 数一致，
 两路 Accuracy 均为 3374/4029；平均吞吐 `120.383→131.107 token/s`，成对中位
 `1.0906x`，3817/4029 获胜。memcheck 0 errors、profile exact 和正式 wrapper
-smoke 均通过。英文 20 条两轮也 20/20 exact、Accuracy 90% 不变，英文完整集在运行。
+smoke 均通过。英文 20 条两轮也 20/20 exact、Accuracy 90% 不变；英文完整集
+4029/4029 exact、Accuracy 均为 3214/4029，平均吞吐
+`118.577→129.398 token/s`、成对中位 `1.0901x`，3704/4029 获胜。
 
 - [`raw-stream-query-ab128-r1-20260828.json`](raw-stream-query-ab128-r1-20260828.json)
 - [`raw-stream-query-ab128-r2-20260828.json`](raw-stream-query-ab128-r2-20260828.json)
@@ -239,6 +241,7 @@ smoke 均通过。英文 20 条两轮也 20/20 exact、Accuracy 90% 不变，英
 - [`raw-stream-query-en20-r1-20260828.json`](raw-stream-query-en20-r1-20260828.json)
 - [`raw-stream-query-en20-r2-20260828.json`](raw-stream-query-en20-r2-20260828.json)
 - [`raw-stream-query-cn4029-summary-20260828.json`](raw-stream-query-cn4029-summary-20260828.json)
+- [`raw-stream-query-en4029-summary-20260828.json`](raw-stream-query-en4029-summary-20260828.json)
 - [`raw-stream-query-profile-ab-20260828.json`](raw-stream-query-profile-ab-20260828.json)
 - [`raw-stream-query-profile-baseline-summary-20260828.json`](raw-stream-query-profile-baseline-summary-20260828.json)
 - [`raw-stream-query-profile-candidate-summary-20260828.json`](raw-stream-query-profile-candidate-summary-20260828.json)

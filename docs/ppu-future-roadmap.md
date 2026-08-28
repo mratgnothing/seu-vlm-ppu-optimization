@@ -13,7 +13,9 @@
    packed MLP 24、单入口 acBLAS packed-MLP 24、grouped-GDN 18、decoder 24、
    gate-prep 18。
 2. grouped-acBLAS GDN + 48-edge residual-RMSNorm + gate-prep + 单入口 packed-MLP 的
-   中英文完整公开集均已 4029/4029 exact；下一步按主办方要求进入私有集门禁。
+   中英文完整公开集均已 4029/4029 exact；叠加 raw-stream 后再次通过中英文各
+   4029/4029 exact，成对中位分别 `1.0906x/1.0901x`。下一步按主办方要求进入
+   私有集门禁。
 3. 获取主办方私有门禁和最终镜像，固定一次“提交候选”而不是继续追逐小样本噪声。
 
 ## P1：真正减少内存中间量和 launch
@@ -54,8 +56,24 @@ bit-exact、memcheck 0 errors，并以 patch-time stream guard 明确限制为�
 
 ## P2：运行时与调度
 
-1. 把多次 ctypes/Python 调用聚合到一个 C++/pybind decode step，减少 dispatcher、
-   device-property 查询和 handle/stream 设置；grouped-acBLAS 已证明主机调度可带来收益。
+1. raw-stream 查询已先消除高层 Stream 对象开销：中文 4029 exact、成对中位
+   `1.0906x`。下一步把多次 ctypes/Python 调用聚合到一个 C++/pybind decode step，
+   减少 dispatcher 和当前 profile 每 16 token 仍有的 5705 次
+   `cudaGetDeviceProperties_v2`；不能通过缓存错误的设备/流状态换取速度。父链归因显示
+   2105 次来自 `aten::mm/bmm/addmm`，其余 3600 次形成 1800 对连续查询并紧邻
+   `cudaFree`。这与 15 个 profiled decode step × 120 次 acBLAS GEMV/step 完全吻合：
+   18 层 grouped-GDN 各 4 次（72），24 层 packed-MLP 各 2 次（48）。下一候选应是
+   厂商可复用 workspace/handle 或跨层 grouped/batched GEMV，避免每次 acBLAS 内部
+   设备查询与释放；不再从 Python stream 侧继续挤微小收益。
+   SDK 2.1.1 公开头文件及 `libacblas.so` 动态符号均确认有
+   `acblasSetWorkspace_v2`，但 GEMV batched 接口只有
+   S/D 精度的 `Sgemv/DgemvStridedBatched`，没有 BF16 `GemvExBatched` 或 heterogeneous
+   grouped GEMV。下一轮先给两个进程级 handle 配置持久 workspace 做低风险 A/B；
+   若内部查询/释放次数不降，再评估 `acblasGemmBatchedEx` 表达同形状 BF16 GEMV，
+   不把 qkv/z/b/a 不同 N 的矩阵强行塞入同一批次。
+   门禁顺序固定为：4/16/64 MiB workspace 模块扫描 → profiler 中上述 3600/1800
+   次查询/释放是否显著下降 → 固定 128-token 两轮 exact 且成对中位/均值均大于 1。
+   若 workspace 只改变计数但整模收益低于 3%，立即记负实验，不跑公开完整集。
 2. PPU Graph Capture 已完成最小验证：固定 16 段 elementwise 子图 `1.8303x`；但
    已聚合 packed-MLP 仅 `1.0203x`，含动态输入 copy 为 `0.9316x`。当前不改正式路径；
    只有固定 KV/page 地址或完整 decoder-layer/多层图边界出现后才重启该方向。
