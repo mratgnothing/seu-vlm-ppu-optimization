@@ -76,6 +76,11 @@ def parse_args() -> argparse.Namespace:
         help="Keep the raw-stream stack on and A/B one packed GDN GEMV",
     )
     targets.add_argument(
+        "--acblas-gdn-ba-gemv-ab",
+        action="store_true",
+        help="Keep qkv/z separate and A/B one packed 32x2048 b/a GEMV",
+    )
+    targets.add_argument(
         "--gate-prep-ab",
         action="store_true",
         help="Keep projections/residual RMSNorm on and A/B GDN gate preparation",
@@ -96,9 +101,10 @@ def parse_args() -> argparse.Namespace:
 def main() -> int:
     args = parse_args()
     single_gemv_ab = args.acblas_gdn_single_gemv_ab
+    ba_gemv_ab = args.acblas_gdn_ba_gemv_ab
     # Reuse the established raw-stream complete-stack setup while keeping raw
     # stream enabled in both arms; only the packed GDN GEMV changes.
-    if single_gemv_ab:
+    if single_gemv_ab or ba_gemv_ab:
         args.raw_stream_query_ab = True
     if args.acblas_workspace_mib <= 0:
         raise ValueError("--acblas-workspace-mib must be positive")
@@ -389,9 +395,13 @@ def main() -> int:
             if gdn_projection_extension is None:
                 raise RuntimeError("single-GEMV A/B requires acblas-grouped projections")
             gdn_projection_extension.set_single_gemv(enabled)
+        if ba_gemv_ab:
+            if gdn_projection_extension is None:
+                raise RuntimeError("b/a GEMV A/B requires acblas-grouped projections")
+            gdn_projection_extension.set_ba_gemv(enabled)
         model._ppu_gdn_library.set_raw_stream_query(
             True
-            if args.acblas_workspace_ab or single_gemv_ab
+            if args.acblas_workspace_ab or single_gemv_ab or ba_gemv_ab
             else enabled
             if args.raw_stream_query_ab
             else False
@@ -422,9 +432,11 @@ def main() -> int:
                 else "residual_rmsnorm_scratch"
                 if enabled and args.residual_rmsnorm_scratch_ab
                 else "raw_stream_query"
-                if enabled and args.raw_stream_query_ab and not single_gemv_ab
+                if enabled and args.raw_stream_query_ab and not single_gemv_ab and not ba_gemv_ab
                 else "acblas_gdn_single_gemv"
                 if enabled and single_gemv_ab
+                else "acblas_gdn_ba_gemv"
+                if enabled and ba_gemv_ab
                 else "acblas_workspace"
                 if enabled and args.acblas_workspace_ab
                 else "residual_rmsnorm"
@@ -518,9 +530,11 @@ def main() -> int:
         else "residual_rmsnorm_scratch"
         if args.residual_rmsnorm_scratch_ab
         else "raw_stream_query"
-        if args.raw_stream_query_ab and not single_gemv_ab
+        if args.raw_stream_query_ab and not single_gemv_ab and not ba_gemv_ab
         else "acblas_gdn_single_gemv"
         if single_gemv_ab
+        else "acblas_gdn_ba_gemv"
+        if ba_gemv_ab
         else "acblas_workspace"
         if args.acblas_workspace_ab
         else "residual_rmsnorm"
@@ -543,8 +557,11 @@ def main() -> int:
         "residual_rmsnorm_scratch_modules": (
             len(residual_modules) if args.residual_rmsnorm_scratch_ab else 0
         ),
-        "raw_stream_query_ab_enabled": args.raw_stream_query_ab and not single_gemv_ab,
+        "raw_stream_query_ab_enabled": (
+            args.raw_stream_query_ab and not single_gemv_ab and not ba_gemv_ab
+        ),
         "acblas_gdn_single_gemv_ab_enabled": single_gemv_ab,
+        "acblas_gdn_ba_gemv_ab_enabled": ba_gemv_ab,
         "acblas_workspace_ab_enabled": args.acblas_workspace_ab,
         "acblas_workspace_bytes_per_handle": (
             args.acblas_workspace_mib * 1024 * 1024

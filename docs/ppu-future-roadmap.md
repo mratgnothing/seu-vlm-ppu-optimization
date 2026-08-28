@@ -82,6 +82,9 @@ bit-exact、memcheck 0 errors，并以 patch-time stream guard 明确限制为�
    fixed-128 中位 `1.0184x/1.0112x`，CN100 中位 `1.0261x`，Accuracy `93%→93%`、
    答案 100/100 一致，但完整文本仅 99/100 一致。该路线作为默认关闭的
    `SEU_PPU_ACBLAS_GDN_SINGLE_GEMV_ENABLE` accuracy-budget 候选保留，不归类为无损融合。
+   另有只合并 b/a 的 3-GEMV 精度优先候选：CN100 100/100 完整文本一致、中位
+   `1.0068x`，通过 `SEU_PPU_ACBLAS_GDN_BA_GEMV_ENABLE` 默认关闭地接入；下一门禁为
+   中英文完整公开集。
 2. PPU Graph Capture 已完成最小验证：固定 16 段 elementwise 子图 `1.8303x`；但
    已聚合 packed-MLP 仅 `1.0203x`，含动态输入 copy 为 `0.9316x`。当前不改正式路径；
    只有固定 KV/page 地址或完整 decoder-layer/多层图边界出现后才重启该方向。

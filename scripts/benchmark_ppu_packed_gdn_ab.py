@@ -80,6 +80,11 @@ def parse_args() -> argparse.Namespace:
         help="Keep the raw-stream stack on and A/B one packed GDN GEMV",
     )
     targets.add_argument(
+        "--acblas-gdn-ba-gemv-ab",
+        action="store_true",
+        help="Keep qkv/z separate and A/B one packed 32x2048 b/a GEMV",
+    )
+    targets.add_argument(
         "--acblas-gdn-tail-gemv-ab",
         action="store_true",
         help="Keep qkv separate and A/B one packed z/b/a GDN GEMV",
@@ -127,11 +132,12 @@ def summarize(records: list[dict[str, object]]) -> dict[str, object]:
 def main() -> int:
     args = parse_args()
     single_gemv_ab = args.acblas_gdn_single_gemv_ab
+    ba_gemv_ab = args.acblas_gdn_ba_gemv_ab
     tail_gemv_ab = args.acblas_gdn_tail_gemv_ab
     # Reuse the established complete-stack setup for this mutually exclusive
     # runtime-overhead experiment. The setter and labels below still distinguish
     # the one-GEMV candidate from the older b/a batching candidate.
-    if single_gemv_ab or tail_gemv_ab:
+    if single_gemv_ab or ba_gemv_ab or tail_gemv_ab:
         args.acblas_gdn_ba_batched_ab = True
     if args.acblas_workspace_mib <= 0:
         raise ValueError("--acblas-workspace-mib must be positive")
@@ -476,6 +482,8 @@ def main() -> int:
                 raise RuntimeError("batched b/a A/B requires acblas-grouped projections")
             if single_gemv_ab:
                 gdn_projection_extension.set_single_gemv(enabled)
+            elif ba_gemv_ab:
+                gdn_projection_extension.set_ba_gemv(enabled)
             elif tail_gemv_ab:
                 gdn_projection_extension.set_tail_gemv(enabled)
             else:
@@ -524,9 +532,11 @@ def main() -> int:
                 else "acblas_workspace"
                 if enabled and args.acblas_workspace_ab
                 else "acblas_gdn_ba_batched"
-                if enabled and args.acblas_gdn_ba_batched_ab and not single_gemv_ab and not tail_gemv_ab
+                if enabled and args.acblas_gdn_ba_batched_ab and not single_gemv_ab and not ba_gemv_ab and not tail_gemv_ab
                 else "acblas_gdn_single_gemv"
                 if enabled and single_gemv_ab
+                else "acblas_gdn_ba_gemv"
+                if enabled and ba_gemv_ab
                 else "acblas_gdn_tail_gemv"
                 if enabled and tail_gemv_ab
                 else "acblas_gdn_output_scratch"
@@ -590,9 +600,11 @@ def main() -> int:
         else "acblas_workspace"
         if args.acblas_workspace_ab
         else "acblas_gdn_ba_batched"
-        if args.acblas_gdn_ba_batched_ab and not single_gemv_ab and not tail_gemv_ab
+        if args.acblas_gdn_ba_batched_ab and not single_gemv_ab and not ba_gemv_ab and not tail_gemv_ab
         else "acblas_gdn_single_gemv"
         if single_gemv_ab
+        else "acblas_gdn_ba_gemv"
+        if ba_gemv_ab
         else "acblas_gdn_tail_gemv"
         if tail_gemv_ab
         else "acblas_gdn_output_scratch"
@@ -617,9 +629,10 @@ def main() -> int:
         "raw_stream_query_ab_enabled": args.raw_stream_query_ab,
         "acblas_workspace_ab_enabled": args.acblas_workspace_ab,
         "acblas_gdn_ba_batched_ab_enabled": (
-            args.acblas_gdn_ba_batched_ab and not single_gemv_ab and not tail_gemv_ab
+            args.acblas_gdn_ba_batched_ab and not single_gemv_ab and not ba_gemv_ab and not tail_gemv_ab
         ),
         "acblas_gdn_single_gemv_ab_enabled": single_gemv_ab,
+        "acblas_gdn_ba_gemv_ab_enabled": ba_gemv_ab,
         "acblas_gdn_tail_gemv_ab_enabled": tail_gemv_ab,
         "acblas_gdn_output_scratch_ab_enabled": (
             args.acblas_gdn_output_scratch_ab

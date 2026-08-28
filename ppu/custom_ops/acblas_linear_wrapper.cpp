@@ -26,6 +26,11 @@ bool& use_batched_ba() {
   return enabled;
 }
 
+bool& use_gdn_ba_gemv() {
+  static bool enabled = false;
+  return enabled;
+}
+
 bool& use_single_gdn_gemv() {
   static bool enabled = false;
   return enabled;
@@ -85,6 +90,17 @@ extern "C" void seu_acblas_gdn_set_batched_ba(int enabled) {
   std::lock_guard<std::mutex> lock(get_handle_mutex());
   use_batched_ba() = enabled != 0;
   if (enabled != 0) {
+    use_gdn_ba_gemv() = false;
+    use_single_gdn_gemv() = false;
+    use_gdn_tail_gemv() = false;
+  }
+}
+
+extern "C" void seu_acblas_gdn_set_ba_gemv(int enabled) {
+  std::lock_guard<std::mutex> lock(get_handle_mutex());
+  use_gdn_ba_gemv() = enabled != 0;
+  if (enabled != 0) {
+    use_batched_ba() = false;
     use_single_gdn_gemv() = false;
     use_gdn_tail_gemv() = false;
   }
@@ -95,6 +111,7 @@ extern "C" void seu_acblas_gdn_set_single_gemv(int enabled) {
   use_single_gdn_gemv() = enabled != 0;
   if (enabled != 0) {
     use_batched_ba() = false;
+    use_gdn_ba_gemv() = false;
     use_gdn_tail_gemv() = false;
   }
 }
@@ -104,6 +121,7 @@ extern "C" void seu_acblas_gdn_set_tail_gemv(int enabled) {
   use_gdn_tail_gemv() = enabled != 0;
   if (enabled != 0) {
     use_batched_ba() = false;
+    use_gdn_ba_gemv() = false;
     use_single_gdn_gemv() = false;
   }
 }
@@ -190,6 +208,29 @@ extern "C" int seu_acblas_gdn_projections_bf16(
         input,
         packed_output + kOutputOffsets[1],
         2080,
+        kInputFeatures,
+        algorithm));
+  }
+
+  if (use_gdn_ba_gemv()) {
+    for (int index = 0; index < 2; ++index) {
+      const int offset = kOutputOffsets[index];
+      status = run_gemv(
+          handle,
+          packed_weight + static_cast<int64_t>(offset) * kInputFeatures,
+          input,
+          packed_output + offset,
+          kOutputFeatures[index],
+          kInputFeatures,
+          algorithm);
+      if (status != ACBLAS_STATUS_SUCCESS) return static_cast<int>(status);
+    }
+    return static_cast<int>(run_gemv(
+        handle,
+        packed_weight + static_cast<int64_t>(kOutputOffsets[2]) * kInputFeatures,
+        input,
+        packed_output + kOutputOffsets[2],
+        32,
         kInputFeatures,
         algorithm));
   }

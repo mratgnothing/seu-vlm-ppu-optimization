@@ -95,6 +95,10 @@
   答案 100/100 一致。由于完整文本只有 99/100 一致，该路径通过
   `SEU_PPU_ACBLAS_GDN_SINGLE_GEMV_ENABLE=1` 显式启用且默认关闭，只作为允许答案级
   精度预算的性能档；精度优先档仍保留四次 GEMV。
+- 精度优先增量只合并相邻的 b/a 两个 `[16,2048]` 投影为一个 `[32,2048]`
+  GEMV：fixed-128 两轮全文 exact，中位 `1.0011x/1.0051x`；CN100 Accuracy
+  `93%→93%`、100/100 完整文本一致，成对中位 `1.0068x`。该路径默认关闭，通过
+  `SEU_PPU_ACBLAS_GDN_BA_GEMV_ENABLE=1` 显式启用，等待完整公开集门禁。
 - 资源释放前完成独立 SwiGLU HGGC 核负实验：四组线程均 bit-exact，但最好只有
   `0.7901x`，因此未接入正式 wrapper；后续改走 packed GEMM epilogue fusion。
 - 已将 PPU 源码、编译产物、小型结果、pip/设备清单、全部原始 trace 和 MMBench

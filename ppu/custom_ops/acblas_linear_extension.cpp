@@ -25,6 +25,7 @@ extern "C" int seu_acblas_linear_set_workspace(
     void* workspace,
     size_t workspace_bytes);
 extern "C" void seu_acblas_gdn_set_batched_ba(int enabled);
+extern "C" void seu_acblas_gdn_set_ba_gemv(int enabled);
 extern "C" void seu_acblas_gdn_set_single_gemv(int enabled);
 extern "C" void seu_acblas_gdn_set_tail_gemv(int enabled);
 
@@ -49,6 +50,10 @@ void clear_workspace() {
 
 void set_gdn_batched_ba(bool enabled) {
   seu_acblas_gdn_set_batched_ba(enabled ? 1 : 0);
+}
+
+void set_gdn_ba_gemv(bool enabled) {
+  seu_acblas_gdn_set_ba_gemv(enabled ? 1 : 0);
 }
 
 void set_gdn_single_gemv(bool enabled) {
@@ -160,6 +165,10 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, module) {
       "set_gdn_batched_ba",
       &set_gdn_batched_ba,
       "Batch the two homogeneous 16x2048 GDN b/a projections");
+  module.def(
+      "set_gdn_ba_gemv",
+      &set_gdn_ba_gemv,
+      "Run the adjacent GDN b/a weights as one 32x2048 GEMV");
   module.def(
       "set_gdn_single_gemv",
       &set_gdn_single_gemv,

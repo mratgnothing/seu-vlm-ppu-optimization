@@ -176,6 +176,10 @@ export SEU_PPU_PACK_GDN_PROJECTIONS_GROUPS=4
 export SEU_PPU_ACBLAS_GDN_BUILD_DIR="$PWD/ppu/custom_ops/build/acblas_linear_extension"
 # 可选；默认 -1 让 SDK 选择算法。
 export SEU_PPU_ACBLAS_GDN_ALGORITHM=-1
+# 精度优先小增量：只把相邻 b/a 两个 16x2048 投影合为一个 32x2048 GEMV。
+# CN100 100/100 完整文本一致、Accuracy 93%→93%，成对中位约 1.0068x；默认关闭，
+# 建议在目标镜像上复测后显式启用。不能与下面的 single-GEMV 性能档同时开启。
+export SEU_PPU_ACBLAS_GDN_BA_GEMV_ENABLE=0
 # Accuracy-budget 候选：将四个连续权重拼成一次 8224x2048 GEMV。
 # CN100 答案 100/100 一致、Accuracy 93%→93%，但 1/100 完整文本漂移；
 # 因此默认关闭，只有接受非 bit-exact 数值路径时才显式设为 1。

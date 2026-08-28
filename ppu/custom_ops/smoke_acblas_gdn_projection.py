@@ -49,6 +49,7 @@ def main() -> int:
     parser.add_argument("--iters", type=int, default=400)
     parser.add_argument("--workspace-mib", type=int, default=0)
     parser.add_argument("--batched-ba", action="store_true")
+    parser.add_argument("--ba-gemv", action="store_true")
     parser.add_argument("--output-scratch", action="store_true")
     parser.add_argument("--single-gemv", action="store_true")
     parser.add_argument("--tail-gemv", action="store_true")
@@ -98,6 +99,9 @@ def main() -> int:
         if args.output_scratch:
             print("PHASE output_scratch_enable", flush=True)
             extension.set_output_scratch(module, True)
+        if args.ba_gemv:
+            print("PHASE ba_gemv_enable", flush=True)
+            extension.set_ba_gemv(True)
         if args.single_gemv:
             print("PHASE single_gemv_enable", flush=True)
             extension.set_single_gemv(True)
@@ -117,6 +121,8 @@ def main() -> int:
         "candidate": (
             "one_packed_8224x2048_gemv"
             if args.single_gemv
+            else "qkv_z_plus_packed_ba_three_gemv"
+            if args.ba_gemv
             else "qkv_plus_packed_zba_two_gemv"
             if args.tail_gemv
             else "one_dispatch_four_acblas_gemv"
@@ -129,6 +135,7 @@ def main() -> int:
         "workspace_speedup": no_workspace_ms / grouped_ms,
         "workspace_exact": workspace_exact,
         "batched_ba": args.batched_ba,
+        "ba_gemv": args.ba_gemv,
         "output_scratch": args.output_scratch,
         "single_gemv": args.single_gemv,
         "tail_gemv": args.tail_gemv,

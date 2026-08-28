@@ -17,6 +17,12 @@
 - `acblas-gdn-single-gemv-sample17-r1-20260828.json`：确定性 43→44 token 漂移复现。
 - `acblas-gdn-tail-gemv-sample17-r1-20260828.json`：保留 qkv、仅合并 z/b/a 后仍发生
   同一确定性漂移，记录后停止该折中路线。
+- `acblas-gdn-ba-gemv-fixed128-r1/r2-20260829.json`：只合并 b/a 的精度优先候选，
+  两轮全文 exact，中位分别 `1.0011x/1.0051x`；
+- `acblas-gdn-ba-gemv-cn100-r1-20260829.json`：CN100 Accuracy `93%→93%`、
+  100/100 完整文本一致，成对中位 `1.0068x`、均值 `1.0083x`、58/100 胜；
+- `acblas-gemv-api-probes-20260829.json`：8224 行算法扫描与 GemmEx-for-GemvEx
+  负实验，二者均未改变主要运行时事件。
 
 ## 当前可公开精度结果
 

@@ -1,0 +1,30 @@
+{
+  "device": "PPU-ZW810E",
+  "shape": [8224, 2048],
+  "acblas_gemv_algorithm_sweep": {
+    "algorithms_tested": 28,
+    "all_exact": true,
+    "default_algorithm": -1,
+    "default_ms": 0.02036479949951172,
+    "best_algorithm": 20,
+    "best_ms": 0.020292266209920248,
+    "default_to_best_speedup": 1.0035744614619934
+  },
+  "gemm_for_gemv": {
+    "all_exact": true,
+    "best_ms": 0.02030893325805664,
+    "decision": "stop: latency is indistinguishable from GemvEx"
+  },
+  "runtime_event_profile_300_calls": {
+    "gemv": {
+      "cudaGetDeviceProperties_v2": 600,
+      "cudaFree": 300
+    },
+    "gemm_n1": {
+      "cudaGetDeviceProperties_v2": 600,
+      "cudaFree": 300
+    },
+    "exact": true,
+    "decision": "stop: GemmEx does not remove GemvEx runtime events"
+  }
+}

@@ -31,14 +31,15 @@ class PPUACBLASGDNProjectionExtension:
         workspace_bytes: int = 0,
         workspace_enabled: bool = True,
         batched_ba: bool = False,
+        ba_gemv: bool = False,
         single_gemv: bool = False,
         tail_gemv: bool = False,
     ) -> None:
         if workspace_bytes < 0:
             raise ValueError("workspace_bytes must be non-negative")
-        if sum((batched_ba, single_gemv, tail_gemv)) > 1:
+        if sum((batched_ba, ba_gemv, single_gemv, tail_gemv)) > 1:
             raise ValueError(
-                "batched_ba, single_gemv and tail_gemv are mutually exclusive"
+                "batched_ba, ba_gemv, single_gemv and tail_gemv are mutually exclusive"
             )
         if workspace_enabled and workspace_bytes == 0:
             workspace_enabled = False
@@ -52,6 +53,8 @@ class PPUACBLASGDNProjectionExtension:
         self.workspace: torch.Tensor | None = None
         self.batched_ba = batched_ba
         self.extension.set_gdn_batched_ba(batched_ba)
+        self.ba_gemv = ba_gemv
+        self.extension.set_gdn_ba_gemv(ba_gemv)
         self.single_gemv = single_gemv
         self.extension.set_gdn_single_gemv(single_gemv)
         self.tail_gemv = tail_gemv
@@ -61,6 +64,15 @@ class PPUACBLASGDNProjectionExtension:
         self.extension.set_gdn_batched_ba(enabled)
         self.batched_ba = enabled
         if enabled:
+            self.ba_gemv = False
+            self.single_gemv = False
+            self.tail_gemv = False
+
+    def set_ba_gemv(self, enabled: bool) -> None:
+        self.extension.set_gdn_ba_gemv(enabled)
+        self.ba_gemv = enabled
+        if enabled:
+            self.batched_ba = False
             self.single_gemv = False
             self.tail_gemv = False
 
@@ -69,6 +81,7 @@ class PPUACBLASGDNProjectionExtension:
         self.single_gemv = enabled
         if enabled:
             self.batched_ba = False
+            self.ba_gemv = False
             self.tail_gemv = False
 
     def set_tail_gemv(self, enabled: bool) -> None:
@@ -76,6 +89,7 @@ class PPUACBLASGDNProjectionExtension:
         self.tail_gemv = enabled
         if enabled:
             self.batched_ba = False
+            self.ba_gemv = False
             self.single_gemv = False
 
     def _ensure_workspace(self, device: torch.device) -> None:
