@@ -5,11 +5,18 @@
 
 所有结论应能追溯到原始结果、配置和代码提交。
 
-2026-08-28 的 acBLAS runtime 三个候选固定长结果：
+2026-08-28 的 acBLAS runtime 候选结果：
 
 - `acblas-workspace-fixed128-r1-20260828.json`：workspace 负实验；
 - `acblas-gdn-ba-batched-fixed128-r1-20260828.json`：b/a batched 负实验；
 - `acblas-gdn-output-scratch-fixed128-r1-20260828.json` 与 `r2`：两轮方向不一致。
+- `acblas-gdn-single-gemv-fixed128-r1/r2-20260828.json`：两轮固定 128-token 正收益；
+- `acblas-gdn-single-gemv-cn20/cn100-r1-20260828.json`：答案与 Accuracy 不变，分别
+  19/20、99/100 完整文本一致；
+- `acblas-gdn-single-gemv-profile-baseline/candidate-r2-20260828.json`：精简 trace 汇总；
+- `acblas-gdn-single-gemv-sample17-r1-20260828.json`：确定性 43→44 token 漂移复现。
+- `acblas-gdn-tail-gemv-sample17-r1-20260828.json`：保留 qkv、仅合并 z/b/a 后仍发生
+  同一确定性漂移，记录后停止该折中路线。
 
 ## 当前可公开精度结果
 

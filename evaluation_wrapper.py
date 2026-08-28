@@ -207,6 +207,7 @@ class VLMModel:
         self._ppu_acblas_attention_prep_modules = 0
         self._ppu_raw_stream_query_enabled = False
         self._ppu_acblas_workspace_bytes_per_handle = 0
+        self._ppu_acblas_gdn_single_gemv_enabled = False
         self._ppu_gdn_projection_backend = "disabled"
         self._ppu_gdn_projection_groups = "disabled"
         gdn_library_path = os.getenv("SEU_PPU_GDN_LIBRARY")
@@ -443,6 +444,14 @@ class VLMModel:
                 os.getenv("SEU_PPU_PACK_GDN_PROJECTIONS_ENABLE", "0") == "1"
             )
             acblas_gdn_build_dir = os.getenv("SEU_PPU_ACBLAS_GDN_BUILD_DIR")
+            acblas_gdn_single_gemv = (
+                os.getenv("SEU_PPU_ACBLAS_GDN_SINGLE_GEMV_ENABLE", "0") == "1"
+            )
+            if acblas_gdn_single_gemv and not acblas_gdn_build_dir:
+                raise RuntimeError(
+                    "SEU_PPU_ACBLAS_GDN_SINGLE_GEMV_ENABLE requires "
+                    "SEU_PPU_ACBLAS_GDN_BUILD_DIR"
+                )
             if pack_gdn_projections and acblas_gdn_build_dir:
                 raise RuntimeError(
                     "SEU PPU GDN projection backends are mutually exclusive"
@@ -456,6 +465,7 @@ class VLMModel:
                     acblas_gdn_build_dir,
                     algorithm=int(os.getenv("SEU_PPU_ACBLAS_GDN_ALGORITHM", "-1")),
                     workspace_bytes=self._ppu_acblas_workspace_bytes_per_handle,
+                    single_gemv=acblas_gdn_single_gemv,
                 )
                 for module in self._model.modules():
                     if type(module).__name__ != "Qwen3_5GatedDeltaNet":
@@ -464,6 +474,7 @@ class VLMModel:
                     self._ppu_packed_gdn_projection_modules += 1
                 self._ppu_gdn_projection_backend = "acblas-grouped"
                 self._ppu_gdn_projection_groups = "4"
+                self._ppu_acblas_gdn_single_gemv_enabled = acblas_gdn_single_gemv
             elif pack_gdn_projections:
                 from ppu_gdn_projection_pack import (
                     pack_qwen35_gdn_input_projections,
@@ -681,6 +692,9 @@ class VLMModel:
                 ),
                 "ppu_acblas_workspace_bytes_per_handle": getattr(
                     self, "_ppu_acblas_workspace_bytes_per_handle", 0
+                ),
+                "ppu_acblas_gdn_single_gemv_enabled": getattr(
+                    self, "_ppu_acblas_gdn_single_gemv_enabled", False
                 ),
             },
         )

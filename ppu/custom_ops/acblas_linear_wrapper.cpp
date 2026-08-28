@@ -26,6 +26,16 @@ bool& use_batched_ba() {
   return enabled;
 }
 
+bool& use_single_gdn_gemv() {
+  static bool enabled = false;
+  return enabled;
+}
+
+bool& use_gdn_tail_gemv() {
+  static bool enabled = false;
+  return enabled;
+}
+
 acblasStatus_t run_gemv(
     acblasHandle_t handle,
     const uint16_t* row_major_weight,
@@ -74,6 +84,28 @@ extern "C" int seu_acblas_linear_set_workspace(
 extern "C" void seu_acblas_gdn_set_batched_ba(int enabled) {
   std::lock_guard<std::mutex> lock(get_handle_mutex());
   use_batched_ba() = enabled != 0;
+  if (enabled != 0) {
+    use_single_gdn_gemv() = false;
+    use_gdn_tail_gemv() = false;
+  }
+}
+
+extern "C" void seu_acblas_gdn_set_single_gemv(int enabled) {
+  std::lock_guard<std::mutex> lock(get_handle_mutex());
+  use_single_gdn_gemv() = enabled != 0;
+  if (enabled != 0) {
+    use_batched_ba() = false;
+    use_gdn_tail_gemv() = false;
+  }
+}
+
+extern "C" void seu_acblas_gdn_set_tail_gemv(int enabled) {
+  std::lock_guard<std::mutex> lock(get_handle_mutex());
+  use_gdn_tail_gemv() = enabled != 0;
+  if (enabled != 0) {
+    use_batched_ba() = false;
+    use_single_gdn_gemv() = false;
+  }
 }
 
 extern "C" int seu_acblas_linear_bf16(
@@ -131,6 +163,36 @@ extern "C" int seu_acblas_gdn_projections_bf16(
   status = acblasSetStream(
       handle, reinterpret_cast<hggcStream_t>(stream_handle));
   if (status != ACBLAS_STATUS_SUCCESS) return static_cast<int>(status);
+
+  if (use_single_gdn_gemv()) {
+    return static_cast<int>(run_gemv(
+        handle,
+        packed_weight,
+        input,
+        packed_output,
+        8224,
+        kInputFeatures,
+        algorithm));
+  }
+  if (use_gdn_tail_gemv()) {
+    status = run_gemv(
+        handle,
+        packed_weight,
+        input,
+        packed_output,
+        kOutputFeatures[0],
+        kInputFeatures,
+        algorithm);
+    if (status != ACBLAS_STATUS_SUCCESS) return static_cast<int>(status);
+    return static_cast<int>(run_gemv(
+        handle,
+        packed_weight + static_cast<int64_t>(kOutputOffsets[1]) * kInputFeatures,
+        input,
+        packed_output + kOutputOffsets[1],
+        2080,
+        kInputFeatures,
+        algorithm));
+  }
 
   const int independent_count = use_batched_ba() ? 2 : 4;
   for (int index = 0; index < independent_count; ++index) {

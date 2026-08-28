@@ -50,6 +50,8 @@ def main() -> int:
     parser.add_argument("--workspace-mib", type=int, default=0)
     parser.add_argument("--batched-ba", action="store_true")
     parser.add_argument("--output-scratch", action="store_true")
+    parser.add_argument("--single-gemv", action="store_true")
+    parser.add_argument("--tail-gemv", action="store_true")
     args = parser.parse_args()
     if args.workspace_mib < 0:
         raise ValueError("--workspace-mib must be non-negative")
@@ -96,6 +98,12 @@ def main() -> int:
         if args.output_scratch:
             print("PHASE output_scratch_enable", flush=True)
             extension.set_output_scratch(module, True)
+        if args.single_gemv:
+            print("PHASE single_gemv_enable", flush=True)
+            extension.set_single_gemv(True)
+        if args.tail_gemv:
+            print("PHASE tail_gemv_enable", flush=True)
+            extension.set_tail_gemv(True)
         actual_decode = module.project(decode_input)
         grouped_ms = measure(lambda: module.project(decode_input), args.warmup, args.iters)
 
@@ -106,7 +114,13 @@ def main() -> int:
         for a, b in zip(actual_decode_without_workspace, actual_decode)
     )
     payload = {
-        "candidate": "one_dispatch_four_acblas_gemv",
+        "candidate": (
+            "one_packed_8224x2048_gemv"
+            if args.single_gemv
+            else "qkv_plus_packed_zba_two_gemv"
+            if args.tail_gemv
+            else "one_dispatch_four_acblas_gemv"
+        ),
         "eager_ms": eager_ms,
         "grouped_ms": grouped_ms,
         "speedup": eager_ms / grouped_ms,
@@ -116,6 +130,8 @@ def main() -> int:
         "workspace_exact": workspace_exact,
         "batched_ba": args.batched_ba,
         "output_scratch": args.output_scratch,
+        "single_gemv": args.single_gemv,
+        "tail_gemv": args.tail_gemv,
         "decode_exact": decode_exact,
         "prefill_exact": prefill_exact,
     }

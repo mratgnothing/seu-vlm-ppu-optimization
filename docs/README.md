@@ -38,6 +38,9 @@
   因此未进入整模门禁。
 - residual-RMSNorm 输出 scratch 模块级 `1.3373x`、exact、memcheck 0 errors，但
   当前完整栈固定长为 `0.9862x`，已止损且默认不分配、不启用。
+- grouped-GDN 的四个连续投影合为一次 GEMV 后，CN100 成对中位 `1.0261x`、
+  Accuracy `93%→93%`、答案 100/100 一致；完整文本 99/100 一致，因此仅作为默认关闭的
+  accuracy-budget 候选，不能替代中英文 4029 exact 的精度优先栈。
 
 ## 模块进度
 
@@ -50,7 +53,7 @@
 | 输出解析鲁棒性 | 已完成 | Markdown 选项、截断结论规范化和整块复测 | 继续记录新格式边界，禁止按题号修补 | [英文全量修复记录](experiments/2026-07-26-en-full-n4029.md) |
 | CUDA 热点定位 | 已完成 | GEMV/GEMM 占 self CUDA time 86.18%，显存峰值已记录 | 映射到 PPU kernel/profile | [CUDA Profile](experiments/2026-07-24-o2-cuda-profile.md) |
 | PPU 工具链 | 已完成首轮闭环 | SDK、驱动、HGGC、定制 PyTorch、模型驻留、真实样本与 20 条基线 | 获取比赛 PPU-vLLM/v1.2，固定最终镜像 | [首次实验](experiments/2026-08-26-ppu-baseline-and-gemv.md)、[首次上机手册](ppu-first-validation.md) |
-| PPU 关键算子 | 七类核、图与 host 调度优化已验证 | GDN/conv/norm/qk-RoPE、packed MLP、grouped-acBLAS GDN、48-edge residual-RMSNorm、GDN gate-prep、单入口 acBLAS packed-MLP、raw-stream；最新栈中英文 4029 均 exact、约 9% 增量；workspace、b/a batched 与 GDN output scratch 均已止损 | 私有集门限、acext weight-only/官方 PPU-vLLM | [融合实验](experiments/2026-08-26-ppu-fused-decode-kernels.md)、[packed MLP](experiments/2026-08-27-ppu-packed-mlp.md)、[packed GDN](experiments/2026-08-27-ppu-packed-gdn-projections.md)、[residual-RMSNorm](experiments/2026-08-27-ppu-residual-rmsnorm.md)、[GDN gate-prep](experiments/2026-08-28-ppu-gdn-gate-prep.md)、[单入口 packed-MLP](experiments/2026-08-28-ppu-acblas-packed-mlp.md)、[raw-stream](experiments/2026-08-28-ppu-raw-stream-query.md)、[运行时主要矛盾](experiments/2026-08-28-ppu-acblas-runtime-overhead.md) |
+| PPU 关键算子 | 七类核、图与 host 调度优化已验证 | GDN/conv/norm/qk-RoPE、packed MLP、grouped-acBLAS GDN、48-edge residual-RMSNorm、GDN gate-prep、单入口 acBLAS packed-MLP、raw-stream；最新精度优先栈中英文 4029 均 exact、约 9% 增量；另有 CN100 中位 +2.61% 且 Accuracy 不降的单-GEMV accuracy-budget 候选；workspace、b/a batched 与 GDN output scratch 均已止损 | 私有集门限、acext weight-only/官方 PPU-vLLM | [融合实验](experiments/2026-08-26-ppu-fused-decode-kernels.md)、[packed MLP](experiments/2026-08-27-ppu-packed-mlp.md)、[packed GDN](experiments/2026-08-27-ppu-packed-gdn-projections.md)、[residual-RMSNorm](experiments/2026-08-27-ppu-residual-rmsnorm.md)、[GDN gate-prep](experiments/2026-08-28-ppu-gdn-gate-prep.md)、[单入口 packed-MLP](experiments/2026-08-28-ppu-acblas-packed-mlp.md)、[raw-stream](experiments/2026-08-28-ppu-raw-stream-query.md)、[运行时主要矛盾](experiments/2026-08-28-ppu-acblas-runtime-overhead.md) |
 | 技术报告 | 初稿完成 | 方法、指标、结果和真实性边界已整理 | 补 PPU 真实实验、最终复现命令 | [初赛技术报告](preliminary-technical-report.md) |
 | 源码交付 | 候选包可用 | 白名单打包、敏感扫描、可复现 ZIP | 按主办方最终目录要求定稿 | [根目录 README](../README.md) |
 

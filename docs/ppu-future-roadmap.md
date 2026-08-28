@@ -78,6 +78,10 @@ bit-exact、memcheck 0 errors，并以 patch-time stream guard 明确限制为�
    详见 `docs/experiments/2026-08-28-ppu-acblas-runtime-overhead.md`。
    当前主要矛盾是每 token 120 个 memory-bound BF16 小 GEMV；下一主线改为厂商 acext
    A16W8/A16W4 `WeightOnlyBatchedGemv` 或官方 PPU-vLLM，但当前镜像未包含 acext。
+   进一步验证发现，GDN 已连续存放的 qkv/z/b/a 可从每层 4 次 GEMV 合为 1 次：两轮
+   fixed-128 中位 `1.0184x/1.0112x`，CN100 中位 `1.0261x`，Accuracy `93%→93%`、
+   答案 100/100 一致，但完整文本仅 99/100 一致。该路线作为默认关闭的
+   `SEU_PPU_ACBLAS_GDN_SINGLE_GEMV_ENABLE` accuracy-budget 候选保留，不归类为无损融合。
 2. PPU Graph Capture 已完成最小验证：固定 16 段 elementwise 子图 `1.8303x`；但
    已聚合 packed-MLP 仅 `1.0203x`，含动态输入 copy 为 `0.9316x`。当前不改正式路径；
    只有固定 KV/page 地址或完整 decoder-layer/多层图边界出现后才重启该方向。
@@ -86,8 +90,8 @@ bit-exact、memcheck 0 errors，并以 patch-time stream guard 明确限制为�
 
 ## P3：矩阵与状态核
 
-1. 向厂商确认 grouped/batched GEMV、multi-output GEMV 和 epilogue API；避免将四路
-   GDN 投影强行拼成改变数值路径的单一 8224 行 GEMV。
+1. 向厂商确认真正保持各投影累加顺序的 grouped/multi-output GEMV 和 epilogue API；
+   当前单一 8224 行 GEMV虽有约 2.6% CN100 中位收益，但存在 1/100 文本漂移。
 2. 对 recurrent GDN 做 state tile/向量化和 shared-memory 布局搜索，但必须包含真实
    16×128×128 FP32 state 带宽与跨 token 依赖；微基准不能只测空 state。
 3. 评估将 causal-conv、raw gate preparation、recurrent update 合成一层 decode

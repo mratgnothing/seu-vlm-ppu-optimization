@@ -176,6 +176,10 @@ export SEU_PPU_PACK_GDN_PROJECTIONS_GROUPS=4
 export SEU_PPU_ACBLAS_GDN_BUILD_DIR="$PWD/ppu/custom_ops/build/acblas_linear_extension"
 # 可选；默认 -1 让 SDK 选择算法。
 export SEU_PPU_ACBLAS_GDN_ALGORITHM=-1
+# Accuracy-budget 候选：将四个连续权重拼成一次 8224x2048 GEMV。
+# CN100 答案 100/100 一致、Accuracy 93%→93%，但 1/100 完整文本漂移；
+# 因此默认关闭，只有接受非 bit-exact 数值路径时才显式设为 1。
+export SEU_PPU_ACBLAS_GDN_SINGLE_GEMV_ENABLE=0
 ```
 
 在精度优先 grouped-GDN/gate-prep 栈上启用单入口 packed-MLP：

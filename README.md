@@ -90,6 +90,11 @@
   profile 和正式入口 smoke 均通过。英文完整集同样 4029/4029 exact、Accuracy
   均为 3214/4029，平均吞吐 `118.577→129.398 token/s`、成对中位 `1.0901x`，
   3704/4029 获胜。
+- 将 grouped-GDN 已连续存放的 qkv/z/b/a 四路权重从每层 4 次 GEMV 合为 1 次后，
+  fixed-128 两轮均为正，CN100 成对吞吐中位 `1.0261x`、Accuracy `93%→93%`、
+  答案 100/100 一致。由于完整文本只有 99/100 一致，该路径通过
+  `SEU_PPU_ACBLAS_GDN_SINGLE_GEMV_ENABLE=1` 显式启用且默认关闭，只作为允许答案级
+  精度预算的性能档；精度优先档仍保留四次 GEMV。
 - 资源释放前完成独立 SwiGLU HGGC 核负实验：四组线程均 bit-exact，但最好只有
   `0.7901x`，因此未接入正式 wrapper；后续改走 packed GEMM epilogue fusion。
 - 已将 PPU 源码、编译产物、小型结果、pip/设备清单、全部原始 trace 和 MMBench
@@ -116,6 +121,7 @@ PPU 侧已完成 SDK、真实模型闭环、20 条稳态基线、算子级 profi
 [PPU Graph Capture 能力与止损实验](docs/experiments/2026-08-28-ppu-graph-capture.md)、
 [PPU residual-RMSNorm scratch 负实验](docs/experiments/2026-08-28-ppu-residual-rmsnorm-scratch.md)、
 [PPU raw stream 查询优化](docs/experiments/2026-08-28-ppu-raw-stream-query.md)、
+[PPU acBLAS 运行时主要矛盾与 single-GEMV 候选](docs/experiments/2026-08-28-ppu-acblas-runtime-overhead.md)、
 [PPU SwiGLU 融合负实验](docs/experiments/2026-08-27-ppu-swiglu-negative.md)、
 [PPU decode 融合算子与问题记录](ppu/custom_ops/README.md)、
 [PPU 兼容性矩阵](docs/ppu-compatibility-matrix.md) 和 [需要向主办方确认的问题](docs/questions-for-organizer.md)。

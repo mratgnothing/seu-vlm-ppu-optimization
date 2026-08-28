@@ -247,6 +247,8 @@ class PPUMicrobenchContractTest(unittest.TestCase):
         self.assertIn("_seu_acblas_gdn_output", acblas_grouped_gdn)
         self.assertIn("set_output_scratch", acblas_grouped_gdn)
         self.assertIn("set_batched_ba", acblas_grouped_gdn)
+        self.assertIn("set_single_gemv", acblas_grouped_gdn)
+        self.assertIn("set_tail_gemv", acblas_grouped_gdn)
         self.assertIn("weights do not alias packed storage", acblas_grouped_gdn)
         self.assertIn("exact_output_pairs", packed_gdn_benchmark)
         self.assertIn("projection_group_sizes", packed_gdn_benchmark)
@@ -254,7 +256,10 @@ class PPUMicrobenchContractTest(unittest.TestCase):
         self.assertIn("--residual-rmsnorm-scratch-ab", packed_gdn_benchmark)
         self.assertIn("--raw-stream-query-ab", packed_gdn_benchmark)
         self.assertIn("--acblas-workspace-ab", packed_gdn_benchmark)
+        self.assertIn("--acblas-gdn-single-gemv-ab", packed_gdn_benchmark)
         self.assertIn("--acblas-gdn-ba-batched-ab", packed_gdn_fixed_benchmark)
+        self.assertIn("--acblas-gdn-single-gemv-ab", packed_gdn_fixed_benchmark)
+        self.assertIn("--acblas-gdn-tail-gemv-ab", packed_gdn_fixed_benchmark)
         self.assertIn(
             "--acblas-gdn-output-scratch-ab", packed_gdn_fixed_benchmark
         )
@@ -286,6 +291,7 @@ class PPUMicrobenchContractTest(unittest.TestCase):
             "SEU_PPU_PACK_GDN_PROJECTIONS_GROUPS",
             "SEU_PPU_ACBLAS_GDN_BUILD_DIR",
             "SEU_PPU_ACBLAS_GDN_ALGORITHM",
+            "SEU_PPU_ACBLAS_GDN_SINGLE_GEMV_ENABLE",
             "SEU_PPU_RESIDUAL_RMSNORM_ENABLE",
             "SEU_PPU_GDN_GATE_PREP_ENABLE",
             "SEU_PPU_RAW_STREAM_QUERY_ENABLE",
@@ -300,6 +306,7 @@ class PPUMicrobenchContractTest(unittest.TestCase):
         self.assertIn('self._ppu_gdn_projection_backend = "acblas-grouped"', integration)
         self.assertIn('"ppu_raw_stream_query_enabled"', integration)
         self.assertIn('"ppu_acblas_workspace_bytes_per_handle"', integration)
+        self.assertIn('"ppu_acblas_gdn_single_gemv_enabled"', integration)
 
 
 if __name__ == "__main__":
