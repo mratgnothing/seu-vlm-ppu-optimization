@@ -67,7 +67,14 @@
   20/20 获胜、Accuracy 85%，成对中位 `1.1212x/1.1122x`。中文完整公开集
   4029/4029 文本、答案和 token 数一致，两路 Accuracy 均为 3374/4029；平均吞吐
   `109.993→122.445 token/s`，成对中位 `1.1125x`，3939/4029 获胜。最终重编译、
-  正式 wrapper 和 `hggc-memcheck` 均通过。
+  正式 wrapper 和 `hggc-memcheck` 均通过。英文完整公开集同样 4029/4029 exact，
+  两路 Accuracy 均为 3214/4029，平均吞吐 `107.276→118.964 token/s`，成对中位
+  `1.1093x`，3806/4029 获胜。
+- 完成全注意力层 Attention Prep 单入口负实验：聚合 Q/K/V 三个原形状 GEMV 与既有
+  Q/K RMSNorm+RoPE。真实模块 Q/K/V/gate、prefill 回退、scratch 复用和异流保护均
+  通过，memcheck 0 errors，模块边界 `4.1006x`；但固定 128-token 56 对合并中位仅
+  `1.0047x`，CN20 两轮中位为 `1.0158x/0.9852x`，第二轮性能门禁失败。因此停止
+  profile/完整集，默认关闭并作为“局部快不等于整模快”的负实验保留。
 - 资源释放前完成独立 SwiGLU HGGC 核负实验：四组线程均 bit-exact，但最好只有
   `0.7901x`，因此未接入正式 wrapper；后续改走 packed GEMM epilogue fusion。
 - 已将 PPU 源码、编译产物、小型结果、pip/设备清单、全部原始 trace 和 MMBench
@@ -75,7 +82,7 @@
   一致；模型权重本地已有完整副本。镜像、CPFS 和恢复步骤见资源释放手册。
 - `dummy` 后端只用于接口冒烟；不得将其结果视为真实模型部署或比赛成绩。
 
-正式性能提升同时由固定 128-token 交错八对、CN20 两轮和中文完整公开集 paired
+正式性能提升同时由固定 128-token 交错八对、CN20 两轮和中英文完整公开集 paired
 门禁支撑；完整集还承担 Accuracy 与逐文本一致性验证。所有本地结果均不代表主办方
 私有评测成绩。可公开的聚合结果见
 [results/README.md](results/README.md)。
@@ -90,6 +97,7 @@ PPU 侧已完成 SDK、真实模型闭环、20 条稳态基线、算子级 profi
 [PPU GDN gate-prep 融合](docs/experiments/2026-08-28-ppu-gdn-gate-prep.md)、
 [PPU acBLASLt Matmul 负实验](docs/experiments/2026-08-28-ppu-acblaslt-matmul.md)、
 [PPU 单入口 acBLAS packed-MLP](docs/experiments/2026-08-28-ppu-acblas-packed-mlp.md)、
+[PPU Attention Prep 单入口融合](docs/experiments/2026-08-28-ppu-acblas-attention-prep.md)、
 [PPU SwiGLU 融合负实验](docs/experiments/2026-08-27-ppu-swiglu-negative.md)、
 [PPU decode 融合算子与问题记录](ppu/custom_ops/README.md)、
 [PPU 兼容性矩阵](docs/ppu-compatibility-matrix.md) 和 [需要向主办方确认的问题](docs/questions-for-organizer.md)。

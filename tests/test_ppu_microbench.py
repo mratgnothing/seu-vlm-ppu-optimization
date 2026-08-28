@@ -134,6 +134,24 @@ class PPUMicrobenchContractTest(unittest.TestCase):
         packed_mlp_python = (
             ROOT / "ppu" / "custom_ops" / "ppu_acblas_packed_mlp.py"
         ).read_text(encoding="utf-8")
+        attention_prep_bridge = (
+            ROOT / "ppu" / "custom_ops" / "acblas_attention_prep_wrapper.cpp"
+        ).read_text(encoding="utf-8")
+        attention_prep_extension = (
+            ROOT / "ppu" / "custom_ops" / "acblas_attention_prep_extension.cpp"
+        ).read_text(encoding="utf-8")
+        attention_prep_python = (
+            ROOT / "ppu" / "custom_ops" / "ppu_acblas_attention_prep.py"
+        ).read_text(encoding="utf-8")
+        attention_prep_smoke = (
+            ROOT / "ppu" / "custom_ops" / "smoke_acblas_attention_prep_module.py"
+        ).read_text(encoding="utf-8")
+        full_gate = (
+            ROOT / "ppu" / "microbench" / "run_acblas_packed_mlp_full_gate.sh"
+        ).read_text(encoding="utf-8")
+        attention_gate = (
+            ROOT / "ppu" / "microbench" / "run_acblas_attention_prep_gate.sh"
+        ).read_text(encoding="utf-8")
         self.assertIn("stream_handle", kernel)
         self.assertIn("round_to_bf16", kernel)
         for symbol in (
@@ -175,9 +193,21 @@ class PPUMicrobenchContractTest(unittest.TestCase):
         self.assertEqual(packed_mlp_bridge.count("run_gemv("), 3)
         self.assertIn("seu_ppu_swiglu_decode_bf16", packed_mlp_bridge)
         self.assertIn("getCurrentCUDAStream", packed_mlp_extension)
+        self.assertIn("bound to one CUDA stream", packed_mlp_extension)
         self.assertIn("packed_mlp_bf16_into", packed_mlp_extension)
         self.assertIn("not torch.is_grad_enabled()", packed_mlp_python)
         self.assertIn("_seu_acblas_packed_output", packed_mlp_python)
+        self.assertIn("expected_stream", packed_mlp_python)
+        self.assertIn("seu_acblas_attention_prep_bf16", attention_prep_bridge)
+        self.assertIn(
+            "seu_ppu_qk_rmsnorm_rope_decode_bf16", attention_prep_bridge
+        )
+        self.assertIn("getCurrentCUDAStream", attention_prep_extension)
+        self.assertIn("bound to one CUDA stream", attention_prep_extension)
+        self.assertIn("_seu_acblas_attention_projected", attention_prep_python)
+        self.assertIn("storage_offset=HEAD_DIM", attention_prep_python)
+        self.assertIn("scratch_reused", attention_prep_smoke)
+        self.assertIn("prefill_falls_back", attention_prep_smoke)
         self.assertIn("pack_qwen35_gdn_gate_prep", wrapper)
         self.assertIn("threading.local()", wrapper)
         self.assertIn("Path(sys.executable).parent", extension_builder)
@@ -194,6 +224,17 @@ class PPUMicrobenchContractTest(unittest.TestCase):
         self.assertIn("weights do not alias packed storage", acblas_grouped_gdn)
         self.assertIn("exact_output_pairs", packed_gdn_benchmark)
         self.assertIn("projection_group_sizes", packed_gdn_benchmark)
+        self.assertIn("--acblas-attention-prep-ab", packed_gdn_benchmark)
+        self.assertIn("--require-speedup", packed_gdn_benchmark)
+        self.assertIn("performance_passed", packed_gdn_benchmark)
+        self.assertIn("acblas_attention_prep_modules", packed_gdn_benchmark)
+        self.assertIn("AB_TARGET", full_gate)
+        self.assertIn("acblas-attention-prep", full_gate)
+        self.assertIn('MODE="${MODE:-fixed}"', attention_gate)
+        self.assertIn("benchmark_ppu_packed_gdn_ab.py", attention_gate)
+        self.assertIn("benchmark_ppu_packed_gdn_multisample_ab.py", attention_gate)
+        self.assertIn("--acblas-attention-prep-ab", attention_gate)
+        self.assertIn("--require-speedup", attention_gate)
         for variable in (
             "SEU_PPU_GDN_LIBRARY",
             "SEU_PPU_CONV_ENABLE",
@@ -209,6 +250,8 @@ class PPUMicrobenchContractTest(unittest.TestCase):
             "SEU_PPU_GDN_GATE_PREP_ENABLE",
             "SEU_PPU_ACBLAS_PACKED_MLP_BUILD_DIR",
             "SEU_PPU_ACBLAS_PACKED_MLP_SWIGLU_THREADS",
+            "SEU_PPU_ACBLAS_ATTENTION_PREP_BUILD_DIR",
+            "SEU_PPU_ACBLAS_ATTENTION_PREP_ALGORITHM",
         ):
             self.assertIn(variable, integration)
         self.assertIn("GDN projection backends are mutually exclusive", integration)

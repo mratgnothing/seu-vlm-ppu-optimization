@@ -1,0 +1,47 @@
+{
+  "source": "results/acblas-packed-mlp-en20-stream-guard-20260828.json",
+  "source_sha256": "05d25cd3f0a9d0ede9ed62a1ca6eccb0125c71b045bd7e01de333f5760b99ca9",
+  "sample_offset": 0,
+  "sample_count": 20,
+  "max_new_tokens": 64,
+  "ab_target": "acblas_packed_mlp",
+  "projection_backend": "acblas-grouped",
+  "module_counts": {
+    "packed_gdn": 18,
+    "residual_rmsnorm": 24,
+    "gdn_gate_prep": 18,
+    "acblas_packed_mlp": 24
+  },
+  "baseline": {
+    "avg_ttft_ms": 119.01650495274225,
+    "avg_throughput_tokens_per_sec": 108.80477820226925,
+    "accuracy": 0.9,
+    "correct": 18
+  },
+  "acblas_packed_mlp": {
+    "avg_ttft_ms": 117.10905889776768,
+    "avg_throughput_tokens_per_sec": 119.90000366757658,
+    "accuracy": 0.9,
+    "correct": 18
+  },
+  "paired_decode": {
+    "mean_speedup": 1.102839393415238,
+    "median_speedup": 1.1055344543207333,
+    "p05_speedup": 1.0258304389439776,
+    "p25_speedup": 1.067241860898956,
+    "p75_speedup": 1.1307533218469974,
+    "p95_speedup": 1.1726882671919965,
+    "min_speedup": 1.0178994407455049,
+    "max_speedup": 1.1825191633767755,
+    "wins": 20,
+    "ties": 0,
+    "losses": 0
+  },
+  "pair_consistency": {
+    "exact_text": 20,
+    "same_answer": 20,
+    "same_token_count": 20,
+    "total": 20
+  },
+  "passed": true
+}

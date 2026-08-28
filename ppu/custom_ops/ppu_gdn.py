@@ -518,28 +518,39 @@ class PPUGDNLibrary:
 
             input_shape = hidden_states.shape[:-1]
             hidden_shape = (*input_shape, -1, module.head_dim)
-            query_states, gate = torch.chunk(
-                module.q_proj(hidden_states).view(
-                    *input_shape, -1, module.head_dim * 2
-                ),
-                2,
-                dim=-1,
+            attention_prep = getattr(module, "_seu_attention_prep_decode", None)
+            prepared = (
+                attention_prep(hidden_states, cosine, sine)
+                if callable(attention_prep)
+                else None
             )
-            gate = gate.reshape(*input_shape, -1)
-            query_states = query_states.view(hidden_shape)
-            key_states = module.k_proj(hidden_states).view(hidden_shape)
-            value_states = (
-                module.v_proj(hidden_states).view(hidden_shape).transpose(1, 2)
-            )
-            query_states, key_states = self.qk_rmsnorm_rope_decode(
-                query_states,
-                key_states,
-                module.q_norm.weight,
-                module.k_norm.weight,
-                cosine,
-                sine,
-                module.q_norm.eps,
-            )
+            if prepared is not None:
+                query_states, key_states, value_states, gate = prepared
+                gate_has_head_dimension = True
+            else:
+                query_states, gate = torch.chunk(
+                    module.q_proj(hidden_states).view(
+                        *input_shape, -1, module.head_dim * 2
+                    ),
+                    2,
+                    dim=-1,
+                )
+                gate = gate.reshape(*input_shape, -1)
+                gate_has_head_dimension = False
+                query_states = query_states.view(hidden_shape)
+                key_states = module.k_proj(hidden_states).view(hidden_shape)
+                value_states = (
+                    module.v_proj(hidden_states).view(hidden_shape).transpose(1, 2)
+                )
+                query_states, key_states = self.qk_rmsnorm_rope_decode(
+                    query_states,
+                    key_states,
+                    module.q_norm.weight,
+                    module.k_norm.weight,
+                    cosine,
+                    sine,
+                    module.q_norm.eps,
+                )
 
             if past_key_values is not None:
                 key_states, value_states = past_key_values.update(
@@ -559,8 +570,16 @@ class PPUGDNLibrary:
                 scaling=module.scaling,
                 **kwargs,
             )
-            attn_output = attn_output.reshape(*input_shape, -1).contiguous()
-            attn_output = attn_output * torch.sigmoid(gate)
+            if gate_has_head_dimension:
+                attn_output = attn_output.reshape(
+                    *input_shape, -1, module.head_dim
+                )
+                attn_output = (attn_output * torch.sigmoid(gate)).reshape(
+                    *input_shape, -1
+                )
+            else:
+                attn_output = attn_output.reshape(*input_shape, -1).contiguous()
+                attn_output = attn_output * torch.sigmoid(gate)
             return module.o_proj(attn_output), attn_weights
 
         return fused_attention_forward

@@ -204,15 +204,21 @@ class VLMModel:
         self._ppu_residual_rmsnorm_modules = 0
         self._ppu_gdn_gate_prep_modules = 0
         self._ppu_acblas_packed_mlp_modules = 0
+        self._ppu_acblas_attention_prep_modules = 0
         self._ppu_gdn_projection_backend = "disabled"
         self._ppu_gdn_projection_groups = "disabled"
         gdn_library_path = os.getenv("SEU_PPU_GDN_LIBRARY")
         acblas_packed_mlp_build_dir = os.getenv(
             "SEU_PPU_ACBLAS_PACKED_MLP_BUILD_DIR"
         )
-        if acblas_packed_mlp_build_dir and not gdn_library_path:
+        acblas_attention_prep_build_dir = os.getenv(
+            "SEU_PPU_ACBLAS_ATTENTION_PREP_BUILD_DIR"
+        )
+        if (
+            acblas_packed_mlp_build_dir or acblas_attention_prep_build_dir
+        ) and not gdn_library_path:
             raise RuntimeError(
-                "SEU PPU acBLAS packed MLP requires SEU_PPU_GDN_LIBRARY"
+                "SEU PPU acBLAS fused extensions require SEU_PPU_GDN_LIBRARY"
             )
         if gdn_library_path:
             custom_op_dir = Path(
@@ -279,6 +285,35 @@ class VLMModel:
                         "SEU PPU q/k RMSNorm+RoPE expected 6 attention modules, "
                         f"patched {self._ppu_qk_rope_patched_modules}"
                     )
+            if acblas_attention_prep_build_dir:
+                if self._ppu_qk_rope_patched_modules != 6:
+                    raise RuntimeError(
+                        "SEU PPU acBLAS attention prep requires "
+                        "SEU_PPU_QK_ROPE_ENABLE=1"
+                    )
+                from ppu_acblas_attention_prep import (
+                    PPUACBLASAttentionPrepExtension,
+                )
+
+                attention_extension = PPUACBLASAttentionPrepExtension(
+                    acblas_attention_prep_build_dir,
+                    algorithm=int(
+                        os.getenv(
+                            "SEU_PPU_ACBLAS_ATTENTION_PREP_ALGORITHM", "-1"
+                        )
+                    ),
+                )
+                for module in self._model.modules():
+                    if type(module).__name__ != "Qwen3_5Attention":
+                        continue
+                    attention_extension.patch_module(module)
+                    self._ppu_acblas_attention_prep_modules += 1
+                if self._ppu_acblas_attention_prep_modules != 6:
+                    raise RuntimeError(
+                        "SEU PPU acBLAS attention prep expected 6 modules, "
+                        f"patched {self._ppu_acblas_attention_prep_modules}"
+                    )
+                torch.cuda.empty_cache()
             self._ppu_rmsnorm_patched_modules = 0
             if os.getenv("SEU_PPU_RMSNORM_ENABLE", "0") == "1":
                 for module_name, module in self._model.named_modules():
@@ -608,6 +643,9 @@ class VLMModel:
                 ),
                 "ppu_acblas_packed_mlp_modules": getattr(
                     self, "_ppu_acblas_packed_mlp_modules", 0
+                ),
+                "ppu_acblas_attention_prep_modules": getattr(
+                    self, "_ppu_acblas_attention_prep_modules", 0
                 ),
                 "ppu_packed_gdn_projection_modules": getattr(
                     self, "_ppu_packed_gdn_projection_modules", 0

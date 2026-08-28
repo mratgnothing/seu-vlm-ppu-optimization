@@ -73,6 +73,9 @@ class PPUACBLASPackedMLPExtension:
         gate_up_algorithm = self.gate_up_algorithm
         down_algorithm = self.down_algorithm
         swiglu_threads = self.swiglu_threads
+        expected_stream = torch.cuda.current_stream(
+            device=packed_weight.device
+        ).cuda_stream
 
         def acblas_packed_forward(input_tensor: torch.Tensor) -> torch.Tensor:
             if (
@@ -89,6 +92,7 @@ class PPUACBLASPackedMLPExtension:
                     module._seu_acblas_packed_projected,
                     module._seu_acblas_packed_activated,
                     module._seu_acblas_packed_output,
+                    expected_stream,
                     gate_up_algorithm,
                     down_algorithm,
                     swiglu_threads,

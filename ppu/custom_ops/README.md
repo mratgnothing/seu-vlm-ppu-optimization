@@ -52,6 +52,13 @@ gate/up GEMV、bit-exact HGGC SwiGLU 和 down GEMV，并复用每层三个 scrat
 和 20/20 获胜，成对中位 `1.1212x/1.1122x`。该候选已接入显式 wrapper 开关，详见
 [`2026-08-28-ppu-acblas-packed-mlp.md`](../../docs/experiments/2026-08-28-ppu-acblas-packed-mlp.md)。
 
+继续把相同边界策略应用到 6 个全注意力层：单入口依次提交 Q/K/V 三个原形状
+acBLAS GEMV，再调用已验证的 Q/K RMSNorm+RoPE 核。真实模块 Q/K/V/gate 与 prefill
+均 bit-exact，强化 smoke 模块边界 `4.1006x`，memcheck 0 errors；固定长 56 对合并中位
+仅 `1.0047x`，CN20 两轮中位 `1.0158x/0.9852x`，第二轮门禁失败，故默认关闭并作为
+负实验保留。
+详见 [`2026-08-28-ppu-acblas-attention-prep.md`](../../docs/experiments/2026-08-28-ppu-acblas-attention-prep.md)。
+
 此外，本目录提供一个不新增 HGGC kernel 的 packed-MLP decode 路径：24 个 MLP 的
 `gate_proj` 和 `up_proj` 权重拼成共享存储 `[12288, 2048]`，decode 时把两次
 `2048→6144` 线性投影合成一次 `2048→12288`，再 split、SiLU、逐元素乘和
@@ -97,6 +104,13 @@ python build_acblas_packed_mlp_extension.py
 python smoke_acblas_packed_mlp_module.py \
   --build-dir build/acblas_packed_mlp_extension \
   --warmup 10 --iters 100
+SEU_PPU_GDN_LIBRARY="$PWD/build/libseu_ppu_gdn.so" \
+  python build_acblas_attention_prep_extension.py
+python smoke_acblas_attention_prep_module.py \
+  --model-path /path/to/Qwen3.5-2B \
+  --gdn-library "$PWD/build/libseu_ppu_gdn.so" \
+  --build-dir build/acblas_attention_prep_extension \
+  --warmup 20 --iters 400
 ```
 
 每个 smoke 都先与当前 Transformers eager 逐元素比较，再计时；数值失败时返回非零。
@@ -115,6 +129,7 @@ bit-exact，GDN 最大 state/output 误差为 `5.96e-8 / 0`。
 | q/k RMSNorm+RoPE，真实 query stride | 0.20616 | 0.026680 | 7.73x |
 | packed MLP gate/up projection | 0.04537 | 0.03997 | 1.135x |
 | 单入口 packed MLP（两 GEMV + SwiGLU） | 0.041666 | 0.033907 | 1.229x |
+| 单入口 Attention Prep（Q/K/V + QK Norm/RoPE） | 0.080652 | 0.019668 | 4.101x |
 
 packed-MLP smoke 的 decode/prefill 均 bit-exact，gate/up 两个参数均确认复用 packed
 storage，重打包后的常驻显存增量为 20 KiB（allocator 元数据/对齐量级）。
@@ -164,6 +179,13 @@ export SEU_PPU_ACBLAS_PACKED_MLP_BUILD_DIR="$PWD/ppu/custom_ops/build/acblas_pac
 export SEU_PPU_ACBLAS_PACKED_MLP_SWIGLU_THREADS=128
 ```
 
+实验性启用 Attention Prep（当前只允许单请求、patch-time stream 串行 decode）：
+
+```bash
+export SEU_PPU_ACBLAS_ATTENTION_PREP_BUILD_DIR="$PWD/ppu/custom_ops/build/acblas_attention_prep_extension"
+export SEU_PPU_ACBLAS_ATTENTION_PREP_ALGORITHM=-1
+```
+
 两种 GDN projection backend 互斥；同时设置时 wrapper 会立即报错。
 
 随后照常运行 `benchmark_public.py`。`GenerationResult.meta` 会记录实际挂载的
@@ -171,6 +193,7 @@ GDN/conv/RMSNorm/gated-RMSNorm/qk-RoPE/packed-MLP/packed-GDN 模块数，预期�
 `18/18/49/18/6/24/18`。启用跨层融合时另应得到 24 个 decoder patch；启用
 gate-prep 时还应得到 18 个 gate-prep module patch。
 启用单入口 packed-MLP 时还应得到 24 个 `ppu_acblas_packed_mlp_modules`。
+启用 Attention Prep 时还应得到 6 个 `ppu_acblas_attention_prep_modules`。
 grouped-acBLAS + residual-RMSNorm 正式单样本冒烟已得到完整计数，且
 `ppu_gdn_projection_backend` 为 `acblas-grouped`、公开校验无错误。
 

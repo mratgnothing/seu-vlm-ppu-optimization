@@ -24,6 +24,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--max-new-tokens", type=int, default=128)
     parser.add_argument("--force-max-new-tokens", action="store_true")
     parser.add_argument(
+        "--require-speedup",
+        action="store_true",
+        help="Fail the gate unless paired median and mean throughput both improve",
+    )
+    parser.add_argument(
         "--group-sizes",
         default="4",
         help="Comma-separated consecutive projection groups, for example 2,2",
@@ -40,6 +45,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--acblaslt-heuristic-index", type=int, default=25)
     parser.add_argument("--acblas-packed-mlp-build-dir", type=Path)
     parser.add_argument("--acblas-packed-mlp-swiglu-threads", type=int, default=128)
+    parser.add_argument("--acblas-attention-prep-build-dir", type=Path)
+    parser.add_argument("--acblas-attention-prep-algorithm", type=int, default=-1)
     targets = parser.add_mutually_exclusive_group()
     targets.add_argument(
         "--residual-rmsnorm-ab",
@@ -60,6 +67,11 @@ def parse_args() -> argparse.Namespace:
         "--acblas-packed-mlp-ab",
         action="store_true",
         help="Keep gate-prep stack on and A/B the one-entry packed MLP path",
+    )
+    targets.add_argument(
+        "--acblas-attention-prep-ab",
+        action="store_true",
+        help="Keep the packed-MLP stack on and A/B grouped attention prep",
     )
     return parser.parse_args()
 
@@ -160,6 +172,7 @@ def main() -> int:
         or args.gate_prep_ab
         or args.acblaslt_square_ab
         or args.acblas_packed_mlp_ab
+        or args.acblas_attention_prep_ab
     ):
         from ppu_gdn import (
             pack_qwen35_decoder_residual_rmsnorm,
@@ -187,7 +200,12 @@ def main() -> int:
                 f"expected 24 residual RMSNorm modules, got {len(residual_modules)}"
             )
     gate_prep_modules = []
-    if args.gate_prep_ab or args.acblaslt_square_ab or args.acblas_packed_mlp_ab:
+    if (
+        args.gate_prep_ab
+        or args.acblaslt_square_ab
+        or args.acblas_packed_mlp_ab
+        or args.acblas_attention_prep_ab
+    ):
         from ppu_gdn import pack_qwen35_gdn_gate_prep
 
         for module in packed_modules:
@@ -221,11 +239,11 @@ def main() -> int:
         named_modules = dict(model._model.named_modules())
         acblaslt_square_modules = [named_modules[name] for name in square_names]
     acblas_packed_mlp_modules = []
-    if args.acblas_packed_mlp_ab:
+    if args.acblas_packed_mlp_ab or args.acblas_attention_prep_ab:
         if args.acblas_packed_mlp_build_dir is None:
             raise ValueError(
                 "--acblas-packed-mlp-build-dir is required for "
-                "--acblas-packed-mlp-ab"
+                "the packed-MLP or attention-prep A/B target"
             )
         from ppu_acblas_packed_mlp import PPUACBLASPackedMLPExtension
 
@@ -242,6 +260,28 @@ def main() -> int:
                 "expected 24 acBLAS packed MLP modules, got "
                 f"{len(acblas_packed_mlp_modules)}"
             )
+    acblas_attention_prep_modules = []
+    if args.acblas_attention_prep_ab:
+        if args.acblas_attention_prep_build_dir is None:
+            raise ValueError(
+                "--acblas-attention-prep-build-dir is required for "
+                "--acblas-attention-prep-ab"
+            )
+        from ppu_acblas_attention_prep import PPUACBLASAttentionPrepExtension
+
+        attention_extension = PPUACBLASAttentionPrepExtension(
+            args.acblas_attention_prep_build_dir,
+            algorithm=args.acblas_attention_prep_algorithm,
+        )
+        for module in model._model.modules():
+            if type(module).__name__ == "Qwen3_5Attention":
+                attention_extension.patch_module(module)
+                acblas_attention_prep_modules.append(module)
+        if len(acblas_attention_prep_modules) != 6:
+            raise RuntimeError(
+                "expected 6 acBLAS attention-prep modules, got "
+                f"{len(acblas_attention_prep_modules)}"
+            )
     torch.cuda.empty_cache()
 
     def set_enabled(enabled: bool) -> None:
@@ -254,6 +294,7 @@ def main() -> int:
                     or args.gate_prep_ab
                     or args.acblaslt_square_ab
                     or args.acblas_packed_mlp_ab
+                    or args.acblas_attention_prep_ab
                 )
                 else enabled,
             )
@@ -262,6 +303,7 @@ def main() -> int:
             or args.gate_prep_ab
             or args.acblaslt_square_ab
             or args.acblas_packed_mlp_ab
+            or args.acblas_attention_prep_ab
         ):
             for module in residual_modules:
                 set_qwen35_decoder_residual_rmsnorm(
@@ -271,6 +313,7 @@ def main() -> int:
                         args.gate_prep_ab
                         or args.acblaslt_square_ab
                         or args.acblas_packed_mlp_ab
+                        or args.acblas_attention_prep_ab
                     )
                     else enabled,
                 )
@@ -278,6 +321,7 @@ def main() -> int:
             args.gate_prep_ab
             or args.acblaslt_square_ab
             or args.acblas_packed_mlp_ab
+            or args.acblas_attention_prep_ab
         ):
             from ppu_gdn import set_qwen35_gdn_gate_prep
 
@@ -285,7 +329,11 @@ def main() -> int:
                 set_qwen35_gdn_gate_prep(
                     module,
                     True
-                    if args.acblaslt_square_ab or args.acblas_packed_mlp_ab
+                    if (
+                        args.acblaslt_square_ab
+                        or args.acblas_packed_mlp_ab
+                        or args.acblas_attention_prep_ab
+                    )
                     else enabled,
                 )
         if args.acblaslt_square_ab:
@@ -302,6 +350,13 @@ def main() -> int:
                     if enabled
                     else module._seu_acblas_packed_mlp_original_forward
                 )
+        if args.acblas_attention_prep_ab:
+            for module in acblas_packed_mlp_modules:
+                module.forward = module._seu_acblas_packed_mlp_forward
+            for module in acblas_attention_prep_modules:
+                module._seu_attention_prep_decode = (
+                    module._seu_acblas_attention_prep_forward if enabled else None
+                )
 
     def run_once(enabled: bool, pair_index: int) -> dict[str, object]:
         set_enabled(enabled)
@@ -315,7 +370,9 @@ def main() -> int:
         )
         return {
             "mode": (
-                "acblas_packed_mlp"
+                "acblas_attention_prep"
+                if enabled and args.acblas_attention_prep_ab
+                else "acblas_packed_mlp"
                 if enabled and args.acblas_packed_mlp_ab
                 else "acblaslt_square"
                 if enabled and args.acblaslt_square_ab
@@ -361,8 +418,13 @@ def main() -> int:
     baseline_hashes = {str(r["text_sha256"]) for r in baseline_records}
     candidate_hashes = {str(r["text_sha256"]) for r in candidate_records}
     exact = len(baseline_hashes) == 1 and baseline_hashes == candidate_hashes
+    median_speedup = statistics.median(pair_ratios)
+    mean_speedup = statistics.fmean(pair_ratios)
+    performance_passed = median_speedup > 1.0 and mean_speedup > 1.0
     candidate_label = (
-        "acblas_packed_mlp"
+        "acblas_attention_prep"
+        if args.acblas_attention_prep_ab
+        else "acblas_packed_mlp"
         if args.acblas_packed_mlp_ab
         else "acblaslt_square"
         if args.acblaslt_square_ab
@@ -391,18 +453,26 @@ def main() -> int:
         "acblas_packed_mlp_modules": len(acblas_packed_mlp_modules),
         "acblas_packed_mlp_swiglu_threads": (
             args.acblas_packed_mlp_swiglu_threads
-            if args.acblas_packed_mlp_ab
+            if args.acblas_packed_mlp_ab or args.acblas_attention_prep_ab
+            else None
+        ),
+        "acblas_attention_prep_modules": len(acblas_attention_prep_modules),
+        "acblas_attention_prep_algorithm": (
+            args.acblas_attention_prep_algorithm
+            if args.acblas_attention_prep_ab
             else None
         ),
         "baseline": baseline,
         "paired_decode": {
-            "median_speedup": statistics.median(pair_ratios),
-            "mean_speedup": statistics.fmean(pair_ratios),
+            "median_speedup": median_speedup,
+            "mean_speedup": mean_speedup,
             "wins": sum(value > 1.0 for value in pair_ratios),
             "ratios": pair_ratios,
         },
         "exact_output_match": exact,
-        "passed": exact,
+        "performance_gate_required": args.require_speedup,
+        "performance_passed": performance_passed,
+        "passed": exact and (performance_passed or not args.require_speedup),
     }
     payload[candidate_label] = candidate
     if args.profile_output_dir:

@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import math
 import statistics
@@ -25,7 +26,8 @@ def main() -> int:
     parser.add_argument("input", type=Path)
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
-    payload = json.loads(args.input.read_text(encoding="utf-8"))
+    source_bytes = args.input.read_bytes()
+    payload = json.loads(source_bytes.decode("utf-8"))
     target = str(payload["ab_target"])
     baseline_records = payload["baseline"]["records"]
     candidate_records = payload[target]["records"]
@@ -48,6 +50,14 @@ def main() -> int:
         baseline["token_count"] == candidate["token_count"]
         for baseline, candidate in zip(baseline_records, candidate_records, strict=True)
     )
+    computed_performance_passed = (
+        statistics.median(ratios) > 1.0 and statistics.fmean(ratios) > 1.0
+    )
+    if (
+        "performance_passed" in payload
+        and bool(payload["performance_passed"]) != computed_performance_passed
+    ):
+        raise ValueError("payload performance_passed does not match paired records")
 
     def compact_mode(name: str, records: list[dict[str, object]]) -> dict[str, object]:
         return {
@@ -60,7 +70,8 @@ def main() -> int:
         }
 
     summary = {
-        "source": str(args.input),
+        "source": args.input.as_posix(),
+        "source_sha256": hashlib.sha256(source_bytes).hexdigest(),
         "sample_offset": int(payload["sample_offset"]),
         "sample_count": int(payload["sample_count"]),
         "max_new_tokens": int(payload["max_new_tokens"]),
@@ -77,6 +88,15 @@ def main() -> int:
                     )
                 }
                 if "acblas_packed_mlp_modules" in payload
+                else {}
+            ),
+            **(
+                {
+                    "acblas_attention_prep": int(
+                        payload["acblas_attention_prep_modules"]
+                    )
+                }
+                if "acblas_attention_prep_modules" in payload
                 else {}
             ),
         },
@@ -101,6 +121,16 @@ def main() -> int:
             "same_token_count": token_count_pairs,
             "total": len(ratios),
         },
+        **(
+            {
+                "performance_gate_required": bool(
+                    payload["performance_gate_required"]
+                ),
+                "performance_passed": computed_performance_passed,
+            }
+            if "performance_gate_required" in payload
+            else {}
+        ),
         "passed": bool(payload["passed"]),
     }
     args.output.parent.mkdir(parents=True, exist_ok=True)

@@ -18,6 +18,10 @@ Qwen3.5-2B 的 decode MLP 已实现一个结构专用候选：在一次 PyTorch 
 - 中文完整公开集 4029/4029 文本、答案和 token 数一致，两路 Accuracy 均为
   3374/4029；平均吞吐 `109.993→122.445 token/s`，成对中位 `1.1125x`、
   平均 `1.1146x`，3939/4029 获胜，P05 仍为 `1.0314x`。
+- 英文完整公开集同样 4029/4029 文本、答案和 token 数一致，两路 Accuracy 均为
+  3214/4029；平均吞吐 `107.276→118.964 token/s`，成对中位 `1.1093x`、
+  平均 `1.1132x`，3806/4029 获胜。P05 为 `0.9903x`，说明少数短样本仍受测量
+  抖动影响，但完整集均值、中位数和胜率方向一致。
 
 这些结果只适用于当前公开集、单请求串行 decode 和当前 PPU 镜像，不能外推为主办方
 私有集成绩。
@@ -76,6 +80,12 @@ CN20 独立两轮：
 |---:|---:|---:|---:|---:|---:|---:|
 | 109.993 | 122.445 | `1.1125x/1.1146x` | `1.0314x` | 3939/4029 | 3374/4029（两路） | 4029/4029 |
 
+完整英文公开集使用相同 paired A/B 口径：
+
+| baseline token/s | candidate token/s | 成对中位/均值 | P05 | 获胜 | Accuracy | exact |
+|---:|---:|---:|---:|---:|---:|---:|
+| 107.276 | 118.964 | `1.1093x/1.1132x` | `0.9903x` | 3806/4029 | 3214/4029（两路） | 4029/4029 |
+
 ## Profile 机制证据
 
 同一 16-token profile；首 token 为 prefill，因此 decode 有 15 步：
@@ -131,5 +141,7 @@ bash ppu/microbench/run_acblas_packed_mlp_full_gate.sh
 - `results/acblas-packed-mlp-profile-candidate-summary-20260828.json`
 - `results/acblas-packed-mlp-formal-wrapper-smoke-20260828.json`
 - `results/acblas-packed-mlp-cn-full4029-summary.json`
+- `results/acblas-packed-mlp-en20-stream-guard-summary-20260828.json`
+- `results/acblas-packed-mlp-en-full4029-summary-20260828.json`
 - `results/acblas-packed-mlp-final-formal-wrapper-smoke-20260828.json`
 - `results/acblas-packed-mlp-final-memcheck-20260828.txt`

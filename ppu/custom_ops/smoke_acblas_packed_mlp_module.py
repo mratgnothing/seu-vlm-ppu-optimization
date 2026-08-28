@@ -61,6 +61,15 @@ def main() -> int:
         extension.patch_module(module)
         actual_decode = module(decode_input).clone()
         actual_prefill = module(prefill_input).clone()
+        alternate_stream = torch.cuda.Stream(device=device)
+        alternate_stream_rejected = False
+        alternate_stream_error = ""
+        with torch.cuda.stream(alternate_stream):
+            try:
+                module(decode_input)
+            except RuntimeError as error:
+                alternate_stream_error = str(error)
+                alternate_stream_rejected = "bound to one CUDA stream" in str(error)
         baseline_ms = measure(lambda: baseline_forward(decode_input), args.warmup, args.iters)
         candidate_ms = measure(lambda: module(decode_input), args.warmup, args.iters)
         first_ptr = module(decode_input).data_ptr()
@@ -75,11 +84,14 @@ def main() -> int:
         "prefill_exact": torch.equal(expected_prefill, actual_prefill),
         "max_abs_error": float((expected_decode.float() - actual_decode.float()).abs().max()),
         "output_scratch_reused": first_ptr == second_ptr,
+        "alternate_stream_rejected": alternate_stream_rejected,
+        "alternate_stream_error": alternate_stream_error,
     }
     result["passed"] = bool(
         result["decode_exact"]
         and result["prefill_exact"]
         and result["output_scratch_reused"]
+        and result["alternate_stream_rejected"]
     )
     print("RESULT " + json.dumps(result, sort_keys=True))
     return 0 if result["passed"] else 1

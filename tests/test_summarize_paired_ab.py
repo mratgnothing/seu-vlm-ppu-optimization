@@ -1,4 +1,5 @@
 import json
+import hashlib
 import subprocess
 import sys
 import tempfile
@@ -54,6 +55,9 @@ class SummarizePairedABTest(unittest.TestCase):
             "residual_rmsnorm_modules": 24,
             "gdn_gate_prep_modules": 18,
             "acblas_packed_mlp_modules": 24,
+            "acblas_attention_prep_modules": 6,
+            "performance_gate_required": True,
+            "performance_passed": False,
             "baseline": {
                 "avg_ttft_ms": 10.0,
                 "avg_throughput_tokens_per_sec": 90.0,
@@ -72,6 +76,7 @@ class SummarizePairedABTest(unittest.TestCase):
             input_path = Path(directory) / "input.json"
             output_path = Path(directory) / "summary.json"
             input_path.write_text(json.dumps(payload), encoding="utf-8")
+            expected_source_sha256 = hashlib.sha256(input_path.read_bytes()).hexdigest()
             subprocess.run(
                 [
                     sys.executable,
@@ -95,6 +100,13 @@ class SummarizePairedABTest(unittest.TestCase):
         self.assertEqual(summary["pair_consistency"]["same_answer"], 2)
         self.assertEqual(summary["pair_consistency"]["same_token_count"], 2)
         self.assertEqual(summary["module_counts"]["acblas_packed_mlp"], 24)
+        self.assertEqual(summary["module_counts"]["acblas_attention_prep"], 6)
+        self.assertTrue(summary["performance_gate_required"])
+        self.assertFalse(summary["performance_passed"])
+        self.assertEqual(
+            summary["source_sha256"],
+            expected_source_sha256,
+        )
 
 
 if __name__ == "__main__":

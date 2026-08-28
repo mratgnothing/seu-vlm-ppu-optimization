@@ -13,7 +13,7 @@
    packed MLP 24、单入口 acBLAS packed-MLP 24、grouped-GDN 18、decoder 24、
    gate-prep 18。
 2. grouped-acBLAS GDN + 48-edge residual-RMSNorm + gate-prep + 单入口 packed-MLP 的
-   中文完整公开集已 4029/4029 exact；下一步补英文公开集或按主办方要求进入私有集门禁。
+   中英文完整公开集均已 4029/4029 exact；下一步按主办方要求进入私有集门禁。
 3. 获取主办方私有门禁和最终镜像，固定一次“提交候选”而不是继续追逐小样本噪声。
 
 ## P1：真正减少内存中间量和 launch
@@ -40,6 +40,13 @@ GEMM 路线受阻，不再为省一次 launch 把它强行并入 recurrent kerne
 `empty_strided=4391`、`cudaFree=3259` 和大量 clone/copy；下一步继续扩展到 qkv、
 gate 和 norm，但必须先验证多请求并发下的 stream/alias 生命周期。
 
+首个扩展候选已经覆盖 6 个全注意力层的 Q/K/V 投影与 Q/K RMSNorm+RoPE：模块级
+bit-exact、memcheck 0 errors，并以 patch-time stream guard 明确限制为单流串行 decode。
+模块边界虽为 `4.1006x`，固定长 56 对合并中位仅 `1.0047x`，CN20 两轮中位
+`1.0158x/0.9852x`、方向不一致，已按停止规则作为“模块快、整模不快”的负实验保留。
+下一步不再扩展同类 per-layer scratch，除非能把多个注意力层或 cache 更新纳入更大的
+运行时/图边界。
+
 ## P2：运行时与调度
 
 1. 把多次 ctypes/Python 调用聚合到一个 C++/pybind decode step，减少 dispatcher、
@@ -63,8 +70,9 @@ gate 和 norm，但必须先验证多请求并发下的 stream/alias 生命周�
 gate-prep 与 acBLASLt heuristic 调查均已完成；方阵整模负实验已止损。当前正收益
 来自单入口 packed-MLP：不减少 GEMV 数，但消除 720 次 Linear/ATen 入口和 360 次
 elementwise launch；4029 门禁已以 4029/4029 exact、成对中位 `1.1125x` 通过。
-下一优先级是厂商自定义 SwiGLU epilogue，直接消除 projected/activated 中间张量；
-其次才是 grouped/batched GEMV 或权重预打包。
+Attention Prep 边界已完成并因 CN20 两轮方向不一致止损。下一优先级仍是厂商自定义
+SwiGLU epilogue，直接消除 projected/activated 中间张量；其次是官方 PPU-vLLM/FLA
+custom-op/graph 接口，最后才是有正式 API 支撑的 grouped/batched GEMV 或权重预打包。
 独立 SwiGLU、自写通用 GEMV、通用 acBLAS Linear 和 acBLASLt 方阵均已有负结果，
 不重复线程或 heuristic 盲搜。
 

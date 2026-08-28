@@ -24,6 +24,7 @@ torch::Tensor packed_mlp_bf16_into(
     torch::Tensor projected,
     torch::Tensor activated,
     torch::Tensor output,
+    int64_t expected_stream,
     int64_t gate_up_algorithm,
     int64_t down_algorithm,
     int64_t swiglu_threads) {
@@ -66,6 +67,11 @@ torch::Tensor packed_mlp_bf16_into(
       "all tensors must be contiguous");
 
   void* stream = at::cuda::getCurrentCUDAStream(input.get_device()).stream();
+  TORCH_CHECK(
+      reinterpret_cast<uintptr_t>(stream) ==
+          static_cast<uintptr_t>(expected_stream),
+      "acBLAS packed MLP persistent scratch is bound to one CUDA stream; "
+      "use the stream active when the module was patched");
   const int status = seu_acblas_packed_mlp_bf16(
       static_cast<const uint16_t*>(packed_gate_up_weight.data_ptr()),
       static_cast<const uint16_t*>(down_weight.data_ptr()),

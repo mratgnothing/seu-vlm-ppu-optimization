@@ -145,7 +145,15 @@
   中 `aten::linear/mm` 各减少 720 次、launch 减少 360 次，GEMV 数保持不变；
   中文完整集两路 Accuracy 均为 3374/4029，4029/4029 文本、答案和 token 数一致，
   平均吞吐 `109.993→122.445 token/s`、成对中位 `1.1125x`，3939/4029 获胜。
+  英文完整公开集也以 4029/4029 exact 通过：两路 Accuracy 均为 3214/4029，平均
+  吞吐 `107.276→118.964 token/s`、成对中位 `1.1093x`，3806/4029 获胜。
   最终重编译的 memcheck 为 0 errors，正式 wrapper meta 记录 24 个新模块。
+- 完成 6 个全注意力层的单入口 Attention Prep 负实验：保留 Q/K/V 三个原形状 BF16
+  GEMV，并在同一 extension 入口调用既有 Q/K RMSNorm+RoPE。真实模块 Q/K/V/gate、
+  prefill 回退、scratch 复用、异流拒绝和 memcheck 均通过；强化 smoke 的模块边界为
+  `0.080652→0.019668 ms`（`4.1006x`）。然而固定 128-token 56 对合并中位仅
+  `1.0047x`，CN20 两轮中位为 `1.0158x/0.9852x`，第二轮严格性能门禁失败。
+  按规则停止 profile 与完整集，候选保持默认关闭。
 - 最终正式 wrapper 单样本 smoke 为真实 Transformers/PPU backend、公开校验通过，
   模块计数为 `18/18/49/18/6/24/24/18/24/18`；46 项无模型单元测试全部通过。
 - 独立 BF16 SwiGLU HGGC 核在 `[1,1,6144]` 上四组线程均 bit-exact，但最优仅
@@ -164,6 +172,7 @@
   [residual-add + RMSNorm](experiments/2026-08-27-ppu-residual-rmsnorm.md)、
   [GDN gate-prep](experiments/2026-08-28-ppu-gdn-gate-prep.md)、
   [单入口 acBLAS packed-MLP](experiments/2026-08-28-ppu-acblas-packed-mlp.md)、
+  [Attention Prep 单入口融合](experiments/2026-08-28-ppu-acblas-attention-prep.md)、
   [acBLASLt Matmul 负实验](experiments/2026-08-28-ppu-acblaslt-matmul.md)、
   [SwiGLU 负实验](experiments/2026-08-27-ppu-swiglu-negative.md)、
   [资源释放与恢复](ppu-resource-release-handoff.md) 和 [未来路线](ppu-future-roadmap.md)。

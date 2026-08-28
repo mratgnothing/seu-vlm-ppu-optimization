@@ -160,6 +160,10 @@ packed gate/up GEMV、HGGC SwiGLU 和 down GEMV。固定 128-token 八对 8/8 �
 Accuracy 均为 3374/4029，4029/4029 文本、答案和 token 数一致；平均吞吐
 `109.993→122.445 token/s`，成对中位 `1.1125x`、3939/4029 获胜。
 
+英文完整公开集也以相同口径通过：两路 Accuracy 均为 3214/4029，4029/4029
+文本、答案和 token 数一致；平均吞吐 `107.276→118.964 token/s`，成对中位
+`1.1093x`、3806/4029 获胜。
+
 - [`acblas-packed-mlp-smoke-20260828.json`](acblas-packed-mlp-smoke-20260828.json)
 - [`acblas-packed-mlp-memcheck-20260828.txt`](acblas-packed-mlp-memcheck-20260828.txt)
 - [`acblas-packed-mlp-ab128-20260828.json`](acblas-packed-mlp-ab128-20260828.json)
@@ -170,9 +174,30 @@ Accuracy 均为 3374/4029，4029/4029 文本、答案和 token 数一致；平�
 - [`acblas-packed-mlp-profile-candidate-summary-20260828.json`](acblas-packed-mlp-profile-candidate-summary-20260828.json)
 - [`acblas-packed-mlp-formal-wrapper-smoke-20260828.json`](acblas-packed-mlp-formal-wrapper-smoke-20260828.json)
 - [`acblas-packed-mlp-cn-full4029-summary.json`](acblas-packed-mlp-cn-full4029-summary.json)
+- [`acblas-packed-mlp-en20-stream-guard-summary-20260828.json`](acblas-packed-mlp-en20-stream-guard-summary-20260828.json)
+- [`acblas-packed-mlp-en-full4029-summary-20260828.json`](acblas-packed-mlp-en-full4029-summary-20260828.json)
 - [`acblas-packed-mlp-final-formal-wrapper-smoke-20260828.json`](acblas-packed-mlp-final-formal-wrapper-smoke-20260828.json)
 - [`acblas-packed-mlp-final-memcheck-20260828.txt`](acblas-packed-mlp-final-memcheck-20260828.txt)
 - [实验说明](../docs/experiments/2026-08-28-ppu-acblas-packed-mlp.md)
+
+## PPU Attention Prep 单入口融合
+
+6 个全注意力层的 Q/K/V 三次 GEMV 与既有 Q/K RMSNorm+RoPE 被放入一次 extension
+入口，运算和 BF16 舍入顺序不变。强化 smoke 的真实模块边界
+`0.080652→0.019668 ms`，即 `4.1006x`；Q/K/V/gate 与 prefill 均 bit-exact，最大
+绝对误差 0，prefill 回退、scratch 复用、异流提交前拒绝均通过，`hggc-memcheck`
+为 0 errors。固定 128-token 三组共 56 对全部全文一致，合并中位仅 `1.0047x`；
+CN20 r1 为 `1.0158x`，r2 为 `0.9852x`，第二轮严格门禁失败。候选因此停止 profile
+和完整集，保持默认关闭。
+
+- [`acblas-attention-prep-smoke-20260828.json`](acblas-attention-prep-smoke-20260828.json)
+- [`acblas-attention-prep-memcheck-20260828.txt`](acblas-attention-prep-memcheck-20260828.txt)
+- [`acblas-attention-prep-ab128-20260828.json`](acblas-attention-prep-ab128-20260828.json)
+- [`acblas-attention-prep-ab128-r2-20260828.json`](acblas-attention-prep-ab128-r2-20260828.json)
+- [`acblas-attention-prep-ab128-r3-20260828.json`](acblas-attention-prep-ab128-r3-20260828.json)
+- [`acblas-attention-prep-cn20-r1-20260828.json`](acblas-attention-prep-cn20-r1-20260828.json)
+- [`acblas-attention-prep-cn20-r2-20260828.json`](acblas-attention-prep-cn20-r2-20260828.json)
+- [实验说明](../docs/experiments/2026-08-28-ppu-acblas-attention-prep.md)
 
 ## PPU acBLASLt Matmul 负实验
 
