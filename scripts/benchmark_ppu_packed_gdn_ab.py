@@ -54,6 +54,11 @@ def parse_args() -> argparse.Namespace:
         help="Keep the selected GDN projection backend on and A/B residual RMSNorm",
     )
     targets.add_argument(
+        "--residual-rmsnorm-scratch-ab",
+        action="store_true",
+        help="Keep fused residual RMSNorm on and A/B persistent output scratch",
+    )
+    targets.add_argument(
         "--gate-prep-ab",
         action="store_true",
         help="Keep projections/residual RMSNorm on and A/B GDN gate preparation",
@@ -169,6 +174,7 @@ def main() -> int:
     residual_modules = []
     if (
         args.residual_rmsnorm_ab
+        or args.residual_rmsnorm_scratch_ab
         or args.gate_prep_ab
         or args.acblaslt_square_ab
         or args.acblas_packed_mlp_ab
@@ -177,6 +183,7 @@ def main() -> int:
         from ppu_gdn import (
             pack_qwen35_decoder_residual_rmsnorm,
             set_qwen35_decoder_residual_rmsnorm,
+            set_qwen35_decoder_residual_rmsnorm_scratch,
         )
 
         decoder_modules = [
@@ -202,6 +209,7 @@ def main() -> int:
     gate_prep_modules = []
     if (
         args.gate_prep_ab
+        or args.residual_rmsnorm_scratch_ab
         or args.acblaslt_square_ab
         or args.acblas_packed_mlp_ab
         or args.acblas_attention_prep_ab
@@ -239,7 +247,11 @@ def main() -> int:
         named_modules = dict(model._model.named_modules())
         acblaslt_square_modules = [named_modules[name] for name in square_names]
     acblas_packed_mlp_modules = []
-    if args.acblas_packed_mlp_ab or args.acblas_attention_prep_ab:
+    if (
+        args.acblas_packed_mlp_ab
+        or args.acblas_attention_prep_ab
+        or args.residual_rmsnorm_scratch_ab
+    ):
         if args.acblas_packed_mlp_build_dir is None:
             raise ValueError(
                 "--acblas-packed-mlp-build-dir is required for "
@@ -291,6 +303,7 @@ def main() -> int:
                 True
                 if (
                     args.residual_rmsnorm_ab
+                    or args.residual_rmsnorm_scratch_ab
                     or args.gate_prep_ab
                     or args.acblaslt_square_ab
                     or args.acblas_packed_mlp_ab
@@ -300,6 +313,7 @@ def main() -> int:
             )
         if (
             args.residual_rmsnorm_ab
+            or args.residual_rmsnorm_scratch_ab
             or args.gate_prep_ab
             or args.acblaslt_square_ab
             or args.acblas_packed_mlp_ab
@@ -310,15 +324,20 @@ def main() -> int:
                     module,
                     True
                     if (
-                        args.gate_prep_ab
+                        args.residual_rmsnorm_scratch_ab
+                        or args.gate_prep_ab
                         or args.acblaslt_square_ab
                         or args.acblas_packed_mlp_ab
                         or args.acblas_attention_prep_ab
                     )
                     else enabled,
                 )
+                set_qwen35_decoder_residual_rmsnorm_scratch(
+                    module, enabled if args.residual_rmsnorm_scratch_ab else False
+                )
         if (
             args.gate_prep_ab
+            or args.residual_rmsnorm_scratch_ab
             or args.acblaslt_square_ab
             or args.acblas_packed_mlp_ab
             or args.acblas_attention_prep_ab
@@ -333,6 +352,7 @@ def main() -> int:
                         args.acblaslt_square_ab
                         or args.acblas_packed_mlp_ab
                         or args.acblas_attention_prep_ab
+                        or args.residual_rmsnorm_scratch_ab
                     )
                     else enabled,
                 )
@@ -343,13 +363,9 @@ def main() -> int:
                     if enabled
                     else module._seu_acblaslt_square_original_forward
                 )
-        if args.acblas_packed_mlp_ab:
+        if args.acblas_packed_mlp_ab or args.residual_rmsnorm_scratch_ab:
             for module in acblas_packed_mlp_modules:
-                module.forward = (
-                    module._seu_acblas_packed_mlp_forward
-                    if enabled
-                    else module._seu_acblas_packed_mlp_original_forward
-                )
+                module.forward = module._seu_acblas_packed_mlp_forward
         if args.acblas_attention_prep_ab:
             for module in acblas_packed_mlp_modules:
                 module.forward = module._seu_acblas_packed_mlp_forward
@@ -378,6 +394,8 @@ def main() -> int:
                 if enabled and args.acblaslt_square_ab
                 else "gdn_gate_prep"
                 if enabled and args.gate_prep_ab
+                else "residual_rmsnorm_scratch"
+                if enabled and args.residual_rmsnorm_scratch_ab
                 else "residual_rmsnorm"
                 if enabled and args.residual_rmsnorm_ab
                 else "packed_gdn"
@@ -430,6 +448,8 @@ def main() -> int:
         if args.acblaslt_square_ab
         else "gdn_gate_prep"
         if args.gate_prep_ab
+        else "residual_rmsnorm_scratch"
+        if args.residual_rmsnorm_scratch_ab
         else "residual_rmsnorm"
         if args.residual_rmsnorm_ab
         else "packed_gdn"
@@ -444,6 +464,9 @@ def main() -> int:
         "projection_backend": args.projection_backend,
         "ab_target": candidate_label,
         "residual_rmsnorm_modules": len(residual_modules),
+        "residual_rmsnorm_scratch_modules": (
+            len(residual_modules) if args.residual_rmsnorm_scratch_ab else 0
+        ),
         "gdn_gate_prep_modules": len(gate_prep_modules),
         "acblaslt_square_modules": len(acblaslt_square_modules),
         "acblaslt_square_shape_counts": acblaslt_square_shape_counts,
@@ -453,7 +476,11 @@ def main() -> int:
         "acblas_packed_mlp_modules": len(acblas_packed_mlp_modules),
         "acblas_packed_mlp_swiglu_threads": (
             args.acblas_packed_mlp_swiglu_threads
-            if args.acblas_packed_mlp_ab or args.acblas_attention_prep_ab
+            if (
+                args.acblas_packed_mlp_ab
+                or args.acblas_attention_prep_ab
+                or args.residual_rmsnorm_scratch_ab
+            )
             else None
         ),
         "acblas_attention_prep_modules": len(acblas_attention_prep_modules),

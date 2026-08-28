@@ -55,6 +55,7 @@ def main() -> int:
     weight = torch.randn(HIDDEN_SIZE, device=device, dtype=torch.bfloat16) * 0.02
     epsilon = 1.0e-6
     library = PPUGDNLibrary(args.library, rmsnorm_threads=args.threads)
+    normalized_scratch = torch.empty_like(residual)
 
     with torch.inference_mode():
         expected_residual = residual + update_source
@@ -63,12 +64,19 @@ def main() -> int:
         )
         actual_update = update_source.clone()
         actual_residual, actual_normalized = library.residual_rmsnorm_decode(
-            residual, actual_update, weight, epsilon
+            residual,
+            actual_update,
+            weight,
+            epsilon,
+            normalized_output=normalized_scratch,
         )
         baseline_updates = [
             update_source.clone() for _ in range(args.warmup + args.iters)
         ]
         candidate_updates = [
+            update_source.clone() for _ in range(args.warmup + args.iters)
+        ]
+        scratch_updates = [
             update_source.clone() for _ in range(args.warmup + args.iters)
         ]
 
@@ -81,8 +89,22 @@ def main() -> int:
                 residual, update, weight, epsilon
             )[1]
 
+        def scratch_candidate(update: torch.Tensor) -> torch.Tensor:
+            return library.residual_rmsnorm_decode(
+                residual,
+                update,
+                weight,
+                epsilon,
+                normalized_output=normalized_scratch,
+            )[1]
+
         baseline_ms = measure(baseline, baseline_updates, args.warmup, args.iters)
         candidate_ms = measure(candidate, candidate_updates, args.warmup, args.iters)
+        scratch_ms = measure(
+            scratch_candidate, scratch_updates, args.warmup, args.iters
+        )
+        first_ptr = scratch_candidate(update_source.clone()).data_ptr()
+        second_ptr = scratch_candidate(update_source.clone()).data_ptr()
 
     residual_exact = torch.equal(expected_residual, actual_residual)
     normalized_exact = torch.equal(expected_normalized, actual_normalized)
@@ -92,12 +114,18 @@ def main() -> int:
         "baseline_ms": baseline_ms,
         "candidate_ms": candidate_ms,
         "speedup": baseline_ms / candidate_ms,
+        "scratch_ms": scratch_ms,
+        "scratch_over_candidate_speedup": candidate_ms / scratch_ms,
         "residual_exact": residual_exact,
         "normalized_exact": normalized_exact,
         "inplace_update": actual_residual.data_ptr() == actual_update.data_ptr(),
+        "normalized_scratch_reused": first_ptr == second_ptr,
     }
     payload["passed"] = (
-        residual_exact and normalized_exact and payload["inplace_update"]
+        residual_exact
+        and normalized_exact
+        and payload["inplace_update"]
+        and payload["normalized_scratch_reused"]
     )
     print("RESULT " + json.dumps(payload, sort_keys=True))
     return 0 if payload["passed"] else 1

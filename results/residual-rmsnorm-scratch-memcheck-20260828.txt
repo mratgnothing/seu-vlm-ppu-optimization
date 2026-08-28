@@ -1,0 +1,2 @@
+RESULT {"baseline_ms": 27.769479751586914, "candidate": "inplace_residual_add_rmsnorm", "candidate_ms": 9.173480033874512, "inplace_update": true, "normalized_exact": true, "normalized_scratch_reused": true, "passed": true, "residual_exact": true, "scratch_ms": 8.91331958770752, "scratch_over_candidate_speedup": 1.0291878288001457, "speedup": 3.0271477835067784, "threads": 512}
+========= ERROR SUMMARY: 0 errors

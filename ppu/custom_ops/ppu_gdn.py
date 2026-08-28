@@ -360,11 +360,24 @@ class PPUGDNLibrary:
         update: torch.Tensor,
         weight: torch.Tensor,
         epsilon: float,
+        *,
+        normalized_output: torch.Tensor | None = None,
     ) -> tuple[torch.Tensor, torch.Tensor]:
         _validate_residual_rmsnorm_inputs(residual, update, weight)
         if self.residual_rmsnorm_launch is None:
             raise RuntimeError("PPU GDN library lacks residual RMSNorm symbol")
-        normalized_output = torch.empty_like(update)
+        if normalized_output is None:
+            normalized_output = torch.empty_like(update)
+        elif (
+            normalized_output.shape != update.shape
+            or normalized_output.dtype != update.dtype
+            or normalized_output.device != update.device
+            or not normalized_output.is_contiguous()
+            or normalized_output.data_ptr() in (residual.data_ptr(), update.data_ptr())
+        ):
+            raise ValueError(
+                "normalized_output must be a distinct contiguous tensor matching update"
+            )
         rows = update.numel() // HIDDEN_SIZE
         stream = torch.cuda.current_stream(update.device).cuda_stream
         status = self.residual_rmsnorm_launch(
@@ -734,6 +747,8 @@ def pack_qwen35_decoder_residual_rmsnorm(
         raise TypeError("residual RMSNorm requires BF16 PPU decoder weights")
 
     original_forward = module.forward
+    module._seu_residual_rmsnorm_scratch_enabled = False
+    module._seu_residual_rmsnorm_scratch_stream = None
     next_norm_cache = None
     if next_norm is not None:
         if (
@@ -779,6 +794,19 @@ def pack_qwen35_decoder_residual_rmsnorm(
                 past_key_values=past_key_values,
                 **kwargs,
             )
+        use_scratch = (
+            module._seu_residual_rmsnorm_scratch_enabled
+            and hidden_states.shape == (1, 1, HIDDEN_SIZE)
+        )
+        if use_scratch:
+            current_stream = torch._C._cuda_getCurrentRawStream(
+                hidden_states.device.index or 0
+            )
+            if current_stream != module._seu_residual_rmsnorm_scratch_stream:
+                raise RuntimeError(
+                    "PPU residual RMSNorm scratch is bound to one CUDA stream; "
+                    "concurrent decode requires per-stream scratch"
+                )
 
         residual = hidden_states
         hidden_states = module.input_layernorm(hidden_states)
@@ -803,6 +831,9 @@ def pack_qwen35_decoder_residual_rmsnorm(
             hidden_states,
             module.post_attention_layernorm.weight,
             module.post_attention_layernorm.eps,
+            normalized_output=(
+                module._seu_residual_rmsnorm_mlp_input if use_scratch else None
+            ),
         )
         hidden_states = module.mlp(hidden_states)
         if next_norm is not None:
@@ -811,6 +842,9 @@ def pack_qwen35_decoder_residual_rmsnorm(
                 hidden_states,
                 next_norm.weight,
                 next_norm.eps,
+                normalized_output=(
+                    module._seu_residual_rmsnorm_next_input if use_scratch else None
+                ),
             )
             next_norm_cache.input = next_residual
             next_norm_cache.output = next_normalized
@@ -840,6 +874,32 @@ def set_qwen35_decoder_residual_rmsnorm(module, enabled: bool) -> None:
         )
         cache = module._seu_residual_rmsnorm_next_cache
         cache.__dict__.clear()
+
+
+def set_qwen35_decoder_residual_rmsnorm_scratch(module, enabled: bool) -> None:
+    if not hasattr(module, "_seu_residual_rmsnorm_scratch_enabled"):
+        raise RuntimeError("decoder residual RMSNorm has not been packed")
+    if enabled and not hasattr(module, "_seu_residual_rmsnorm_mlp_input"):
+        options = {
+            "device": module.post_attention_layernorm.weight.device,
+            "dtype": torch.bfloat16,
+        }
+        module.register_buffer(
+            "_seu_residual_rmsnorm_mlp_input",
+            torch.empty(1, 1, HIDDEN_SIZE, **options),
+            persistent=False,
+        )
+        module.register_buffer(
+            "_seu_residual_rmsnorm_next_input",
+            torch.empty(1, 1, HIDDEN_SIZE, **options),
+            persistent=False,
+        )
+        module._seu_residual_rmsnorm_scratch_stream = (
+            torch._C._cuda_getCurrentRawStream(
+                module.post_attention_layernorm.weight.device.index or 0
+            )
+        )
+    module._seu_residual_rmsnorm_scratch_enabled = enabled
 
 
 def pack_qwen35_mlp_module(module) -> Callable[[torch.Tensor], torch.Tensor]:

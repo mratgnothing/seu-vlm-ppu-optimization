@@ -36,6 +36,8 @@
 - HGGC Graph Capture 已在当前 PPU/PyTorch 上通过输入更新与 exact replay；合成链
   `1.8303x`，但现有单入口 packed-MLP 仅 `1.0203x`，含输入 copy 为 `0.9316x`，
   因此未进入整模门禁。
+- residual-RMSNorm 输出 scratch 模块级 `1.3373x`、exact、memcheck 0 errors，但
+  当前完整栈固定长为 `0.9862x`，已止损且默认不分配、不启用。
 
 ## 模块进度
 
@@ -123,6 +125,7 @@
 - [2026-08-28 PPU 单入口 acBLAS packed-MLP](experiments/2026-08-28-ppu-acblas-packed-mlp.md)
 - [2026-08-28 PPU Attention Prep 单入口融合](experiments/2026-08-28-ppu-acblas-attention-prep.md)
 - [2026-08-28 PPU Graph Capture 能力与止损实验](experiments/2026-08-28-ppu-graph-capture.md)
+- [2026-08-28 PPU residual-RMSNorm scratch 负实验](experiments/2026-08-28-ppu-residual-rmsnorm-scratch.md)
 - [2026-08-27 PPU SwiGLU 融合负实验](experiments/2026-08-27-ppu-swiglu-negative.md)
 - [PPU 资源释放前快照与恢复手册](ppu-resource-release-handoff.md)
 - [PPU 后续优化路线图](ppu-future-roadmap.md)

@@ -210,6 +210,18 @@ packed-MLP 只有 `0.044214→0.043336 ms`（`1.0203x`），加入动态输入�
 - [`acblas-packed-mlp-graph-smoke-20260828.json`](acblas-packed-mlp-graph-smoke-20260828.json)
 - [实验说明](../docs/experiments/2026-08-28-ppu-graph-capture.md)
 
+## PPU residual-RMSNorm 输出 scratch 负实验
+
+持久 BF16 输出 scratch 相对现有 fused residual-RMSNorm 模块边界为
+`0.018729→0.014005 ms`（`1.3373x`），bit-exact、地址复用且 memcheck 0 errors。
+但在 grouped-GDN + residual-RMSNorm + gate-prep + 单入口 packed-MLP 完整栈上，
+固定 128-token 八对仅 `0.9862x`、2/8 获胜，严格性能门禁失败，未继续 CN20/profile。
+
+- [`residual-rmsnorm-scratch-smoke-20260828.txt`](residual-rmsnorm-scratch-smoke-20260828.txt)
+- [`residual-rmsnorm-scratch-memcheck-20260828.txt`](residual-rmsnorm-scratch-memcheck-20260828.txt)
+- [`residual-rmsnorm-scratch-ab128-20260828.json`](residual-rmsnorm-scratch-ab128-20260828.json)
+- [实验说明](../docs/experiments/2026-08-28-ppu-residual-rmsnorm-scratch.md)
+
 ## PPU acBLASLt Matmul 负实验
 
 SDK 正式 epilogue 没有 SiLU/SwiGLU。四个 decode 主形状各扫描 32 个 bit-exact

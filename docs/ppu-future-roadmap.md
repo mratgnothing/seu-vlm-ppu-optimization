@@ -40,6 +40,11 @@ GEMM 路线受阻，不再为省一次 launch 把它强行并入 recurrent kerne
 `empty_strided=4391`、`cudaFree=3259` 和大量 clone/copy；下一步继续扩展到 qkv、
 gate 和 norm，但必须先验证多请求并发下的 stream/alias 生命周期。
 
+residual-RMSNorm 的两个输出 scratch 已单独验证：模块级相对现有融合 `1.3373x`、
+bit-exact、memcheck 0 errors，但当前完整栈固定长只有 `0.9862x`。因此该方向已止损，
+不再逐个小张量扩展 scratch；后续必须在更大 C++/图边界内统一管理 arena，才可能抵消
+Python 守卫成本。
+
 首个扩展候选已经覆盖 6 个全注意力层的 Q/K/V 投影与 Q/K RMSNorm+RoPE：模块级
 bit-exact、memcheck 0 errors，并以 patch-time stream guard 明确限制为单流串行 decode。
 模块边界虽为 `4.1006x`，固定长 56 对合并中位仅 `1.0047x`，CN20 两轮中位
