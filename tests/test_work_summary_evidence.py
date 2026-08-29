@@ -17,7 +17,7 @@ def load_json(relative: str) -> dict:
 
 class WorkSummaryEvidenceTest(unittest.TestCase):
     def test_eager_baseline_matches_source(self) -> None:
-        result = load_json("artifacts/remote-results/eager-cn20-current.json")
+        result = load_json("results/ppu-eager-cn20-baseline-summary-20260826.json")
         self.assertEqual(result["sample_count"], 20)
         self.assertEqual(result["performance"]["avg_ttft_ms"], 118.493)
         self.assertEqual(
@@ -104,6 +104,7 @@ class WorkSummaryEvidenceTest(unittest.TestCase):
     def test_summary_links_every_primary_evidence_file(self) -> None:
         text = SUMMARY.read_text(encoding="utf-8")
         for filename in (
+            "ppu-eager-cn20-baseline-summary-20260826.json",
             "gate-prep-scratch-cn-full4029-summary.json",
             "acblas-packed-mlp-cn-full4029-summary.json",
             "acblas-packed-mlp-en-full4029-summary-20260828.json",

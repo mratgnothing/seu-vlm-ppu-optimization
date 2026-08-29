@@ -84,6 +84,8 @@ source scripts/activate_ppu_env.sh
 | Accuracy | `17/20 = 85%` |
 | 公开输出校验 | 通过 |
 
+可提交的聚合证据见 [eager CN20 基线汇总](../../results/ppu-eager-cn20-baseline-summary-20260826.json)；逐样本原始结果继续保留在 Git ignored `artifacts/` 中，不进入仓库。
+
 同一真实样本 2-token 预热、16-token profile 显示：
 
 | 指标 | eager |
