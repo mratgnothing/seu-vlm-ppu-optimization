@@ -1,0 +1,105 @@
+{
+  "sweeps": [
+    {
+      "source": "results/acblaslt-12288x2048-20260828.jsonl",
+      "shape": [
+        12288,
+        2048
+      ],
+      "torch_mv_ms": 0.026487998962402344,
+      "heuristics_returned": 32,
+      "passing_heuristics": 32,
+      "best": {
+        "average_ms": 0.026171200275421143,
+        "backend": "acblasLtMatmul",
+        "exact": true,
+        "heuristic_index": 6,
+        "k": 2048,
+        "max_abs_error": 0.0,
+        "n": 12288,
+        "passed": true,
+        "torch_speedup": 1.0121048589154211,
+        "waves_count": 0.0,
+        "workspace_bytes": 393216
+      },
+      "best_speedup": 1.0121048589154211,
+      "integration_candidate": false
+    },
+    {
+      "source": "results/acblaslt-2048x6144-20260828.jsonl",
+      "shape": [
+        2048,
+        6144
+      ],
+      "torch_mv_ms": 0.014611799716949463,
+      "heuristics_returned": 32,
+      "passing_heuristics": 32,
+      "best": {
+        "average_ms": 0.01422860026359558,
+        "backend": "acblasLtMatmul",
+        "exact": true,
+        "heuristic_index": 14,
+        "k": 6144,
+        "max_abs_error": 0.0,
+        "n": 2048,
+        "passed": true,
+        "torch_speedup": 1.0269316339102106,
+        "waves_count": 0.0,
+        "workspace_bytes": 0
+      },
+      "best_speedup": 1.0269316339102106,
+      "integration_candidate": false
+    },
+    {
+      "source": "results/acblaslt-2048x2048-20260828.jsonl",
+      "shape": [
+        2048,
+        2048
+      ],
+      "torch_mv_ms": 0.007633200287818909,
+      "heuristics_returned": 32,
+      "passing_heuristics": 32,
+      "best": {
+        "average_ms": 0.007216600179672242,
+        "backend": "acblasLtMatmul",
+        "exact": true,
+        "heuristic_index": 25,
+        "k": 2048,
+        "max_abs_error": 0.0,
+        "n": 2048,
+        "passed": true,
+        "torch_speedup": 1.0577280295117566,
+        "waves_count": 0.0,
+        "workspace_bytes": 0
+      },
+      "best_speedup": 1.0577280295117566,
+      "integration_candidate": true
+    },
+    {
+      "source": "results/acblaslt-6144x2048-20260828.jsonl",
+      "shape": [
+        6144,
+        2048
+      ],
+      "torch_mv_ms": 0.01697160005569458,
+      "heuristics_returned": 32,
+      "passing_heuristics": 32,
+      "best": {
+        "average_ms": 0.016653000116348265,
+        "backend": "acblasLtMatmul",
+        "exact": true,
+        "heuristic_index": 9,
+        "k": 2048,
+        "max_abs_error": 0.0,
+        "n": 6144,
+        "passed": true,
+        "torch_speedup": 1.0191316842082734,
+        "waves_count": 0.0,
+        "workspace_bytes": 0
+      },
+      "best_speedup": 1.0191316842082734,
+      "integration_candidate": false
+    }
+  ],
+  "any_integration_candidate": true
+}

@@ -18,6 +18,11 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Load the real model without generating")
     parser.add_argument("--model-path", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument(
+        "--require-accelerator",
+        action="store_true",
+        help="Fail when any parameter is on CPU/meta/disk or no accelerator is visible.",
+    )
     return parser.parse_args()
 
 
@@ -31,17 +36,53 @@ def main() -> int:
 
     try:
         model = VLMModel(str(args.model_path), backend="transformers", device="auto")
+        torch = model._torch
         loaded = model._model
         device_map = getattr(loaded, "hf_device_map", None)
         parameter_devices = Counter(str(parameter.device) for parameter in loaded.parameters())
+        parameter_numel_by_device: Counter[str] = Counter()
+        for parameter in loaded.parameters():
+            parameter_numel_by_device[str(parameter.device)] += parameter.numel()
+        mapped_devices = (
+            {str(device) for device in device_map.values()}
+            if isinstance(device_map, dict)
+            else set()
+        )
+        observed_devices = set(parameter_devices) | mapped_devices
+        offload_devices = {
+            device
+            for device in observed_devices
+            if device.lower().startswith(("cpu", "meta", "disk"))
+        }
+        cuda_available = bool(torch.cuda.is_available())
+        accelerator_resident = bool(parameter_devices) and not offload_devices
+        if args.require_accelerator:
+            accelerator_resident = accelerator_resident and cuda_available
         payload.update(
             {
-                "passed": True,
+                "passed": accelerator_resident if args.require_accelerator else True,
                 "backend_name": model.backend_name,
                 "model_class": type(loaded).__name__,
-                "primary_device": str(loaded.device),
+                "primary_device": str(getattr(loaded, "device", "unknown")),
                 "device_map": device_map,
                 "parameter_devices": dict(parameter_devices),
+                "parameter_numel_by_device": dict(parameter_numel_by_device),
+                "mapped_devices": sorted(mapped_devices),
+                "offload_devices": sorted(offload_devices),
+                "accelerator_required": args.require_accelerator,
+                "accelerator_resident": accelerator_resident,
+                "torch_cuda_available": cuda_available,
+                "accelerator_devices": (
+                    [
+                        {
+                            "index": index,
+                            "name": torch.cuda.get_device_name(index),
+                        }
+                        for index in range(torch.cuda.device_count())
+                    ]
+                    if cuda_available
+                    else []
+                ),
                 "memory_footprint_bytes": (
                     loaded.get_memory_footprint()
                     if hasattr(loaded, "get_memory_footprint")
@@ -49,6 +90,11 @@ def main() -> int:
                 ),
             }
         )
+        if args.require_accelerator and not accelerator_resident:
+            payload["failure_reason"] = (
+                "Model parameters are not fully accelerator-resident or the "
+                "PPU PyTorch CUDA-compatibility backend is unavailable."
+            )
     except Exception as exc:
         payload.update(
             {

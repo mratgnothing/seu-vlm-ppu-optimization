@@ -1,0 +1,19 @@
+{
+  "torch_version": "2.11.0",
+  "cuda_available": true,
+  "has_cuda_graph": true,
+  "has_graph_context": true,
+  "raw_stream_apis": [
+    "_cuda_getCurrentRawStream",
+    "_mtia_getCurrentRawStream"
+  ],
+  "elements": 65536,
+  "chain_depth": 16,
+  "capture_supported": true,
+  "replay_uses_updated_input": true,
+  "max_abs_error": 0.0,
+  "eager_median_ms": 0.15327399887610227,
+  "graph_median_ms": 0.08374299795832485,
+  "microbench_speedup": 1.830290324122142,
+  "passed": true
+}

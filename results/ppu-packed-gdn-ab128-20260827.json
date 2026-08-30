@@ -1,0 +1,130 @@
+{
+  "sample_id": "3000984",
+  "max_new_tokens": 128,
+  "force_max_new_tokens": true,
+  "packed_gdn_modules": 18,
+  "packed_weight_shape_per_module": [
+    8224,
+    2048
+  ],
+  "projection_group_sizes": [
+    4
+  ],
+  "baseline": {
+    "repeats": 4,
+    "median_ttft_ms": 119.35242100298638,
+    "median_elapsed_ms": 1456.3058130079298,
+    "median_throughput_tokens_per_sec": 94.99214120849108,
+    "records": [
+      {
+        "mode": "optimized_baseline",
+        "pair_index": 0,
+        "pair_order": "AB",
+        "token_count": 128,
+        "ttft_ms": 118.19382100657094,
+        "elapsed_ms": 1454.1877870069584,
+        "throughput_tokens_per_sec": 95.06030957625086,
+        "answer": "A",
+        "text_sha256": "8f2f3253fd306b15fa42d633c96fbd996786cc26b3053d02e0539a196a81a803"
+      },
+      {
+        "mode": "optimized_baseline",
+        "pair_index": 1,
+        "pair_order": "BA",
+        "token_count": 128,
+        "ttft_ms": 123.84082000062335,
+        "elapsed_ms": 1480.1697229995625,
+        "throughput_tokens_per_sec": 93.63510555529268,
+        "answer": "A",
+        "text_sha256": "8f2f3253fd306b15fa42d633c96fbd996786cc26b3053d02e0539a196a81a803"
+      },
+      {
+        "mode": "optimized_baseline",
+        "pair_index": 2,
+        "pair_order": "AB",
+        "token_count": 128,
+        "ttft_ms": 117.66052099119406,
+        "elapsed_ms": 1424.7239919932326,
+        "throughput_tokens_per_sec": 97.16437098700153,
+        "answer": "A",
+        "text_sha256": "8f2f3253fd306b15fa42d633c96fbd996786cc26b3053d02e0539a196a81a803"
+      },
+      {
+        "mode": "optimized_baseline",
+        "pair_index": 3,
+        "pair_order": "BA",
+        "token_count": 128,
+        "ttft_ms": 120.51102099940181,
+        "elapsed_ms": 1458.4238390089013,
+        "throughput_tokens_per_sec": 94.9239728407313,
+        "answer": "A",
+        "text_sha256": "8f2f3253fd306b15fa42d633c96fbd996786cc26b3053d02e0539a196a81a803"
+      }
+    ]
+  },
+  "packed_gdn": {
+    "repeats": 4,
+    "median_ttft_ms": 122.40807899797801,
+    "median_elapsed_ms": 1427.557466995495,
+    "median_throughput_tokens_per_sec": 97.21058844344354,
+    "records": [
+      {
+        "mode": "packed_gdn",
+        "pair_index": 0,
+        "pair_order": "AB",
+        "token_count": 128,
+        "ttft_ms": 121.32110599486623,
+        "elapsed_ms": 1366.800769988913,
+        "throughput_tokens_per_sec": 101.96874639665496,
+        "answer": "A",
+        "text_sha256": "8f2f3253fd306b15fa42d633c96fbd996786cc26b3053d02e0539a196a81a803"
+      },
+      {
+        "mode": "packed_gdn",
+        "pair_index": 1,
+        "pair_order": "BA",
+        "token_count": 128,
+        "ttft_ms": 126.20674500067253,
+        "elapsed_ms": 1458.6644749942934,
+        "throughput_tokens_per_sec": 95.31259201791565,
+        "answer": "A",
+        "text_sha256": "8f2f3253fd306b15fa42d633c96fbd996786cc26b3053d02e0539a196a81a803"
+      },
+      {
+        "mode": "packed_gdn",
+        "pair_index": 2,
+        "pair_order": "AB",
+        "token_count": 128,
+        "ttft_ms": 117.8860289946897,
+        "elapsed_ms": 1401.1889349931153,
+        "throughput_tokens_per_sec": 98.96338534446973,
+        "answer": "A",
+        "text_sha256": "8f2f3253fd306b15fa42d633c96fbd996786cc26b3053d02e0539a196a81a803"
+      },
+      {
+        "mode": "packed_gdn",
+        "pair_index": 3,
+        "pair_order": "BA",
+        "token_count": 128,
+        "ttft_ms": 123.49505200108979,
+        "elapsed_ms": 1453.9259989978746,
+        "throughput_tokens_per_sec": 95.45779154241735,
+        "answer": "A",
+        "text_sha256": "8f2f3253fd306b15fa42d633c96fbd996786cc26b3053d02e0539a196a81a803"
+      }
+    ]
+  },
+  "paired_decode": {
+    "median_speedup": 1.0182151548192908,
+    "mean_speedup": 1.0286820514057748,
+    "wins": 4,
+    "ratios": [
+      1.0726742512327148,
+      1.01791514467437,
+      1.0185151649642117,
+      1.005623644751803
+    ]
+  },
+  "exact_output_match": true,
+  "passed": true
+}

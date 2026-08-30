@@ -1,0 +1,13 @@
+{
+  "candidate": "one_entry_acblas_packed_mlp",
+  "baseline_ms": 0.04166600227355957,
+  "candidate_ms": 0.033907198905944826,
+  "speedup": 1.2288246631382582,
+  "decode_exact": true,
+  "prefill_exact": true,
+  "max_abs_error": 0.0,
+  "output_scratch_reused": true,
+  "warmup": 10,
+  "iters": 100,
+  "passed": true
+}

@@ -18,10 +18,18 @@ CUDA profile 显示 GEMV/GEMM 占 self CUDA time 的 86.18%，其中 decode
 阶段 BF16 GEMV 是第一热点。项目已据此解析 Qwen3.5-2B 的 Gated Delta
 Network（GDN）、MLP、全注意力和视觉主干尺寸，并为
 `N=6144,K=2048`、`N=2048,K=6144`、`N=2048,K=2048`
-三组核心矩阵准备 HGGC BF16 参考微基准。当前共享 PPU 节点的 SDK 与基础
-kernel 链可用，但 Python 推理栈缺失，预置 PPU-vLLM 分支也尚未包含
-Qwen3.5 模型注册与 GDN 路径。因此 PPU 模型级部署和算子优化结果需要在主办方
-提供支持 Qwen3.5 的隔离镜像后完成。
+三组核心矩阵准备 HGGC BF16 参考微基准。随后已在隔离 PPU-ZW810E 节点完成
+Qwen3.5-2B 全模型部署，并接入五类 HGGC decode 融合与 packed MLP。注册式
+acBLAS Linear 通用替换已完成但最终固定长解码无稳定收益，作为负实验保留。新增的
+GDN 四路输入投影打包在同模型 CN20 paired 验证中达到 98.430 token/s、85%
+Accuracy，但只有 19/20 完整文本一致。进一步实现的结构专用 grouped acBLAS
+保留四个原形状 GEMV，CN20 两轮成对中位提升 1.87%/3.91%，Accuracy 均为 85%
+且 20/20 全文一致。在此基础上，48-edge residual-add + RMSNorm 跨层融合又在
+16-token profile 中减少 720 次 kernel launch，CN20 两轮配对中位提升约 2.1%，
+均保持 20/20 全文一致。最终 gate-prep 组合进一步通过中文完整公开集：两路
+Accuracy 均为 3374/4029，4029/4029 完整文本、答案和 token 数一致，成对吞吐中位
+1.0862x。公开 acBLASLt epilogue 不含 SiLU；方阵 scratch 候选虽模块级 1.2797x，
+整模固定长仅 0.9898x，作为负实验保留。正式路径继续显式启用，私有集仍是外部门禁。
 
 ## 1. 应用场景与目标
 
@@ -189,37 +197,109 @@ width-4 causal conv 是 decode 优化重点。
 本机 6GB 显存余量有限，不在 Windows 上盲装未经验证的扩展或直接进行高风险全模型
 编译。
 
-## 7. PPU 现状与待验证方案
+## 7. PPU 实机部署与优化结果
 
 ### 7.1 已确认事实
 
-- 共享节点为 4 张 PPU-ZW810E，每张显存约 97.9GB。
-- PPU SDK 2.1、驱动 1.3.2、HGGC 13.0 可用。
-- 官方 `vectorAdd` 已完成编译和运行，基础 kernel 链通过。
-- 当前共享运行态没有 PyTorch、Transformers、vLLM 或 SGLang。
-- `/opt/vllm` 的 PPU 定制 0.8.5 源码包含 PPU 矩阵、FlashAttention、
-  causal-conv1d 和量化路径，但缺少 `Qwen3_5ForConditionalGeneration`
-  注册和 GDN 实现。
+- 隔离节点为 1 张 PPU-ZW810E，显存 98,304 MiB；SDK 2.1.1、HGGC 13.0 可用。
+- 独立 venv 复用 PPU PyTorch 2.11 和定制 Triton，并安装 Transformers 5.14.1；
+  没有替换系统环境。
+- Qwen3.5-2B 的 617 个参数张量全部驻留 `cuda:0`，无 CPU/meta/disk offload；
+  视觉编码、18 层 Gated DeltaNet、6 层全注意力和自回归解码均已闭环。
+- 当前没有可直接使用的 PPU-vLLM/Qwen3.5 fast path，生产验证以 Transformers
+  eager 加仓库显式 opt-in 算子为基线。
 
-上述结果只能证明 SDK 基础链路，不代表 Qwen3.5-2B 已在 PPU 部署。
+### 7.2 已实测优化
 
-### 7.2 已准备验证入口
+已接入 recurrent GDN、causal-conv、2048 维 RMSNorm、128 维 gated RMSNorm、
+q/k RMSNorm+partial RoPE 五类 HGGC decode 核；另以权重共享 view 合并 24 层
+MLP gate/up projection，并探索 GDN 每层四个同输入投影的 multi-output packing。
+Torch extension + C-ABI acBLAS bridge 也完成了 ABI 隔离和 102 个 Linear 的负实验。
 
-`ppu/microbench/qwen35_bf16_gemv.hg` 为三组关键尺寸提供正确性优先的
-BF16/FP32 累加参考实现，并输出平均延迟、GFLOP/s、有效带宽、误差和机器可解析
-JSON。获得隔离资源后，将按“编译—单次冒烟—memcheck—稳定计时—asys/acu
-profile—运行时算子对照”的顺序验证。
+固定中文前 20 条的关键结果为：
 
-后续生产优化候选包括：
+| 路径 | 平均 token/s | Accuracy | 相对 eager |
+|---|---:|---:|---:|
+| eager | 49.737 | 85% | - |
+| GDN + causal-conv | 63.911 | 85% | +28.50% |
+| all-five | 93.918 / 94.889 | 85% | +88.83% / +90.78% |
+| all-five + packed-MLP | 96.506 / 96.715 | 85% | +94.04% / +94.46% |
+| + packed GDN projections，paired | 98.430 | 85% | +97.90% |
+| + grouped-acBLAS GDN r1/r2 | 98.028 / 99.601 | 85% | +97.10% / +100.26% |
+| + 48-edge residual-RMSNorm r1/r2 | 101.616 / 101.507 | 85% | +104.31% / +104.09% |
+| + GDN gate-prep r1/r2 | 109.275 / 107.083 | 85% | +119.71% / +115.31% |
+| + 单入口 acBLAS packed-MLP r1/r2 | 122.350 / 121.297 | 85% | +145.99% / +143.88% |
 
-- BF16 向量化加载和 warp 级归约；
-- 针对 PPU 的权重布局与矩阵指令；
-- bias、RMSNorm、gate 和激活融合；
-- GDN recurrent update 与 causal-conv1d update 融合；
-- KV Cache/内存池与单请求调度；
-- 经规则允许且精度通过的 INT8/INT4/FP8 量化。
+最终线程隔离版 packed-GDN 的同模型逐样本 AB/BA 中，基线/候选为
+94.099/98.430 token/s，成对速度比中位数 1.0355x，20 条赢 15 条；Accuracy 都是
+85%，但 1 条文本多生成 1 个 token。固定 128-token 四对则 4/4 获胜且全文一致。
+候选由 Qwen3.5 图结构产生，公开
+数据只作回归门禁。acBLAS 最终固定 128-token 八对成对中位仅 0.9997x，未接入。
 
-这些候选必须由真实 PPU profile 决定，当前不报告未经实测的提升率。
+grouped-acBLAS GDN 不是通用替换：它在一次 pybind/C++ 入口中依次执行 qkv、z、b、a
+四个原形状 `acblasGemvEx`。CN20 两轮由 96.409→98.028 和 95.634→99.601
+token/s，成对中位为 1.0187x/1.0391x，分别 16/20、17/20 获胜，并保持两轮
+20/20 全文一致。Profile 中 `aten::linear/mm` 各减少 1080 次，而设备侧
+`gemvt_op` 和 `cudaLaunchKernel` 数不变，说明收益来自主机调度与 handle/stream
+设置合并，不是减少数学计算。固定长六对只有 3/6 获胜，所以暂不默认启用。
+
+Qwen3.5 每层 attention 和 MLP 后各有一条 `residual add -> RMSNorm` 相邻边，24 层
+共 48 条。新增 HGGC 核保持 residual 的 BF16 舍入点，在同一 kernel 内做 FP32
+平方和归约与 weight scaling；跨层 thread-local 缓存把 MLP residual 直接交给下一层
+input norm，最后一层连接 final norm。只融合层内 24 条边的第一版固定长中位为
+0.9821x，作为负实验保留；完整 48-edge 版固定长两轮中位为 1.0159x/1.0233x。
+CN20 两轮由 100.156→101.616 和 98.576→101.507 token/s，配对中位
+1.0213x/1.0206x，均 14/20 获胜、85% Accuracy、20/20 全文一致。Profile 中目标
+`aten::add` 720→0、`cudaLaunchKernel` 16973→16253；正式 wrapper smoke 也通过
+真实 PPU 后端和公开校验。
+
+最后一轮进一步针对 18 个 GDN 层的门控准备：eval 加载时缓存 FP32
+`exp(A_log)`，一个 HGGC kernel 合并 `sigmoid(b)`、两个 cast、bias add、Softplus、
+乘法和取负，并以 thread-local scratch 复用 FP32 `g` 与 BF16 `beta`。最终固定
+128-token 六对全部获胜、全文一致、配对中位 1.0839x；CN20 两轮分别为
+101.651→109.275 和 100.085→107.083 token/s，配对中位 1.0811x/1.0863x、
+19/20 和 17/20 获胜，两轮均 20/20 全文一致且 Accuracy 85%。Profile 中
+`cudaLaunchKernel` 16253→14363，Self CPU/PPU 分别下降 11.48%/5.35%，
+`hggc-memcheck` 为 0 errors。中文完整公开集 4029 条 paired AB/BA 中，两路 Accuracy
+均为 3374/4029，完整文本、答案和 token 数均 4029/4029 一致；配对速度比中位
+1.0862x、3882/4029 获胜。该长测只承担精度/一致性门禁，未按公开标签调节实现，
+也不替代固定 128-token 性能结论。
+
+随后对 acBLASLt 四个真实 decode 形状各扫描 32 个 bit-exact heuristic。packed
+gate/up、MLP down 和 GDN qkv 最佳仅 1.0121x/1.0269x/1.0191x；2048 方阵最佳
+1.0577x，配合 per-module scratch 后模块级为 1.2797x。但完整模型固定 128-token
+八对成对中位 0.9898x、仅 3/8 获胜。Profile 显示 `aten::linear/mm` 各减少 360 次，
+主 `gemvt_op` 却增加 270 次，因此不接入正式 wrapper。
+
+继续 GEMM 迭代时，不再替换任意方阵 Linear，而是把完整 decode MLP 作为提交边界：
+一次 C++ extension 入口依次调用 packed gate/up `acblasGemvEx`、bit-exact HGGC
+SwiGLU 和 down `acblasGemvEx`，并为 24 层各复用 projected/activated/output scratch。
+模块级为 1.2288x；固定 128-token 八对 8/8 获胜、成对中位 1.1336x。CN20 两轮
+平均吞吐分别为 108.451→122.350 和 109.652→121.297 token/s，成对中位
+1.1212x/1.1122x，两轮均 20/20 获胜、20/20 全文一致、Accuracy 85%。Profile 中
+`aten::linear/mm` 各减少 720 次，`cudaLaunchKernel` 减少 360 次，三类 GEMV 数
+保持不变；这证明收益来自正确的调度/内存边界，而非改变矩阵数学。中文完整公开集
+两路 Accuracy 均为 3374/4029，4029/4029 文本、答案和 token 数一致；平均吞吐
+109.993→122.445 token/s，成对中位 1.1125x、平均 1.1146x，3939/4029 获胜。
+最终重编译后的 memcheck 和正式 wrapper smoke 均通过。
+
+最后对 host 提交固定开销做单变量优化。原 ctypes 路径每次用
+`torch.cuda.current_stream(...).cuda_stream` 获取流对象；当前完整栈约执行 127 次/token。
+改用带运行时能力检查的 `_cuda_getCurrentRawStream` 后，不改变任何 kernel、launch
+数量、张量或数值顺序。中文完整集两路 Accuracy 均为 3374/4029，4029/4029 exact，
+平均吞吐 `120.383→131.107 token/s`、成对中位 `1.0906x`，3817/4029 获胜；英文
+完整集两路 Accuracy 均为 3214/4029，4029/4029 exact，平均吞吐
+`118.577→129.398 token/s`、成对中位 `1.0901x`，3704/4029 获胜。Profile 两路
+`cudaLaunchKernel` 均为 14,118，memcheck 0 errors，正式入口 meta 也记录该开关。
+
+### 7.3 当前边界
+
+全部自定义路径只有显式环境变量才挂载。五类融合的 reduction 顺序使
+all-five 相对 eager 有 5/20 生成长度变化，packed-GDN 又相对 packed 基线新增 1/20
+文本漂移；最终 grouped-acBLAS + residual-RMSNorm + gate-prep + 单入口 packed-MLP
+及 raw-stream 组合已通过中英文公开完整集严格一致性门禁，但主办方私有集仍需保持
+相同 Accuracy/文本护栏。raw-stream 依赖当前 PPU PyTorch 私有 API，默认关闭并在
+显式启用时做能力检查。
 
 ## 8. 可复现性
 
@@ -245,7 +325,10 @@ O1 已在本地固定中英文样本上取得稳定、无精度变化的 TTFT �
 79.75%，结果完整性均已独立审计。Profile 说明后续优化应集中于 decode
 GEMV/GEMM、GDN 和 causal conv，而非在缺少证据时广泛改动。
 
-当前最小外部依赖是主办方明确：
+当前最高性能候选已在 PPU 完成编译、模型 A/B、profile、memcheck 和中英文各 4029
+条精度/一致性门禁。下一 profile 热点指向 acBLAS 每次 GEMV 的设备属性查询与释放，
+下一轮先验证 SDK 已导出的 `acblasSetWorkspace_v2`。剩余外部
+依赖是主办方明确：
 
 1. 支持 Qwen3.5-2B 的 PPU Python/vLLM 镜像及版本；
 2. GDN 和 causal-conv1d 的 PPU fast path；
@@ -253,7 +336,8 @@ GEMV/GEMM、GDN 和 causal conv，而非在缺少证据时广泛改动。
 4. 允许的量化格式、校准数据和层级混合精度范围；
 5. 初赛复现环境、依赖安装和启动命令限制。
 
-收到答复后即可选择 PPU 路线并进入真实模型功能闭环。
+收到答复后可固定最终镜像 ABI、完成完整集门禁，并决定是否把当前 extension 打包为
+wheel 或迁移到官方 PPU-vLLM custom-op 接口。
 
 ## 附录：证据索引
 

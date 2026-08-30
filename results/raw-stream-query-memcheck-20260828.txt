@@ -1,0 +1,2 @@
+RESULT {"baseline_ms": 27.07379913330078, "candidate": "inplace_residual_add_rmsnorm", "candidate_ms": 9.113280296325684, "inplace_update": true, "normalized_exact": true, "normalized_scratch_reused": true, "passed": true, "raw_stream_exact": true, "raw_stream_handle_matches": true, "raw_stream_ms": 8.92908000946045, "raw_stream_query_speedup": 1.0206292570645656, "residual_exact": true, "scratch_ms": 8.9376802444458, "scratch_over_candidate_speedup": 1.019647162023838, "speedup": 2.9708072453577956, "threads": 512}
+========= ERROR SUMMARY: 0 errors

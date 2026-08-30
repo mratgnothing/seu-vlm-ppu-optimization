@@ -1,0 +1,3 @@
+[2026-08-28 03:48:22:756962][ALINPU INFO]: ACOMPUTE: [device caps] dev=0, name=PPU-ZW810E, sm8.0, smem=256KB, num_of_sm=64, freq_of_sm=0MHz
+RESULT {"alternate_stream_error": "acBLAS attention prep persistent scratch is bound to one CUDA stream; use the stream active when the module was patched", "alternate_stream_rejected": true, "baseline_ms": 204.82647705078125, "candidate": "grouped_acblas_attention_prep", "candidate_ms": 82.00647735595703, "exact": {"gate": true, "key": true, "query": true, "value": true}, "max_abs_error": 0.0, "passed": true, "prefill_exact": true, "speedup": 2.497686568851289}
+========= ERROR SUMMARY: 0 errors

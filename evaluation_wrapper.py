@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import os
 import re
+import sys
 import threading
 import time
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 
@@ -176,6 +178,10 @@ class VLMModel:
         )
 
     def _load_transformers_backend(self) -> None:
+        default_ppu_sdk = Path("/usr/local/PPU_SDK")
+        if default_ppu_sdk.is_dir():
+            os.environ.setdefault("PPU_SDK", str(default_ppu_sdk))
+            os.environ.setdefault("PPU_HOME", str(default_ppu_sdk))
         import torch
         from transformers import AutoModelForImageTextToText, AutoProcessor
 
@@ -193,6 +199,361 @@ class VLMModel:
             device_map=self.device,
         ).eval()
         self._tokenizer = getattr(self._processor, "tokenizer", None)
+        self._ppu_gdn_patched_modules = 0
+        self._ppu_packed_gdn_projection_modules = 0
+        self._ppu_residual_rmsnorm_modules = 0
+        self._ppu_gdn_gate_prep_modules = 0
+        self._ppu_acblas_packed_mlp_modules = 0
+        self._ppu_acblas_attention_prep_modules = 0
+        self._ppu_raw_stream_query_enabled = False
+        self._ppu_acblas_workspace_bytes_per_handle = 0
+        self._ppu_acblas_gdn_single_gemv_enabled = False
+        self._ppu_acblas_gdn_ba_gemv_enabled = False
+        self._ppu_gdn_projection_backend = "disabled"
+        self._ppu_gdn_projection_groups = "disabled"
+        gdn_library_path = os.getenv("SEU_PPU_GDN_LIBRARY")
+        acblas_packed_mlp_build_dir = os.getenv(
+            "SEU_PPU_ACBLAS_PACKED_MLP_BUILD_DIR"
+        )
+        acblas_attention_prep_build_dir = os.getenv(
+            "SEU_PPU_ACBLAS_ATTENTION_PREP_BUILD_DIR"
+        )
+        if (
+            acblas_packed_mlp_build_dir or acblas_attention_prep_build_dir
+        ) and not gdn_library_path:
+            raise RuntimeError(
+                "SEU PPU acBLAS fused extensions require SEU_PPU_GDN_LIBRARY"
+            )
+        if gdn_library_path:
+            workspace_mib = int(os.getenv("SEU_PPU_ACBLAS_WORKSPACE_MIB", "0"))
+            if workspace_mib < 0:
+                raise ValueError("SEU_PPU_ACBLAS_WORKSPACE_MIB must be non-negative")
+            self._ppu_acblas_workspace_bytes_per_handle = workspace_mib * 1024 * 1024
+            custom_op_dir = Path(
+                os.getenv(
+                    "SEU_PPU_GDN_PYTHON_DIR",
+                    str(Path(__file__).resolve().parent / "ppu" / "custom_ops"),
+                )
+            ).resolve()
+            if str(custom_op_dir) not in sys.path:
+                sys.path.insert(0, str(custom_op_dir))
+            from ppu_gdn import (
+                PPUGDNLibrary,
+                pack_qwen35_decoder_residual_rmsnorm,
+                pack_qwen35_gdn_gate_prep,
+                pack_qwen35_mlp_module,
+            )
+
+            tiles_per_head = int(os.getenv("SEU_PPU_GDN_TILES", "4"))
+            self._ppu_gdn_library = PPUGDNLibrary(
+                gdn_library_path,
+                tiles_per_head=tiles_per_head,
+                conv_threads=int(os.getenv("SEU_PPU_CONV_THREADS", "96")),
+                rmsnorm_threads=int(os.getenv("SEU_PPU_RMSNORM_THREADS", "512")),
+                gated_rmsnorm_threads=int(
+                    os.getenv("SEU_PPU_GATED_RMSNORM_THREADS", "128")
+                ),
+                raw_stream_query=(
+                    os.getenv("SEU_PPU_RAW_STREAM_QUERY_ENABLE", "0") == "1"
+                ),
+            )
+            self._ppu_raw_stream_query_enabled = (
+                self._ppu_gdn_library.raw_stream_query
+            )
+            fused_callable = self._ppu_gdn_library.transformers_callable()
+            fuse_causal_conv = os.getenv("SEU_PPU_CONV_ENABLE", "0") == "1"
+            self._ppu_conv_patched_modules = 0
+            for module in self._model.modules():
+                if type(module).__name__ == "Qwen3_5GatedDeltaNet":
+                    module.recurrent_gated_delta_rule = fused_callable
+                    self._ppu_gdn_patched_modules += 1
+                    if fuse_causal_conv:
+                        module.causal_conv1d_update = (
+                            self._ppu_gdn_library.causal_conv1d_decode
+                        )
+                        self._ppu_conv_patched_modules += 1
+            if self._ppu_gdn_patched_modules != 18:
+                raise RuntimeError(
+                    "SEU PPU GDN integration expected 18 Qwen3.5 modules, "
+                    f"patched {self._ppu_gdn_patched_modules}"
+                )
+            self._ppu_qk_rope_patched_modules = 0
+            if os.getenv("SEU_PPU_QK_ROPE_ENABLE", "0") == "1":
+                from transformers.models.qwen3_5 import (
+                    modeling_qwen3_5 as qwen35_modeling,
+                )
+
+                for module in self._model.modules():
+                    if type(module).__name__ != "Qwen3_5Attention":
+                        continue
+                    module.forward = (
+                        self._ppu_gdn_library.transformers_attention_callable(
+                            module,
+                            qwen35_modeling.ALL_ATTENTION_FUNCTIONS,
+                            qwen35_modeling.eager_attention_forward,
+                        )
+                    )
+                    self._ppu_qk_rope_patched_modules += 1
+                if self._ppu_qk_rope_patched_modules != 6:
+                    raise RuntimeError(
+                        "SEU PPU q/k RMSNorm+RoPE expected 6 attention modules, "
+                        f"patched {self._ppu_qk_rope_patched_modules}"
+                    )
+            if acblas_attention_prep_build_dir:
+                if self._ppu_qk_rope_patched_modules != 6:
+                    raise RuntimeError(
+                        "SEU PPU acBLAS attention prep requires "
+                        "SEU_PPU_QK_ROPE_ENABLE=1"
+                    )
+                from ppu_acblas_attention_prep import (
+                    PPUACBLASAttentionPrepExtension,
+                )
+
+                attention_extension = PPUACBLASAttentionPrepExtension(
+                    acblas_attention_prep_build_dir,
+                    algorithm=int(
+                        os.getenv(
+                            "SEU_PPU_ACBLAS_ATTENTION_PREP_ALGORITHM", "-1"
+                        )
+                    ),
+                )
+                for module in self._model.modules():
+                    if type(module).__name__ != "Qwen3_5Attention":
+                        continue
+                    attention_extension.patch_module(module)
+                    self._ppu_acblas_attention_prep_modules += 1
+                if self._ppu_acblas_attention_prep_modules != 6:
+                    raise RuntimeError(
+                        "SEU PPU acBLAS attention prep expected 6 modules, "
+                        f"patched {self._ppu_acblas_attention_prep_modules}"
+                    )
+                torch.cuda.empty_cache()
+            self._ppu_rmsnorm_patched_modules = 0
+            if os.getenv("SEU_PPU_RMSNORM_ENABLE", "0") == "1":
+                for module_name, module in self._model.named_modules():
+                    if (
+                        type(module).__name__ != "Qwen3_5RMSNorm"
+                        or not module_name.startswith("model.language_model")
+                        or module.weight.numel() != 2048
+                    ):
+                        continue
+                    eager_forward = module.forward
+
+                    def decode_rmsnorm(x, *, _module=module, _eager=eager_forward):
+                        if x.ndim >= 2 and x.shape[-2] == 1 and x.shape[-1] == 2048:
+                            return self._ppu_gdn_library.rmsnorm_decode(
+                                x, _module.weight, _module.eps
+                            )
+                        return _eager(x)
+
+                    module.forward = decode_rmsnorm
+                    self._ppu_rmsnorm_patched_modules += 1
+                if self._ppu_rmsnorm_patched_modules != 49:
+                    raise RuntimeError(
+                        "SEU PPU RMSNorm integration expected 49 Qwen3.5 modules, "
+                        f"patched {self._ppu_rmsnorm_patched_modules}"
+                    )
+            self._ppu_gated_rmsnorm_patched_modules = 0
+            if os.getenv("SEU_PPU_GATED_RMSNORM_ENABLE", "0") == "1":
+                for module in self._model.modules():
+                    if type(module).__name__ != "Qwen3_5RMSNormGated":
+                        continue
+                    eager_forward = module.forward
+
+                    def decode_gated_rmsnorm(
+                        hidden_states,
+                        gate=None,
+                        *,
+                        _module=module,
+                        _eager=eager_forward,
+                    ):
+                        if (
+                            gate is not None
+                            and hidden_states.ndim == 2
+                            and hidden_states.shape == (16, 128)
+                            and gate.shape == hidden_states.shape
+                        ):
+                            return self._ppu_gdn_library.gated_rmsnorm_decode(
+                                hidden_states,
+                                gate,
+                                _module.weight,
+                                _module.variance_epsilon,
+                            )
+                        return _eager(hidden_states, gate)
+
+                    module.forward = decode_gated_rmsnorm
+                    self._ppu_gated_rmsnorm_patched_modules += 1
+                if self._ppu_gated_rmsnorm_patched_modules != 18:
+                    raise RuntimeError(
+                        "SEU PPU gated RMSNorm expected 18 modules, "
+                        f"patched {self._ppu_gated_rmsnorm_patched_modules}"
+                    )
+            self._ppu_packed_mlp_modules = 0
+            if os.getenv("SEU_PPU_PACK_MLP_ENABLE", "0") == "1":
+                for module in self._model.modules():
+                    if type(module).__name__ != "Qwen3_5MLP":
+                        continue
+                    module.forward = pack_qwen35_mlp_module(module)
+                    self._ppu_packed_mlp_modules += 1
+                if self._ppu_packed_mlp_modules != 24:
+                    raise RuntimeError(
+                        "SEU PPU packed MLP expected 24 modules, "
+                        f"patched {self._ppu_packed_mlp_modules}"
+                    )
+                torch.cuda.empty_cache()
+            if acblas_packed_mlp_build_dir:
+                if self._ppu_packed_mlp_modules != 24:
+                    raise RuntimeError(
+                        "SEU PPU acBLAS packed MLP requires "
+                        "SEU_PPU_PACK_MLP_ENABLE=1"
+                    )
+                from ppu_acblas_packed_mlp import (
+                    PPUACBLASPackedMLPExtension,
+                )
+
+                mlp_extension = PPUACBLASPackedMLPExtension(
+                    acblas_packed_mlp_build_dir,
+                    gate_up_algorithm=int(
+                        os.getenv(
+                            "SEU_PPU_ACBLAS_PACKED_MLP_GATE_UP_ALGORITHM", "-1"
+                        )
+                    ),
+                    down_algorithm=int(
+                        os.getenv(
+                            "SEU_PPU_ACBLAS_PACKED_MLP_DOWN_ALGORITHM", "-1"
+                        )
+                    ),
+                    swiglu_threads=int(
+                        os.getenv(
+                            "SEU_PPU_ACBLAS_PACKED_MLP_SWIGLU_THREADS", "128"
+                        )
+                    ),
+                    workspace_bytes=self._ppu_acblas_workspace_bytes_per_handle,
+                )
+                for module in self._model.modules():
+                    if type(module).__name__ != "Qwen3_5MLP":
+                        continue
+                    mlp_extension.patch_module(module)
+                    self._ppu_acblas_packed_mlp_modules += 1
+                if self._ppu_acblas_packed_mlp_modules != 24:
+                    raise RuntimeError(
+                        "SEU PPU acBLAS packed MLP expected 24 modules, "
+                        f"patched {self._ppu_acblas_packed_mlp_modules}"
+                    )
+                torch.cuda.empty_cache()
+            pack_gdn_projections = (
+                os.getenv("SEU_PPU_PACK_GDN_PROJECTIONS_ENABLE", "0") == "1"
+            )
+            acblas_gdn_build_dir = os.getenv("SEU_PPU_ACBLAS_GDN_BUILD_DIR")
+            acblas_gdn_single_gemv = (
+                os.getenv("SEU_PPU_ACBLAS_GDN_SINGLE_GEMV_ENABLE", "0") == "1"
+            )
+            acblas_gdn_ba_gemv = (
+                os.getenv("SEU_PPU_ACBLAS_GDN_BA_GEMV_ENABLE", "0") == "1"
+            )
+            if acblas_gdn_single_gemv and acblas_gdn_ba_gemv:
+                raise RuntimeError(
+                    "SEU PPU GDN single-GEMV and b/a-GEMV modes are mutually exclusive"
+                )
+            if acblas_gdn_single_gemv and not acblas_gdn_build_dir:
+                raise RuntimeError(
+                    "SEU_PPU_ACBLAS_GDN_SINGLE_GEMV_ENABLE requires "
+                    "SEU_PPU_ACBLAS_GDN_BUILD_DIR"
+                )
+            if acblas_gdn_ba_gemv and not acblas_gdn_build_dir:
+                raise RuntimeError(
+                    "SEU_PPU_ACBLAS_GDN_BA_GEMV_ENABLE requires "
+                    "SEU_PPU_ACBLAS_GDN_BUILD_DIR"
+                )
+            if pack_gdn_projections and acblas_gdn_build_dir:
+                raise RuntimeError(
+                    "SEU PPU GDN projection backends are mutually exclusive"
+                )
+            if acblas_gdn_build_dir:
+                from ppu_acblas_gdn_projection import (
+                    PPUACBLASGDNProjectionExtension,
+                )
+
+                extension = PPUACBLASGDNProjectionExtension(
+                    acblas_gdn_build_dir,
+                    algorithm=int(os.getenv("SEU_PPU_ACBLAS_GDN_ALGORITHM", "-1")),
+                    workspace_bytes=self._ppu_acblas_workspace_bytes_per_handle,
+                    ba_gemv=acblas_gdn_ba_gemv,
+                    single_gemv=acblas_gdn_single_gemv,
+                )
+                for module in self._model.modules():
+                    if type(module).__name__ != "Qwen3_5GatedDeltaNet":
+                        continue
+                    extension.pack_module(module)
+                    self._ppu_packed_gdn_projection_modules += 1
+                self._ppu_gdn_projection_backend = "acblas-grouped"
+                self._ppu_gdn_projection_groups = "4"
+                self._ppu_acblas_gdn_single_gemv_enabled = acblas_gdn_single_gemv
+                self._ppu_acblas_gdn_ba_gemv_enabled = acblas_gdn_ba_gemv
+            elif pack_gdn_projections:
+                from ppu_gdn_projection_pack import (
+                    pack_qwen35_gdn_input_projections,
+                )
+
+                group_sizes = tuple(
+                    int(value)
+                    for value in os.getenv(
+                        "SEU_PPU_PACK_GDN_PROJECTIONS_GROUPS", "4"
+                    ).split(",")
+                )
+                for module in self._model.modules():
+                    if type(module).__name__ != "Qwen3_5GatedDeltaNet":
+                        continue
+                    pack_qwen35_gdn_input_projections(
+                        module, group_sizes=group_sizes
+                    )
+                    self._ppu_packed_gdn_projection_modules += 1
+                self._ppu_gdn_projection_backend = "torch-packed"
+                self._ppu_gdn_projection_groups = ",".join(
+                    str(value) for value in group_sizes
+                )
+            if pack_gdn_projections or acblas_gdn_build_dir:
+                if self._ppu_packed_gdn_projection_modules != 18:
+                    raise RuntimeError(
+                        "SEU PPU packed GDN projections expected 18 modules, "
+                        f"patched {self._ppu_packed_gdn_projection_modules}"
+                    )
+                torch.cuda.empty_cache()
+            if os.getenv("SEU_PPU_RESIDUAL_RMSNORM_ENABLE", "0") == "1":
+                decoder_modules = [
+                    module
+                    for module in self._model.modules()
+                    if type(module).__name__ == "Qwen3_5DecoderLayer"
+                ]
+                final_norm = self._model.model.language_model.norm
+                for index, module in enumerate(decoder_modules):
+                    next_norm = (
+                        decoder_modules[index + 1].input_layernorm
+                        if index + 1 < len(decoder_modules)
+                        else final_norm
+                    )
+                    pack_qwen35_decoder_residual_rmsnorm(
+                        module,
+                        self._ppu_gdn_library,
+                        next_norm=next_norm,
+                    )
+                    self._ppu_residual_rmsnorm_modules += 1
+                if self._ppu_residual_rmsnorm_modules != 24:
+                    raise RuntimeError(
+                        "SEU PPU residual RMSNorm expected 24 decoder layers, "
+                        f"patched {self._ppu_residual_rmsnorm_modules}"
+                    )
+            if os.getenv("SEU_PPU_GDN_GATE_PREP_ENABLE", "0") == "1":
+                for module in self._model.modules():
+                    if type(module).__name__ != "Qwen3_5GatedDeltaNet":
+                        continue
+                    pack_qwen35_gdn_gate_prep(module, self._ppu_gdn_library)
+                    self._ppu_gdn_gate_prep_modules += 1
+                if self._ppu_gdn_gate_prep_modules != 18:
+                    raise RuntimeError(
+                        "SEU PPU GDN gate-prep expected 18 modules, "
+                        f"patched {self._ppu_gdn_gate_prep_modules}"
+                    )
 
     def _load_dummy_backend(self, reason: str) -> None:
         self._dummy_reason = reason
@@ -304,6 +665,55 @@ class VLMModel:
                 ),
                 "optimization_profile": self.optimization_profile,
                 "ttft_measurement": "first_generated_token_put",
+                "ppu_gdn_patched_modules": self._ppu_gdn_patched_modules,
+                "ppu_conv_patched_modules": getattr(
+                    self, "_ppu_conv_patched_modules", 0
+                ),
+                "ppu_rmsnorm_patched_modules": getattr(
+                    self, "_ppu_rmsnorm_patched_modules", 0
+                ),
+                "ppu_gated_rmsnorm_patched_modules": getattr(
+                    self, "_ppu_gated_rmsnorm_patched_modules", 0
+                ),
+                "ppu_qk_rope_patched_modules": getattr(
+                    self, "_ppu_qk_rope_patched_modules", 0
+                ),
+                "ppu_packed_mlp_modules": getattr(
+                    self, "_ppu_packed_mlp_modules", 0
+                ),
+                "ppu_acblas_packed_mlp_modules": getattr(
+                    self, "_ppu_acblas_packed_mlp_modules", 0
+                ),
+                "ppu_acblas_attention_prep_modules": getattr(
+                    self, "_ppu_acblas_attention_prep_modules", 0
+                ),
+                "ppu_packed_gdn_projection_modules": getattr(
+                    self, "_ppu_packed_gdn_projection_modules", 0
+                ),
+                "ppu_packed_gdn_projection_groups": getattr(
+                    self, "_ppu_gdn_projection_groups", "disabled"
+                ),
+                "ppu_gdn_projection_backend": getattr(
+                    self, "_ppu_gdn_projection_backend", "disabled"
+                ),
+                "ppu_residual_rmsnorm_modules": getattr(
+                    self, "_ppu_residual_rmsnorm_modules", 0
+                ),
+                "ppu_gdn_gate_prep_modules": getattr(
+                    self, "_ppu_gdn_gate_prep_modules", 0
+                ),
+                "ppu_raw_stream_query_enabled": getattr(
+                    self, "_ppu_raw_stream_query_enabled", False
+                ),
+                "ppu_acblas_workspace_bytes_per_handle": getattr(
+                    self, "_ppu_acblas_workspace_bytes_per_handle", 0
+                ),
+                "ppu_acblas_gdn_single_gemv_enabled": getattr(
+                    self, "_ppu_acblas_gdn_single_gemv_enabled", False
+                ),
+                "ppu_acblas_gdn_ba_gemv_enabled": getattr(
+                    self, "_ppu_acblas_gdn_ba_gemv_enabled", False
+                ),
             },
         )
 
@@ -329,5 +739,9 @@ class VLMModel:
             token_count=token_count,
             ttft_seconds=max(end - start, 1e-4),
             elapsed_seconds=max(end - start, 2e-4),
-            meta={"backend": "dummy", "reason": getattr(self, "_dummy_reason", "n/a"), "prompt_chars": len(prompt)},
+            meta={
+                "backend": "dummy",
+                "reason": getattr(self, "_dummy_reason", "n/a"),
+                "prompt_chars": len(prompt),
+            },
         )

@@ -1,0 +1,14 @@
+{
+  "shape": [
+    2048,
+    2048
+  ],
+  "heuristic_index": 25,
+  "eager_ms": 0.009051460266113281,
+  "patched_ms": 0.007072919845581054,
+  "speedup": 1.2797346023606304,
+  "decode_exact": true,
+  "prefill_exact": true,
+  "scratch_pointer_reused": true,
+  "passed": true
+}

@@ -1,0 +1,36 @@
+{
+  "kernel": "seu_ppu_gdn_gate_prep_decode_bf16",
+  "seed": 20260828,
+  "warmup": 0,
+  "iters": 1,
+  "repeats": 1,
+  "cases": [
+    {
+      "name": "random",
+      "g_exact": true,
+      "g_max_abs_error": 0.0,
+      "g_mean_abs_error": 0.0,
+      "beta_exact": true,
+      "finite": true
+    },
+    {
+      "name": "boundary",
+      "g_exact": true,
+      "g_max_abs_error": 0.0,
+      "g_mean_abs_error": 0.0,
+      "beta_exact": true,
+      "finite": true
+    }
+  ],
+  "baseline_ms": [
+    147.46152100269683
+  ],
+  "candidate_ms": [
+    25.821548988460563
+  ],
+  "baseline_median_ms": 147.46152100269683,
+  "candidate_median_ms": 25.821548988460563,
+  "speedup": 5.71079299187652,
+  "passed": true
+}
+========= ERROR SUMMARY: 0 errors

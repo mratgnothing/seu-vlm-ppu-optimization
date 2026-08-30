@@ -1,0 +1,15 @@
+{
+  "candidate": "graph_captured_acblas_packed_mlp",
+  "capture_supported": true,
+  "updated_input_exact": true,
+  "dynamic_pointer_fallback_exact": true,
+  "prefill_fallback_exact": true,
+  "alternate_stream_rejected": true,
+  "max_abs_error": 0.0,
+  "eager_candidate_median_ms": 0.04421449557412416,
+  "graph_replay_median_ms": 0.043335501686669886,
+  "graph_over_eager_speedup": 1.0202834593634034,
+  "graph_with_input_copy_median_ms": 0.04746150807477534,
+  "graph_with_input_copy_speedup": 0.931586402700573,
+  "passed": true
+}

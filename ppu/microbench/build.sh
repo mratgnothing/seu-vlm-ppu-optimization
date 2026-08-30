@@ -4,6 +4,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PPU_SDK_ROOT="${PPU_SDK_ROOT:-/usr/local/PPU_SDK}"
 COMPILER="${PPU_SDK_ROOT}/bin/clang++"
+HGGC_RUNTIME_LIBRARY="${HGGC_RUNTIME_LIBRARY:-hggcrt1}"
 OUTPUT_DIR="${SCRIPT_DIR}/build"
 
 if [[ ! -x "${COMPILER}" ]]; then
@@ -21,6 +22,7 @@ mkdir -p "${OUTPUT_DIR}"
   -I"${PPU_SDK_ROOT}/include" \
   -L"${PPU_SDK_ROOT}/lib" \
   -Wl,-rpath,"${PPU_SDK_ROOT}/lib" \
+  -l"${HGGC_RUNTIME_LIBRARY}" \
   -o "${OUTPUT_DIR}/qwen35_bf16_gemv"
 
 echo "Built ${OUTPUT_DIR}/qwen35_bf16_gemv"

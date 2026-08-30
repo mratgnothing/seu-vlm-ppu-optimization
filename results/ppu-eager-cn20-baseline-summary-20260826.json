@@ -1,0 +1,16 @@
+{
+  "source": "artifacts/remote-results/eager-cn20-current.json",
+  "source_kind": "git-ignored raw result",
+  "sample_count": 20,
+  "performance": {
+    "avg_ttft_ms": 118.493,
+    "avg_throughput_tokens_per_sec": 49.737
+  },
+  "accuracy": {
+    "correct": 17,
+    "total": 20
+  },
+  "public_validation": {
+    "passed": true
+  }
+}

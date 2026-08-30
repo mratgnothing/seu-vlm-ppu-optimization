@@ -1,0 +1,3 @@
+[2026-08-28 00:59:50:885600][ALINPU INFO]: ACOMPUTE: [device caps] dev=0, name=PPU-ZW810E, sm8.0, smem=256KB, num_of_sm=64, freq_of_sm=0MHz
+RESULT {"baseline_ms": 182.04364013671875, "candidate": "one_entry_acblas_packed_mlp", "candidate_ms": 89.68340301513672, "decode_exact": true, "max_abs_error": 0.0, "output_scratch_reused": true, "passed": true, "prefill_exact": true, "speedup": 2.029847597397631}
+========= ERROR SUMMARY: 0 errors

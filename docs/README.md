@@ -1,11 +1,9 @@
 # 项目导航与进度总览
 
-更新时间：2026-07-26
+更新时间：2026-08-29
 
 本页是人类成员和 Agent 的统一入口。需要快速接手时，先看“当前结论”和“模块进度”，
 再按表格中的证据文档深入。
-
-> **2026-08-20 最新队内状态：** 当前赛事已经进入 v1.2、私有 PAI/PPU 资源和统一评测环境准备阶段。仓库下方原有 7 月状态尚未完全迁移到最新赛事阶段，请优先阅读 [团队当前状态与冲刺计划](team-status-2026-08-20.md)，其中汇总了最新通知、现有成果、风险、待确认事项和 8 月下旬内部时间表。
 
 ## 当前结论
 
@@ -15,8 +13,36 @@
 - O1 相对 O0 的正式三次中位提升：
   - 中文 TTFT 8.25%，Throughput 8.82%；
   - 英文 TTFT 10.22%，Throughput 6.37%。
-- 25 项无模型测试通过；源码候选包可复现构建并自动排除模型、数据、密钥和本地结果。
-- PPU SDK、官方 vectorAdd 和运行时调查已完成；Qwen3.5-2B 尚未在目标 PPU 上形成真实推理闭环。
+- Qwen3.5-2B 已在隔离 PPU-ZW810E 上形成真实多模态闭环，参数无 offload。
+- 中文前 20 条 PPU 稳态基线 Accuracy 85%，平均 TTFT 约 118.5 ms，吞吐约
+  48.85 token/s；O1 相对 O0 的稳态聚合提升约 10.98%/10.78%。
+- PPU profile 已确认大量细碎 launch、elementwise、reduce、copy 和临时分配；
+  当前 HGGC GEMV 优化核尚未超过 `torch.mv`。
+- 48-edge residual-add + RMSNorm 已在真实 PPU 上消除 720 次 add/launch；CN20 两轮
+  配对中位约 `1.021x`，均 20/20 全文一致，当前仍为显式 opt-in 候选。
+- GDN gate-prep 融合在最终优化栈之上取得 CN20 两轮配对中位
+  `1.0811x/1.0863x`；完整中文 4029 条两路 Accuracy 同为 3374/4029，全文、答案和
+  token 数 4029/4029 一致，配对中位 `1.0862x`。
+- acBLASLt 四形状 heuristic 扫描与方阵 scratch 集成已完成；方阵模块级虽为
+  `1.2797x`，整模固定长仅 `0.9898x`，因此明确作为负实验保留。
+- 单入口 acBLAS packed-MLP 在固定 128-token 八对和 CN20 两轮均稳定正收益；CN20
+  两轮均 20/20 全文一致、20/20 获胜，成对中位 `1.1212x/1.1122x`。完整中文
+  4029 条两路 Accuracy 均为 3374/4029，4029/4029 文本、答案和 token 数一致，
+  成对中位 `1.1125x`、3939/4029 获胜；完整英文同样 4029/4029 exact，成对中位
+  `1.1093x`、3806/4029 获胜。
+- Attention Prep 单入口候选已通过模块 exact、prefill 回退、scratch 复用、异流保护和
+  memcheck，模块边界 `4.1006x`；但 CN20 两轮性能方向相反，第二轮中位 `0.9852x`，
+  已按规则停止并作为默认关闭的负实验保留。
+- HGGC Graph Capture 已在当前 PPU/PyTorch 上通过输入更新与 exact replay；合成链
+  `1.8303x`，但现有单入口 packed-MLP 仅 `1.0203x`，含输入 copy 为 `0.9316x`，
+  因此未进入整模门禁。
+- residual-RMSNorm 输出 scratch 模块级 `1.3373x`、exact、memcheck 0 errors，但
+  当前完整栈固定长为 `0.9862x`，已止损且默认不分配、不启用。
+- grouped-GDN 的四个连续投影合为一次 GEMV 后，CN100 成对中位 `1.0261x`、
+  Accuracy `93%→93%`、答案 100/100 一致；完整文本 99/100 一致，因此仅作为默认关闭的
+  accuracy-budget 候选，不能替代中英文 4029 exact 的精度优先栈。
+- 更保守的 b/a-only 合并保持 qkv/z 原形状，CN100 100/100 完整文本一致、Accuracy
+  `93%→93%`，中位 `1.0068x`；作为默认关闭的精度优先小增量，等待 4029 条门禁。
 
 ## 模块进度
 
@@ -28,8 +54,8 @@
 | 完整公开集精度 | 已完成 | 中英文各 4029 条、分块哈希与题号集合审计 | 私有集评测时保持同一 Accuracy 护栏 | [中文全量](experiments/2026-07-26-cn-full-n4029.md)、[英文全量](experiments/2026-07-26-en-full-n4029.md) |
 | 输出解析鲁棒性 | 已完成 | Markdown 选项、截断结论规范化和整块复测 | 继续记录新格式边界，禁止按题号修补 | [英文全量修复记录](experiments/2026-07-26-en-full-n4029.md) |
 | CUDA 热点定位 | 已完成 | GEMV/GEMM 占 self CUDA time 86.18%，显存峰值已记录 | 映射到 PPU kernel/profile | [CUDA Profile](experiments/2026-07-24-o2-cuda-profile.md) |
-| PPU 工具链 | 部分完成 | SDK、驱动、HGGC、vectorAdd、PPU-vLLM 源码调查 | 获取隔离资源和 Qwen3.5 Python/vLLM 镜像 | [PPU 环境](ppu-environment.md)、[兼容性矩阵](ppu-compatibility-matrix.md) |
-| PPU 关键算子 | 已准备，未实测 | 三组 BF16 GEMV 参考微基准和数值校验逻辑 | 在隔离 PPU 编译、校验、profile | [关键算子目标](qwen35-kernel-targets.md) |
+| PPU 工具链 | 已完成首轮闭环 | SDK、驱动、HGGC、定制 PyTorch、模型驻留、真实样本与 20 条基线 | 获取比赛 PPU-vLLM/v1.2，固定最终镜像 | [首次实验](experiments/2026-08-26-ppu-baseline-and-gemv.md)、[首次上机手册](ppu-first-validation.md) |
+| PPU 关键算子 | 七类核、图与 host 调度优化已验证 | GDN/conv/norm/qk-RoPE、packed MLP、grouped-acBLAS GDN、48-edge residual-RMSNorm、GDN gate-prep、单入口 acBLAS packed-MLP、raw-stream；最新精度优先栈中英文 4029 均 exact、约 9% 增量；另有 CN100 中位 +2.61% 且 Accuracy 不降的单-GEMV accuracy-budget 候选；workspace、b/a batched 与 GDN output scratch 均已止损 | 私有集门限、acext weight-only/官方 PPU-vLLM | [融合实验](experiments/2026-08-26-ppu-fused-decode-kernels.md)、[packed MLP](experiments/2026-08-27-ppu-packed-mlp.md)、[packed GDN](experiments/2026-08-27-ppu-packed-gdn-projections.md)、[residual-RMSNorm](experiments/2026-08-27-ppu-residual-rmsnorm.md)、[GDN gate-prep](experiments/2026-08-28-ppu-gdn-gate-prep.md)、[单入口 packed-MLP](experiments/2026-08-28-ppu-acblas-packed-mlp.md)、[raw-stream](experiments/2026-08-28-ppu-raw-stream-query.md)、[运行时主要矛盾](experiments/2026-08-28-ppu-acblas-runtime-overhead.md) |
 | 技术报告 | 初稿完成 | 方法、指标、结果和真实性边界已整理 | 补 PPU 真实实验、最终复现命令 | [初赛技术报告](preliminary-technical-report.md) |
 | 源码交付 | 候选包可用 | 白名单打包、敏感扫描、可复现 ZIP | 按主办方最终目录要求定稿 | [根目录 README](../README.md) |
 
@@ -37,11 +63,11 @@
 
 本地不再缺少基础模型、数据、评测脚本或可复现基线。关键外部依赖是主办方提供：
 
-1. 支持 Qwen3.5-2B 的 PPU Python/vLLM 镜像；
-2. 个性化隔离 PPU 资源和上传方式；
-3. GDN、causal-conv1d 等算子的支持状态；
+1. 主办方 v1.2 评测包及与 v1.1 的差异；
+2. 比赛 PPU-vLLM 是否注册 Qwen3.5 并实现 GDN/causal-conv fast path；
+3. RTC cache 在最终实例中的可写性与持久化规则；
 4. 量化、校准数据和混合精度允许范围；
-5. 初赛统一复现环境与启动命令限制。
+5. 最终复现镜像、启动命令和提交目录限制。
 
 可直接发送的内容见 [需要向主办方确认的问题](questions-for-organizer.md)。
 
@@ -54,6 +80,11 @@
 3. 从 `main` 拉出短分支；
 4. 使用 [实验模板](experiment-template.md) 记录配置、提交、结果和失败；
 5. 通过 Pull Request 合并，避免两人直接覆盖同一实验记录。
+
+隔离 PPU 节点首次接入时，按 [PPU + Qwen3.5 首次上机验证手册](ppu-first-validation.md)
+运行 `scripts/run_ppu_first_validation.sh`。默认只做只读预检；设备计算、微基准、
+完整模型加载和真实样本必须分别显式启用，并且只允许在主办方批准的个性化隔离
+资源执行。
 
 ### Agent
 
@@ -82,7 +113,7 @@
 
 ## 文档地图
 
-- [团队当前状态与冲刺计划（2026-08-20）](team-status-2026-08-20.md)
+- [PPU 推理优化完整工作说明](work-summary/README.md)
 - [项目目标与真实状态边界](../PROJECT_CONTEXT.md)
 - [当前已验证状态](current-status.md)
 - [首轮实验计划](experiment-plan.md)
@@ -90,5 +121,19 @@
 - [初赛技术报告初稿](preliminary-technical-report.md)
 - [PPU 兼容性矩阵](ppu-compatibility-matrix.md)
 - [需要向主办方确认的问题](questions-for-organizer.md)
+- [2026-08-26 PPU 首次真实基线与算子实验](experiments/2026-08-26-ppu-baseline-and-gemv.md)
+- [2026-08-27 PPU packed MLP](experiments/2026-08-27-ppu-packed-mlp.md)
+- [2026-08-27 PPU 注册式 acBLAS Linear](experiments/2026-08-27-ppu-acblas-gemv.md)
+- [2026-08-27 PPU GDN 输入投影打包](experiments/2026-08-27-ppu-packed-gdn-projections.md)
+- [2026-08-27 PPU residual-add + RMSNorm](experiments/2026-08-27-ppu-residual-rmsnorm.md)
+- [2026-08-28 PPU GDN gate-prep](experiments/2026-08-28-ppu-gdn-gate-prep.md)
+- [2026-08-28 PPU acBLASLt Matmul 负实验](experiments/2026-08-28-ppu-acblaslt-matmul.md)
+- [2026-08-28 PPU 单入口 acBLAS packed-MLP](experiments/2026-08-28-ppu-acblas-packed-mlp.md)
+- [2026-08-28 PPU Attention Prep 单入口融合](experiments/2026-08-28-ppu-acblas-attention-prep.md)
+- [2026-08-28 PPU Graph Capture 能力与止损实验](experiments/2026-08-28-ppu-graph-capture.md)
+- [2026-08-28 PPU residual-RMSNorm scratch 负实验](experiments/2026-08-28-ppu-residual-rmsnorm-scratch.md)
+- [2026-08-28 PPU acBLAS 运行时开销与主要矛盾](experiments/2026-08-28-ppu-acblas-runtime-overhead.md)
+- [2026-08-27 PPU SwiGLU 融合负实验](experiments/2026-08-27-ppu-swiglu-negative.md)
+- [PPU 资源释放前快照与恢复手册](ppu-resource-release-handoff.md)
+- [PPU 后续优化路线图](ppu-future-roadmap.md)
 - [实验记录目录](experiments/)
-

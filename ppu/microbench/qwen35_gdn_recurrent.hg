@@ -1,0 +1,472 @@
+#include <hggc_bf16.h>
+#include <hggc_runtime.h>
+
+#include <algorithm>
+#include <cmath>
+#include <cstdint>
+#include <cstdlib>
+#include <cstring>
+#include <fstream>
+#include <iomanip>
+#include <iostream>
+#include <limits>
+#include <string>
+#include <vector>
+
+namespace {
+
+constexpr int kHeads = 16;
+constexpr int kKeyDim = 128;
+constexpr int kValueDim = 128;
+constexpr int kWarpSize = 32;
+constexpr unsigned kFullWarpMask = 0xffffffffU;
+constexpr float kNormEpsilon = 1.0e-6F;
+
+struct Options {
+  int warmup = 20;
+  int iterations = 200;
+  int device = 0;
+  int threads = 128;
+  std::string dump_prefix;
+};
+
+void print_usage(const char* program) {
+  std::cout << "Usage: " << program
+            << " [--warmup COUNT] [--iters COUNT] [--device INDEX]"
+               " [--threads 32|64|128|256|512|1024]"
+               " [--dump-prefix PATH]\n";
+}
+
+bool parse_int(const char* value, int minimum, int* output) {
+  char* end = nullptr;
+  const long parsed = std::strtol(value, &end, 10);
+  if (end == value || *end != '\0' || parsed < minimum ||
+      parsed > std::numeric_limits<int>::max()) {
+    return false;
+  }
+  *output = static_cast<int>(parsed);
+  return true;
+}
+
+bool parse_options(int argc, char** argv, Options* options) {
+  for (int index = 1; index < argc; ++index) {
+    const std::string argument = argv[index];
+    if (argument == "--help" || argument == "-h") {
+      print_usage(argv[0]);
+      std::exit(EXIT_SUCCESS);
+    }
+    if (index + 1 >= argc) {
+      return false;
+    }
+    const char* value = argv[++index];
+    if (argument == "--warmup") {
+      if (!parse_int(value, 0, &options->warmup)) return false;
+    } else if (argument == "--iters") {
+      if (!parse_int(value, 1, &options->iterations)) return false;
+    } else if (argument == "--device") {
+      if (!parse_int(value, 0, &options->device)) return false;
+    } else if (argument == "--threads") {
+      if (!parse_int(value, kWarpSize, &options->threads)) return false;
+    } else if (argument == "--dump-prefix") {
+      options->dump_prefix = value;
+    } else {
+      return false;
+    }
+  }
+  if (options->threads > 1024 ||
+      (options->threads & (options->threads - 1)) != 0 ||
+      options->threads % kWarpSize != 0) {
+    std::cerr << "--threads must be a power of two from 32 through 1024\n";
+    return false;
+  }
+  return true;
+}
+
+uint16_t float_to_bf16(float value) {
+  uint32_t bits = 0;
+  std::memcpy(&bits, &value, sizeof(bits));
+  const uint32_t rounding_bias = 0x7fffU + ((bits >> 16U) & 1U);
+  return static_cast<uint16_t>((bits + rounding_bias) >> 16U);
+}
+
+float bf16_to_float(uint16_t value) {
+  const uint32_t bits = static_cast<uint32_t>(value) << 16U;
+  float result = 0.0F;
+  std::memcpy(&result, &bits, sizeof(result));
+  return result;
+}
+
+__device__ float warp_sum(float value) {
+  for (int offset = kWarpSize / 2; offset > 0; offset >>= 1) {
+    value += __shfl_down_sync(kFullWarpMask, value, offset);
+  }
+  return value;
+}
+
+__device__ float block_sum(float value) {
+  __shared__ float warp_sums[32];
+  const int lane = threadIdx.x & (kWarpSize - 1);
+  const int warp = threadIdx.x / kWarpSize;
+  const int warp_count = blockDim.x / kWarpSize;
+  value = warp_sum(value);
+  if (lane == 0) warp_sums[warp] = value;
+  __syncthreads();
+  if (warp == 0) {
+    value = lane < warp_count ? warp_sums[lane] : 0.0F;
+    value = warp_sum(value);
+  }
+  return value;
+}
+
+__global__ void gdn_recurrent_fused(const __ppu_bfloat16* query,
+                                    const __ppu_bfloat16* key,
+                                    const __ppu_bfloat16* value,
+                                    const float* g,
+                                    const float* beta,
+                                    float* state,
+                                    __ppu_bfloat16* output) {
+  const int head = blockIdx.x;
+  const int thread = threadIdx.x;
+  if (head >= kHeads) return;
+
+  __shared__ float normalized_query[kKeyDim];
+  __shared__ float normalized_key[kKeyDim];
+  __shared__ float query_inv_norm;
+  __shared__ float key_inv_norm;
+
+  float query_square_sum = 0.0F;
+  float key_square_sum = 0.0F;
+  const size_t vector_offset = static_cast<size_t>(head) * kKeyDim;
+  for (int index = thread; index < kKeyDim; index += blockDim.x) {
+    const float query_value = __bfloat162float(query[vector_offset + index]);
+    const float key_value = __bfloat162float(key[vector_offset + index]);
+    query_square_sum += query_value * query_value;
+    key_square_sum += key_value * key_value;
+  }
+  query_square_sum = block_sum(query_square_sum);
+  if (thread == 0) {
+    query_inv_norm = rsqrtf(query_square_sum + kNormEpsilon) /
+                     sqrtf(static_cast<float>(kKeyDim));
+  }
+  __syncthreads();
+  key_square_sum = block_sum(key_square_sum);
+  if (thread == 0) {
+    key_inv_norm = rsqrtf(key_square_sum + kNormEpsilon);
+  }
+  __syncthreads();
+
+  for (int index = thread; index < kKeyDim; index += blockDim.x) {
+    normalized_query[index] =
+        __bfloat162float(query[vector_offset + index]) * query_inv_norm;
+    normalized_key[index] =
+        __bfloat162float(key[vector_offset + index]) * key_inv_norm;
+  }
+  __syncthreads();
+
+  const float decay = expf(g[head]);
+  const float beta_value = beta[head];
+  const size_t state_head_offset =
+      static_cast<size_t>(head) * kKeyDim * kValueDim;
+  const size_t value_head_offset = static_cast<size_t>(head) * kValueDim;
+
+  for (int value_index = thread; value_index < kValueDim;
+       value_index += blockDim.x) {
+    float memory_projection = 0.0F;
+    for (int key_index = 0; key_index < kKeyDim; ++key_index) {
+      const size_t state_offset = state_head_offset +
+          static_cast<size_t>(key_index) * kValueDim + value_index;
+      memory_projection +=
+          (state[state_offset] * decay) * normalized_key[key_index];
+    }
+    const float delta =
+        (__bfloat162float(value[value_head_offset + value_index]) -
+         memory_projection) * beta_value;
+
+    float result = 0.0F;
+    for (int key_index = 0; key_index < kKeyDim; ++key_index) {
+      const size_t state_offset = state_head_offset +
+          static_cast<size_t>(key_index) * kValueDim + value_index;
+      const float updated = state[state_offset] * decay +
+                            normalized_key[key_index] * delta;
+      state[state_offset] = updated;
+      result += updated * normalized_query[key_index];
+    }
+    output[value_head_offset + value_index] = __float2bfloat16_rn(result);
+  }
+}
+
+void cpu_step(const std::vector<uint16_t>& query,
+              const std::vector<uint16_t>& key,
+              const std::vector<uint16_t>& value,
+              const std::vector<float>& g,
+              const std::vector<float>& beta,
+              std::vector<float>* state,
+              std::vector<uint16_t>* output) {
+  for (int head = 0; head < kHeads; ++head) {
+    float query_square_sum = 0.0F;
+    float key_square_sum = 0.0F;
+    for (int index = 0; index < kKeyDim; ++index) {
+      const size_t offset = static_cast<size_t>(head) * kKeyDim + index;
+      const float q = bf16_to_float(query[offset]);
+      const float k = bf16_to_float(key[offset]);
+      query_square_sum += q * q;
+      key_square_sum += k * k;
+    }
+    const float query_inv_norm =
+        1.0F / std::sqrt(query_square_sum + kNormEpsilon) /
+        std::sqrt(static_cast<float>(kKeyDim));
+    const float key_inv_norm =
+        1.0F / std::sqrt(key_square_sum + kNormEpsilon);
+    const float decay = std::exp(g[head]);
+    const size_t state_head_offset =
+        static_cast<size_t>(head) * kKeyDim * kValueDim;
+    const size_t vector_offset = static_cast<size_t>(head) * kKeyDim;
+
+    for (int value_index = 0; value_index < kValueDim; ++value_index) {
+      float memory_projection = 0.0F;
+      for (int key_index = 0; key_index < kKeyDim; ++key_index) {
+        const size_t state_offset = state_head_offset +
+            static_cast<size_t>(key_index) * kValueDim + value_index;
+        const float normalized_key =
+            bf16_to_float(key[vector_offset + key_index]) * key_inv_norm;
+        memory_projection += (*state)[state_offset] * decay * normalized_key;
+      }
+      const float delta =
+          (bf16_to_float(value[vector_offset + value_index]) -
+           memory_projection) * beta[head];
+      float result = 0.0F;
+      for (int key_index = 0; key_index < kKeyDim; ++key_index) {
+        const size_t state_offset = state_head_offset +
+            static_cast<size_t>(key_index) * kValueDim + value_index;
+        const float normalized_key =
+            bf16_to_float(key[vector_offset + key_index]) * key_inv_norm;
+        const float normalized_query =
+            bf16_to_float(query[vector_offset + key_index]) * query_inv_norm;
+        const float updated = (*state)[state_offset] * decay +
+                              normalized_key * delta;
+        (*state)[state_offset] = updated;
+        result += updated * normalized_query;
+      }
+      (*output)[vector_offset + value_index] = float_to_bf16(result);
+    }
+  }
+}
+
+bool check_hggc(hggcError_t status, const char* expression, int line) {
+  if (status == hggcSuccess) return true;
+  std::cerr << "HGGC call failed at line " << line << ": " << expression
+            << " -> " << hggcGetErrorString(status) << '\n';
+  return false;
+}
+
+#define HGGC_CHECK(expression)                                      \
+  do {                                                              \
+    if (!check_hggc((expression), #expression, __LINE__)) {         \
+      return EXIT_FAILURE;                                          \
+    }                                                               \
+  } while (false)
+
+}  // namespace
+
+int main(int argc, char** argv) {
+  Options options;
+  if (!parse_options(argc, argv, &options)) {
+    print_usage(argv[0]);
+    return EXIT_FAILURE;
+  }
+
+  constexpr size_t kVectorElements =
+      static_cast<size_t>(kHeads) * kKeyDim;
+  constexpr size_t kStateElements =
+      static_cast<size_t>(kHeads) * kKeyDim * kValueDim;
+  std::vector<uint16_t> host_query(kVectorElements);
+  std::vector<uint16_t> host_key(kVectorElements);
+  std::vector<uint16_t> host_value(kVectorElements);
+  std::vector<float> host_g(kHeads);
+  std::vector<float> host_beta(kHeads);
+  std::vector<float> initial_state(kStateElements);
+  std::vector<float> reference_state;
+  std::vector<float> actual_state(kStateElements);
+  std::vector<uint16_t> reference_output(kVectorElements);
+  std::vector<uint16_t> actual_output(kVectorElements);
+
+  for (int head = 0; head < kHeads; ++head) {
+    host_g[head] = -0.05F - static_cast<float>(head % 7) * 0.01F;
+    host_beta[head] = 0.2F + static_cast<float>(head % 5) * 0.1F;
+    for (int index = 0; index < kKeyDim; ++index) {
+      const size_t offset = static_cast<size_t>(head) * kKeyDim + index;
+      host_query[offset] = float_to_bf16(
+          static_cast<float>(((head * 17 + index * 5) % 31) - 15) / 64.0F);
+      host_key[offset] = float_to_bf16(
+          static_cast<float>(((head * 11 + index * 3) % 29) - 14) / 64.0F);
+      host_value[offset] = float_to_bf16(
+          static_cast<float>(((head * 7 + index * 13) % 37) - 18) / 64.0F);
+    }
+  }
+  for (int head = 0; head < kHeads; ++head) {
+    for (int key_index = 0; key_index < kKeyDim; ++key_index) {
+      for (int value_index = 0; value_index < kValueDim; ++value_index) {
+        const size_t offset = static_cast<size_t>(head) * kKeyDim * kValueDim +
+            static_cast<size_t>(key_index) * kValueDim + value_index;
+        initial_state[offset] = static_cast<float>(
+            ((head * 19 + key_index * 7 + value_index * 3) % 41) - 20) /
+            1024.0F;
+      }
+    }
+  }
+  reference_state = initial_state;
+  cpu_step(host_query, host_key, host_value, host_g, host_beta,
+           &reference_state, &reference_output);
+
+  __ppu_bfloat16* device_query = nullptr;
+  __ppu_bfloat16* device_key = nullptr;
+  __ppu_bfloat16* device_value = nullptr;
+  __ppu_bfloat16* device_output = nullptr;
+  float* device_g = nullptr;
+  float* device_beta = nullptr;
+  float* device_state = nullptr;
+  hggcEvent_t start = nullptr;
+  hggcEvent_t stop = nullptr;
+
+  HGGC_CHECK(hggcSetDevice(options.device));
+  HGGC_CHECK(hggcMalloc(reinterpret_cast<void**>(&device_query),
+                        kVectorElements * sizeof(uint16_t)));
+  HGGC_CHECK(hggcMalloc(reinterpret_cast<void**>(&device_key),
+                        kVectorElements * sizeof(uint16_t)));
+  HGGC_CHECK(hggcMalloc(reinterpret_cast<void**>(&device_value),
+                        kVectorElements * sizeof(uint16_t)));
+  HGGC_CHECK(hggcMalloc(reinterpret_cast<void**>(&device_output),
+                        kVectorElements * sizeof(uint16_t)));
+  HGGC_CHECK(hggcMalloc(reinterpret_cast<void**>(&device_g),
+                        kHeads * sizeof(float)));
+  HGGC_CHECK(hggcMalloc(reinterpret_cast<void**>(&device_beta),
+                        kHeads * sizeof(float)));
+  HGGC_CHECK(hggcMalloc(reinterpret_cast<void**>(&device_state),
+                        kStateElements * sizeof(float)));
+  HGGC_CHECK(hggcMemcpy(device_query, host_query.data(),
+                        kVectorElements * sizeof(uint16_t), hggcMemcpyHostToDevice));
+  HGGC_CHECK(hggcMemcpy(device_key, host_key.data(),
+                        kVectorElements * sizeof(uint16_t), hggcMemcpyHostToDevice));
+  HGGC_CHECK(hggcMemcpy(device_value, host_value.data(),
+                        kVectorElements * sizeof(uint16_t), hggcMemcpyHostToDevice));
+  HGGC_CHECK(hggcMemcpy(device_g, host_g.data(), kHeads * sizeof(float),
+                        hggcMemcpyHostToDevice));
+  HGGC_CHECK(hggcMemcpy(device_beta, host_beta.data(), kHeads * sizeof(float),
+                        hggcMemcpyHostToDevice));
+
+  // Correctness uses exactly one recurrent update from the shared initial state.
+  HGGC_CHECK(hggcMemcpy(device_state, initial_state.data(),
+                        kStateElements * sizeof(float), hggcMemcpyHostToDevice));
+  gdn_recurrent_fused<<<kHeads, options.threads>>>(
+      device_query, device_key, device_value, device_g, device_beta,
+      device_state, device_output);
+  HGGC_CHECK(hggcGetLastError());
+  HGGC_CHECK(hggcDeviceSynchronize());
+  HGGC_CHECK(hggcMemcpy(actual_state.data(), device_state,
+                        kStateElements * sizeof(float), hggcMemcpyDeviceToHost));
+  HGGC_CHECK(hggcMemcpy(actual_output.data(), device_output,
+                        kVectorElements * sizeof(uint16_t), hggcMemcpyDeviceToHost));
+
+  float max_state_error = 0.0F;
+  float max_output_error = 0.0F;
+  int failed_state_values = 0;
+  int failed_output_values = 0;
+  for (size_t index = 0; index < kStateElements; ++index) {
+    const float error = std::abs(actual_state[index] - reference_state[index]);
+    max_state_error = std::max(max_state_error, error);
+    if (!std::isfinite(actual_state[index]) || error > 2.0e-5F) {
+      ++failed_state_values;
+    }
+  }
+  for (size_t index = 0; index < kVectorElements; ++index) {
+    const float expected = bf16_to_float(reference_output[index]);
+    const float actual = bf16_to_float(actual_output[index]);
+    const float error = std::abs(actual - expected);
+    max_output_error = std::max(max_output_error, error);
+    if (!std::isfinite(actual) || error > 7.8125e-3F) {
+      ++failed_output_values;
+    }
+  }
+  if (!options.dump_prefix.empty()) {
+    std::ofstream state_file(options.dump_prefix + ".state.f32.bin",
+                             std::ios::binary);
+    std::ofstream output_file(options.dump_prefix + ".output.bf16.bin",
+                              std::ios::binary);
+    if (!state_file || !output_file) {
+      std::cerr << "Cannot open dump files with prefix: "
+                << options.dump_prefix << '\n';
+      return EXIT_FAILURE;
+    }
+    state_file.write(reinterpret_cast<const char*>(actual_state.data()),
+                     actual_state.size() * sizeof(float));
+    output_file.write(reinterpret_cast<const char*>(actual_output.data()),
+                      actual_output.size() * sizeof(uint16_t));
+  }
+
+  // Timing follows the real recurrent contract: the state evolves each token.
+  HGGC_CHECK(hggcMemcpy(device_state, initial_state.data(),
+                        kStateElements * sizeof(float), hggcMemcpyHostToDevice));
+  for (int iteration = 0; iteration < options.warmup; ++iteration) {
+    gdn_recurrent_fused<<<kHeads, options.threads>>>(
+        device_query, device_key, device_value, device_g, device_beta,
+        device_state, device_output);
+  }
+  HGGC_CHECK(hggcGetLastError());
+  HGGC_CHECK(hggcDeviceSynchronize());
+  HGGC_CHECK(hggcEventCreate(&start));
+  HGGC_CHECK(hggcEventCreate(&stop));
+  HGGC_CHECK(hggcEventRecord(start, 0));
+  for (int iteration = 0; iteration < options.iterations; ++iteration) {
+    gdn_recurrent_fused<<<kHeads, options.threads>>>(
+        device_query, device_key, device_value, device_g, device_beta,
+        device_state, device_output);
+  }
+  HGGC_CHECK(hggcEventRecord(stop, 0));
+  HGGC_CHECK(hggcEventSynchronize(stop));
+  float total_ms = 0.0F;
+  HGGC_CHECK(hggcEventElapsedTime(&total_ms, start, stop));
+  const double average_ms =
+      static_cast<double>(total_ms) / options.iterations;
+  const double bytes =
+      3.0 * static_cast<double>(kStateElements * sizeof(float)) +
+      3.0 * static_cast<double>(kVectorElements * sizeof(uint16_t)) +
+      2.0 * static_cast<double>(kHeads * sizeof(float));
+  const double effective_gbps = bytes / (average_ms / 1000.0) / 1.0e9;
+  const bool passed = failed_state_values == 0 && failed_output_values == 0 &&
+                      average_ms > 0.0;
+
+  std::cout << std::fixed << std::setprecision(6)
+            << "gdn_recurrent_fused: heads=" << kHeads
+            << ", key_dim=" << kKeyDim << ", value_dim=" << kValueDim
+            << ", threads=" << options.threads
+            << ", average_ms=" << average_ms
+            << ", effective_GB/s=" << effective_gbps << '\n'
+            << "Correctness: " << (passed ? "PASS" : "FAIL")
+            << ", failed_state_values=" << failed_state_values
+            << ", failed_output_values=" << failed_output_values
+            << ", max_state_error=" << max_state_error
+            << ", max_output_error=" << max_output_error << '\n'
+            << "RESULT {\"kernel\":\"gdn_recurrent_fused\""
+            << ",\"heads\":" << kHeads
+            << ",\"key_dim\":" << kKeyDim
+            << ",\"value_dim\":" << kValueDim
+            << ",\"threads\":" << options.threads
+            << ",\"warmup\":" << options.warmup
+            << ",\"iterations\":" << options.iterations
+            << ",\"average_ms\":" << average_ms
+            << ",\"effective_gbps\":" << effective_gbps
+            << ",\"max_state_error\":" << max_state_error
+            << ",\"max_output_error\":" << max_output_error
+            << ",\"passed\":" << (passed ? "true" : "false") << "}\n";
+
+  HGGC_CHECK(hggcEventDestroy(start));
+  HGGC_CHECK(hggcEventDestroy(stop));
+  HGGC_CHECK(hggcFree(device_state));
+  HGGC_CHECK(hggcFree(device_beta));
+  HGGC_CHECK(hggcFree(device_g));
+  HGGC_CHECK(hggcFree(device_output));
+  HGGC_CHECK(hggcFree(device_value));
+  HGGC_CHECK(hggcFree(device_key));
+  HGGC_CHECK(hggcFree(device_query));
+  return passed ? EXIT_SUCCESS : EXIT_FAILURE;
+}

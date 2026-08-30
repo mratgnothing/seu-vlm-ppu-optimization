@@ -14,9 +14,17 @@
 
 namespace {
 
-constexpr int kThreads = 256;
+constexpr int kDefaultThreads = 256;
+constexpr int kWarpSize = 32;
+constexpr unsigned kFullWarpMask = 0xffffffffU;
 static_assert(sizeof(__ppu_bfloat16) == sizeof(uint16_t),
               "PPU BF16 must occupy 16 bits");
+
+enum class KernelKind {
+  kReference,
+  kWarp,
+  kWarpVec2,
+};
 
 struct Options {
   int n = 6144;
@@ -24,13 +32,30 @@ struct Options {
   int warmup = 10;
   int iterations = 100;
   int device = 0;
+  int threads = kDefaultThreads;
+  int matrix_copies = 1;
+  KernelKind kernel = KernelKind::kReference;
 };
 
 void print_usage(const char* program) {
   std::cout
       << "Usage: " << program
       << " [--n OUTPUT_ROWS] [--k INPUT_SIZE] [--warmup COUNT]"
-         " [--iters COUNT] [--device INDEX]\n";
+         " [--iters COUNT] [--device INDEX] [--threads COUNT]"
+         " [--matrix-copies COUNT]"
+         " [--kernel reference|warp|warp_vec2]\n";
+}
+
+const char* kernel_name(KernelKind kernel) {
+  switch (kernel) {
+    case KernelKind::kReference:
+      return "bf16_gemv_reference";
+    case KernelKind::kWarp:
+      return "bf16_gemv_warp";
+    case KernelKind::kWarpVec2:
+      return "bf16_gemv_warp_vec2";
+  }
+  return "unknown";
 }
 
 bool parse_positive_int(const char* value, int* output) {
@@ -88,10 +113,40 @@ bool parse_options(int argc, char** argv, Options* options) {
       if (!parse_nonnegative_int(value, &options->device)) {
         return false;
       }
+    } else if (argument == "--threads") {
+      if (!parse_positive_int(value, &options->threads)) {
+        return false;
+      }
+    } else if (argument == "--matrix-copies") {
+      if (!parse_positive_int(value, &options->matrix_copies)) {
+        return false;
+      }
+    } else if (argument == "--kernel") {
+      const std::string kernel = value;
+      if (kernel == "reference") {
+        options->kernel = KernelKind::kReference;
+      } else if (kernel == "warp") {
+        options->kernel = KernelKind::kWarp;
+      } else if (kernel == "warp_vec2") {
+        options->kernel = KernelKind::kWarpVec2;
+      } else {
+        std::cerr << "Unknown kernel: " << kernel << '\n';
+        return false;
+      }
     } else {
       std::cerr << "Unknown option: " << argument << '\n';
       return false;
     }
+  }
+  if (options->threads < kWarpSize || options->threads > 1024 ||
+      (options->threads & (options->threads - 1)) != 0 ||
+      options->threads % kWarpSize != 0) {
+    std::cerr << "--threads must be a power of two between 32 and 1024\n";
+    return false;
+  }
+  if (options->kernel == KernelKind::kWarpVec2 && options->k % 2 != 0) {
+    std::cerr << "warp_vec2 requires an even K dimension\n";
+    return false;
   }
   return true;
 }
@@ -128,7 +183,7 @@ __global__ void bf16_gemv_reference(const __ppu_bfloat16* weights,
                __bfloat162float(input[column]);
   }
 
-  __shared__ float reduction[kThreads];
+  extern __shared__ float reduction[];
   reduction[lane] = partial;
   __syncthreads();
   for (int stride = blockDim.x / 2; stride > 0; stride >>= 1) {
@@ -139,6 +194,102 @@ __global__ void bf16_gemv_reference(const __ppu_bfloat16* weights,
   }
   if (lane == 0) {
     output[row] = reduction[0];
+  }
+}
+
+__device__ float warp_sum(float value) {
+  for (int offset = kWarpSize / 2; offset > 0; offset >>= 1) {
+    value += __shfl_down_sync(kFullWarpMask, value, offset);
+  }
+  return value;
+}
+
+__device__ float block_sum(float value) {
+  __shared__ float warp_sums[32];
+  const int lane = threadIdx.x & (kWarpSize - 1);
+  const int warp = threadIdx.x / kWarpSize;
+  const int warp_count = (blockDim.x + kWarpSize - 1) / kWarpSize;
+
+  value = warp_sum(value);
+  if (lane == 0) {
+    warp_sums[warp] = value;
+  }
+  __syncthreads();
+
+  if (warp == 0) {
+    value = lane < warp_count ? warp_sums[lane] : 0.0F;
+    value = warp_sum(value);
+  }
+  return value;
+}
+
+__global__ void bf16_gemv_warp(const __ppu_bfloat16* weights,
+                               const __ppu_bfloat16* input,
+                               float* output,
+                               int n,
+                               int k) {
+  const int row = blockIdx.x;
+  if (row >= n) {
+    return;
+  }
+
+  float partial = 0.0F;
+  const size_t row_offset = static_cast<size_t>(row) * static_cast<size_t>(k);
+  for (int column = threadIdx.x; column < k; column += blockDim.x) {
+    partial += __bfloat162float(weights[row_offset + column]) *
+               __bfloat162float(input[column]);
+  }
+  partial = block_sum(partial);
+  if (threadIdx.x == 0) {
+    output[row] = partial;
+  }
+}
+
+__global__ void bf16_gemv_warp_vec2(const __ppu_bfloat16* weights,
+                                    const __ppu_bfloat16* input,
+                                    float* output,
+                                    int n,
+                                    int k) {
+  const int row = blockIdx.x;
+  if (row >= n) {
+    return;
+  }
+
+  float partial = 0.0F;
+  const size_t row_offset = static_cast<size_t>(row) * static_cast<size_t>(k);
+  const auto* weight_pairs = reinterpret_cast<const __ppu_bfloat162*>(
+      weights + row_offset);
+  const auto* input_pairs = reinterpret_cast<const __ppu_bfloat162*>(input);
+  const int pair_count = k / 2;
+  for (int pair = threadIdx.x; pair < pair_count; pair += blockDim.x) {
+    const float2 weight = __bfloat1622float2(weight_pairs[pair]);
+    const float2 value = __bfloat1622float2(input_pairs[pair]);
+    partial += weight.x * value.x + weight.y * value.y;
+  }
+  partial = block_sum(partial);
+  if (threadIdx.x == 0) {
+    output[row] = partial;
+  }
+}
+
+void launch_kernel(const Options& options,
+                   const __ppu_bfloat16* weights,
+                   const __ppu_bfloat16* input,
+                   float* output) {
+  switch (options.kernel) {
+    case KernelKind::kReference:
+      bf16_gemv_reference<<<options.n, options.threads,
+                            options.threads * sizeof(float)>>>(
+          weights, input, output, options.n, options.k);
+      return;
+    case KernelKind::kWarp:
+      bf16_gemv_warp<<<options.n, options.threads>>>(
+          weights, input, output, options.n, options.k);
+      return;
+    case KernelKind::kWarpVec2:
+      bf16_gemv_warp_vec2<<<options.n, options.threads>>>(
+          weights, input, output, options.n, options.k);
+      return;
   }
 }
 
@@ -169,10 +320,14 @@ int main(int argc, char** argv) {
 
   const size_t element_count =
       static_cast<size_t>(options.n) * static_cast<size_t>(options.k);
-  if (element_count > std::numeric_limits<size_t>::max() / sizeof(uint16_t)) {
+  if (element_count > std::numeric_limits<size_t>::max() / sizeof(uint16_t) ||
+      static_cast<size_t>(options.matrix_copies) >
+          std::numeric_limits<size_t>::max() / element_count) {
     std::cerr << "Requested matrix is too large\n";
     return EXIT_FAILURE;
   }
+  const size_t total_weight_elements =
+      element_count * static_cast<size_t>(options.matrix_copies);
 
   std::vector<uint16_t> host_weights(element_count);
   std::vector<uint16_t> host_input(static_cast<size_t>(options.k));
@@ -207,21 +362,26 @@ int main(int argc, char** argv) {
 
   HGGC_CHECK(hggcSetDevice(options.device));
   HGGC_CHECK(hggcMalloc(reinterpret_cast<void**>(&device_weights),
-                        element_count * sizeof(uint16_t)));
+                        total_weight_elements * sizeof(uint16_t)));
   HGGC_CHECK(hggcMalloc(reinterpret_cast<void**>(&device_input),
                         static_cast<size_t>(options.k) * sizeof(uint16_t)));
   HGGC_CHECK(hggcMalloc(reinterpret_cast<void**>(&device_output),
                         static_cast<size_t>(options.n) * sizeof(float)));
-  HGGC_CHECK(hggcMemcpy(device_weights, host_weights.data(),
-                        element_count * sizeof(uint16_t),
-                        hggcMemcpyHostToDevice));
+  for (int copy = 0; copy < options.matrix_copies; ++copy) {
+    HGGC_CHECK(hggcMemcpy(
+        device_weights + static_cast<size_t>(copy) * element_count,
+        host_weights.data(), element_count * sizeof(uint16_t),
+        hggcMemcpyHostToDevice));
+  }
   HGGC_CHECK(hggcMemcpy(device_input, host_input.data(),
                         static_cast<size_t>(options.k) * sizeof(uint16_t),
                         hggcMemcpyHostToDevice));
 
   for (int iteration = 0; iteration < options.warmup; ++iteration) {
-    bf16_gemv_reference<<<options.n, kThreads>>>(
-        device_weights, device_input, device_output, options.n, options.k);
+    const size_t copy =
+        static_cast<size_t>(iteration % options.matrix_copies);
+    launch_kernel(options, device_weights + copy * element_count,
+                  device_input, device_output);
   }
   HGGC_CHECK(hggcGetLastError());
   HGGC_CHECK(hggcDeviceSynchronize());
@@ -230,8 +390,10 @@ int main(int argc, char** argv) {
   HGGC_CHECK(hggcEventCreate(&stop));
   HGGC_CHECK(hggcEventRecord(start, 0));
   for (int iteration = 0; iteration < options.iterations; ++iteration) {
-    bf16_gemv_reference<<<options.n, kThreads>>>(
-        device_weights, device_input, device_output, options.n, options.k);
+    const size_t copy =
+        static_cast<size_t>((options.warmup + iteration) % options.matrix_copies);
+    launch_kernel(options, device_weights + copy * element_count,
+                  device_input, device_output);
   }
   HGGC_CHECK(hggcEventRecord(stop, 0));
   HGGC_CHECK(hggcEventSynchronize(stop));
@@ -277,15 +439,20 @@ int main(int argc, char** argv) {
   const bool passed = failed_values == 0;
 
   std::cout << std::fixed << std::setprecision(6)
-            << "BF16 GEMV reference: N=" << options.n << ", K=" << options.k
+            << kernel_name(options.kernel) << ": N=" << options.n
+            << ", K=" << options.k << ", threads=" << options.threads
+            << ", matrix_copies=" << options.matrix_copies
             << ", average_ms=" << average_ms << ", GFLOP/s=" << gflops
             << ", effective_GB/s=" << effective_gbps << '\n'
             << "Correctness: " << (passed ? "PASS" : "FAIL")
             << ", failed_values=" << failed_values
             << ", max_abs_error=" << max_absolute_error
             << ", max_rel_error=" << max_relative_error << '\n'
-            << "RESULT {\"kernel\":\"bf16_gemv_reference\",\"n\":"
+            << "RESULT {\"kernel\":\"" << kernel_name(options.kernel)
+            << "\",\"n\":"
             << options.n << ",\"k\":" << options.k
+            << ",\"threads\":" << options.threads
+            << ",\"matrix_copies\":" << options.matrix_copies
             << ",\"warmup\":" << options.warmup
             << ",\"iterations\":" << options.iterations
             << ",\"average_ms\":" << average_ms
