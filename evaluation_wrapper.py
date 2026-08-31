@@ -241,6 +241,9 @@ class VLMModel:
         self._ppu_acblas_workspace_bytes_per_handle = 0
         self._ppu_acblas_gdn_single_gemv_enabled = False
         self._ppu_acblas_gdn_ba_gemv_enabled = False
+        self._ppu_prefill_row_fusions_enabled = (
+            os.getenv("SEU_PPU_PREFILL_ROW_FUSIONS_ENABLE", "0") == "1"
+        )
         self._ppu_gdn_projection_backend = "disabled"
         self._ppu_gdn_projection_groups = "disabled"
         gdn_library_path = os.getenv("SEU_PPU_GDN_LIBRARY")
@@ -370,9 +373,19 @@ class VLMModel:
                     ):
                         continue
                     eager_forward = module.forward
+                    module._seu_prefill_rmsnorm_enabled = (
+                        self._ppu_prefill_row_fusions_enabled
+                    )
 
                     def decode_rmsnorm(x, *, _module=module, _eager=eager_forward):
-                        if x.ndim >= 2 and x.shape[-2] == 1 and x.shape[-1] == 2048:
+                        if (
+                            x.ndim >= 2
+                            and x.shape[-1] == 2048
+                            and (
+                                x.shape[-2] == 1
+                                or _module._seu_prefill_rmsnorm_enabled
+                            )
+                        ):
                             return self._ppu_gdn_library.rmsnorm_decode(
                                 x, _module.weight, _module.eps
                             )
@@ -391,6 +404,9 @@ class VLMModel:
                     if type(module).__name__ != "Qwen3_5RMSNormGated":
                         continue
                     eager_forward = module.forward
+                    module._seu_prefill_gated_rmsnorm_enabled = (
+                        self._ppu_prefill_row_fusions_enabled
+                    )
 
                     def decode_gated_rmsnorm(
                         hidden_states,
@@ -402,8 +418,12 @@ class VLMModel:
                         if (
                             gate is not None
                             and hidden_states.ndim == 2
-                            and hidden_states.shape == (16, 128)
+                            and hidden_states.shape[-1] == 128
                             and gate.shape == hidden_states.shape
+                            and (
+                                hidden_states.shape == (16, 128)
+                                or _module._seu_prefill_gated_rmsnorm_enabled
+                            )
                         ):
                             return self._ppu_gdn_library.gated_rmsnorm_decode(
                                 hidden_states,
@@ -568,6 +588,9 @@ class VLMModel:
                         module,
                         self._ppu_gdn_library,
                         next_norm=next_norm,
+                    )
+                    module._seu_prefill_residual_rmsnorm_enabled = (
+                        self._ppu_prefill_row_fusions_enabled
                     )
                     self._ppu_residual_rmsnorm_modules += 1
                 if self._ppu_residual_rmsnorm_modules != 24:
@@ -771,6 +794,9 @@ class VLMModel:
                 ),
                 "ppu_gdn_gate_prep_modules": getattr(
                     self, "_ppu_gdn_gate_prep_modules", 0
+                ),
+                "ppu_prefill_row_fusions_enabled": getattr(
+                    self, "_ppu_prefill_row_fusions_enabled", False
                 ),
                 "ppu_raw_stream_query_enabled": getattr(
                     self, "_ppu_raw_stream_query_enabled", False

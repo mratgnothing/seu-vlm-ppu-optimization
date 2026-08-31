@@ -2,7 +2,7 @@
 # Source after scripts/activate_ppu_env.sh to select an evidence-backed PPU stack.
 
 if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
-  echo "Run this script with: source scripts/activate_ppu_profile.sh [precision|performance|experimental-single]" >&2
+  echo "Run this script with: source scripts/activate_ppu_profile.sh [precision|performance|experimental-single|experimental-prefill]" >&2
   exit 2
 fi
 
@@ -12,9 +12,9 @@ _seu_repo_root="$(cd "${_seu_script_dir}/.." && pwd)"
 _seu_custom_ops="${_seu_repo_root}/ppu/custom_ops"
 
 case "${_seu_profile}" in
-  precision|performance|experimental-single) ;;
+  precision|performance|experimental-single|experimental-prefill) ;;
   *)
-    echo "Unknown PPU profile: ${_seu_profile} (expected precision, performance or experimental-single)" >&2
+    echo "Unknown PPU profile: ${_seu_profile}" >&2
     unset _seu_profile _seu_script_dir _seu_repo_root _seu_custom_ops
     return 2
     ;;
@@ -67,6 +67,9 @@ unset SEU_PPU_FIRST_TOKEN_CACHE_MODE
 # Visual token reduction is an accuracy-risk experiment and is never inherited
 # by an evidence-backed profile until it passes the bilingual/full-set gate.
 unset SEU_VISION_MAX_PIXELS
+# Multi-row norm/residual kernels are an experimental prefill candidate until
+# the paired TTFT and accuracy gate is complete.
+unset SEU_PPU_PREFILL_ROW_FUSIONS_ENABLE
 
 if [[ "${_seu_profile}" == "performance" ]]; then
   # Bilingual MMBench 4029/4029 exact in both languages. This combines only
@@ -76,6 +79,10 @@ elif [[ "${_seu_profile}" == "experimental-single" ]]; then
   echo "WARNING: single-GEMV lost one correct answer on English MMBench 4029." >&2
   echo "Use only for reproducing the accuracy-budget experiment." >&2
   export SEU_PPU_ACBLAS_GDN_SINGLE_GEMV_ENABLE=1
+elif [[ "${_seu_profile}" == "experimental-prefill" ]]; then
+  echo "WARNING: prefill row fusion improves TTFT but CN20 decode throughput regressed." >&2
+  export SEU_PPU_ACBLAS_GDN_BA_GEMV_ENABLE=1
+  export SEU_PPU_PREFILL_ROW_FUSIONS_ENABLE=1
 fi
 export SEU_PPU_ACTIVE_PROFILE="${_seu_profile}"
 
@@ -83,6 +90,7 @@ echo "Activated PPU profile: ${SEU_PPU_ACTIVE_PROFILE}"
 echo "  GDN projection: acblas-grouped"
 echo "  b/a-GEMV: ${SEU_PPU_ACBLAS_GDN_BA_GEMV_ENABLE}"
 echo "  single-GEMV: ${SEU_PPU_ACBLAS_GDN_SINGLE_GEMV_ENABLE}"
+echo "  prefill-row-fusions: ${SEU_PPU_PREFILL_ROW_FUSIONS_ENABLE:-0}"
 
 unset _seu_profile _seu_script_dir _seu_repo_root _seu_custom_ops
 unset _seu_gdn_library _seu_gdn_extension _seu_mlp_extension _seu_required

@@ -15,7 +15,7 @@ class ActivatePPUProfileContractTest(unittest.TestCase):
 
     def test_requires_sourcing_and_known_profile(self) -> None:
         self.assertIn('${BASH_SOURCE[0]}" == "$0', self.text)
-        self.assertIn("precision|performance|experimental-single", self.text)
+        self.assertIn("precision|performance|experimental-single|experimental-prefill", self.text)
         self.assertIn("Unknown PPU profile", self.text)
 
     def test_enables_every_validated_precision_component(self) -> None:
@@ -45,6 +45,11 @@ class ActivatePPUProfileContractTest(unittest.TestCase):
         self.assertIn('if [[ "${_seu_profile}" == "performance" ]]', self.text)
         self.assertIn("export SEU_PPU_ACBLAS_GDN_BA_GEMV_ENABLE=1", self.text)
         self.assertIn("Bilingual MMBench 4029/4029 exact", self.text)
+
+    def test_prefill_profile_is_explicitly_experimental(self) -> None:
+        self.assertIn('"${_seu_profile}" == "experimental-prefill"', self.text)
+        self.assertIn("export SEU_PPU_PREFILL_ROW_FUSIONS_ENABLE=1", self.text)
+        self.assertIn("CN20 decode throughput regressed", self.text)
 
     def test_rejected_first_token_cache_is_always_disabled(self) -> None:
         for variable in (

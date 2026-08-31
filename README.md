@@ -123,6 +123,10 @@
   双语 TTFT 门槛；视觉 192-token 档保持 400/400 答案一致但英文 TTFT 中位
   `0.99803x`，176/128 档开始出现答案漂移或吞吐回退。因此正式 profile 保持两类
   实验默认关闭，不以噪声级变化冒充提升。
+- 新增只包含一次 warm multimodal prefill 的首 Token profiler，并将现有 multi-row
+  RMSNorm、gated-RMSNorm、residual+RMSNorm 核接入 prefill。CN20/EN20 TTFT 配对
+  中位提升 `4.86%/4.48%`，Accuracy 和解析答案不变；但 CN20 吞吐中位回退 1.68%、
+  全文仅 12/20 一致，因此只保留为 `experimental-prefill`，正式性能档不变。
 - 资源释放前完成独立 SwiGLU HGGC 核负实验：四组线程均 bit-exact，但最好只有
   `0.7901x`，因此未接入正式 wrapper；后续改走 packed GEMM epilogue fusion。
 - 已将 PPU 源码、编译产物、小型结果、pip/设备清单、全部原始 trace 和 MMBench
@@ -152,6 +156,7 @@ PPU 侧已完成 SDK、真实模型闭环、20 条稳态基线、算子级 profi
 [PPU acBLAS 运行时主要矛盾与 single-GEMV 候选](docs/experiments/2026-08-28-ppu-acblas-runtime-overhead.md)、
 [PPU 首 Token cache 负实验](docs/experiments/2026-09-01-ppu-first-token-cache.md)、
 [PPU 视觉 Token / TTFT 负实验](docs/experiments/2026-09-01-ppu-visual-token.md)、
+[PPU 独立首 Token profile 与 prefill 行融合](docs/experiments/2026-09-01-ppu-first-token-prefill.md)、
 [PPU SwiGLU 融合负实验](docs/experiments/2026-08-27-ppu-swiglu-negative.md)、
 [PPU decode 融合算子与问题记录](ppu/custom_ops/README.md)、
 [PPU 兼容性矩阵](docs/ppu-compatibility-matrix.md) 和 [需要向主办方确认的问题](docs/questions-for-organizer.md)。

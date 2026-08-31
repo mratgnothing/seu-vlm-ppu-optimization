@@ -463,6 +463,14 @@ ccf81e2  新 PPU 镜像环境一键恢复
 证据见 [实验说明](../experiments/2026-09-01-ppu-visual-token.md) 与
 [精简结果](../../results/ppu-visual-token-ab-20260901.json)。
 
+随后新增只生成一个 token 的独立 warm prefill profiler。它显示首 Token 的主要可融合
+空间来自大量 elementwise/reduction，而非单个 GEMM；据此把现有三个按行 norm/residual
+核接到 prefill。CN20/EN20 TTFT 配对中位分别提升 `4.86%/4.48%`，解析答案和 Accuracy
+不变；但 CN20 吞吐中位为 `0.98318x`、全文仅 12/20 一致。因此候选进入显式
+`experimental-prefill`，不覆盖正式 `performance`。证据见
+[实验说明](../experiments/2026-09-01-ppu-first-token-prefill.md) 与
+[结果](../../results/ppu-first-token-prefill-row-fusions-20260901.json)。
+
 ## 9. 当前限制与下一步
 
 1. 新实例恢复脚本增加了最终 b/a-GEMV 符号检查，避免重启后误载旧扩展；每次新镜像

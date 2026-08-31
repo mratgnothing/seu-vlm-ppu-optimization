@@ -1,0 +1,58 @@
+{
+  "date": "2026-09-01",
+  "device": "PPU-ZW810E",
+  "model": "Qwen3.5-2B",
+  "profile_scope": "one warmed multimodal prefill producing exactly one token",
+  "prompt_tokens": 226,
+  "profile": {
+    "baseline_self_cpu_ms": 227.788,
+    "candidate_self_cpu_ms": 237.487,
+    "baseline_self_ppu_ms": 53.154,
+    "candidate_self_ppu_ms": 50.531,
+    "self_ppu_speedup": 1.0519,
+    "baseline_observation": "elementwise kernels dominate; largest MLP GEMM group is 4.820 ms",
+    "candidate": "enable existing RMSNorm, gated-RMSNorm and residual+RMSNorm kernels for multi-row prefill"
+  },
+  "effective_prefill_modules": {
+    "rmsnorm": 49,
+    "gated_rmsnorm": 18,
+    "decoder_residual_rmsnorm": 24
+  },
+  "paired_ab": {
+    "cn20": {
+      "baseline_avg_ttft_ms": 117.09886484968592,
+      "candidate_avg_ttft_ms": 111.36159594934725,
+      "median_ttft_speedup": 1.048594669254574,
+      "mean_ttft_speedup": 1.052658652810258,
+      "ttft_wins": "18/20",
+      "baseline_avg_throughput": 134.60657339106936,
+      "candidate_avg_throughput": 133.88244126597047,
+      "median_throughput_speedup": 0.9831767226318422,
+      "mean_throughput_speedup": 0.9958128436785776,
+      "accuracy": "17/20 -> 17/20",
+      "equal_answers": "20/20",
+      "exact_text": "12/20"
+    },
+    "en20": {
+      "baseline_avg_ttft_ms": 119.1892300012114,
+      "candidate_avg_ttft_ms": 112.9427415497048,
+      "median_ttft_speedup": 1.0447709299720955,
+      "mean_ttft_speedup": 1.0600642550635715,
+      "ttft_wins": "18/20",
+      "baseline_avg_throughput": 133.34114405928156,
+      "candidate_avg_throughput": 137.42578821385325,
+      "median_throughput_speedup": 1.0257336846591643,
+      "mean_throughput_speedup": 1.0350232516525097,
+      "accuracy": "18/20 -> 18/20",
+      "equal_answers": "20/20",
+      "exact_text": "20/20"
+    }
+  },
+  "decision": {
+    "formal_performance_profile": "unchanged",
+    "experimental_profile": "experimental-prefill",
+    "reason": "TTFT improves in both languages, but CN20 throughput median regresses 1.68% and text is not exact",
+    "profile_isolation_check": "PPU verified: switching from experimental-prefill to performance clears SEU_PPU_PREFILL_ROW_FUSIONS_ENABLE"
+  },
+  "raw_artifacts": "artifacts/ppu-prefill-row-fusions-20260901 (gitignored local archive)"
+}
