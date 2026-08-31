@@ -114,6 +114,38 @@ class WorkSummaryEvidenceTest(unittest.TestCase):
             54,
         )
 
+    def test_single_gemv_accuracy_budget_profile(self) -> None:
+        result = load_json(
+            "results/acblas-gdn-single-gemv-cn-full4029-summary-20260831.json"
+        )
+        self.assertEqual(result["sample_count"], 4029)
+        self.assertTrue(result["performance_passed"])
+        self.assertFalse(result["passed"])
+        self.assertEqual(result["baseline"]["correct"], 3374)
+        self.assertEqual(result["acblas_gdn_single_gemv"]["correct"], 3374)
+        self.assertEqual(result["pair_consistency"]["same_answer"], 4029)
+        self.assertEqual(result["pair_consistency"]["exact_text"], 3873)
+        self.assertEqual(
+            result["decision_gates"]["recommended_profile"],
+            "performance_accuracy_budget",
+        )
+        self.assertTrue(
+            result["decision_gates"]["answer_accuracy_budget_passed"]
+        )
+
+        total = load_json(
+            "results/ppu-single-gemv-vs-eager-cn20-abba-20260831.json"
+        )
+        self.assertTrue(total["passed"])
+        self.assertTrue(
+            math.isclose(
+                total["aggregate"]["throughput_speedup"],
+                2.7689191696386235,
+                rel_tol=0.0,
+                abs_tol=1e-12,
+            )
+        )
+
     def test_negative_results_are_not_presented_as_wins(self) -> None:
         swiglu = load_json("results/ppu-swiglu-thread-sweep-negative-20260827.json")
         acblas = load_json("results/ppu-acblas-ab128-final-20260827.json")
@@ -145,6 +177,8 @@ class WorkSummaryEvidenceTest(unittest.TestCase):
             "ppu-swiglu-thread-sweep-negative-20260827.json",
             "acblas-attention-prep-cn20-r2-20260828.json",
             "residual-rmsnorm-scratch-ab128-20260828.json",
+            "acblas-gdn-single-gemv-cn-full4029-summary-20260831.json",
+            "ppu-single-gemv-vs-eager-cn20-abba-20260831.json",
         ):
             self.assertIn(filename, text)
 

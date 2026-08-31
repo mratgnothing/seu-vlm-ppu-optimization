@@ -89,6 +89,42 @@ GDN 四个投影共享同一个输入，且权重已按 qkv/z/b/a 连续存为 `
 2. 若 Accuracy/答案守住且性能门禁通过，作为显式 **performance/accuracy-budget** 档；
 3. 无论结果如何，四-GEMV 精度优先档继续保留，不能把性能档描述为 bit-exact。
 
+### 4.1 中文 4029 完整结果
+
+| 指标 | 四-GEMV 精度优先栈 | single-GEMV 性能档 |
+|---|---:|---:|
+| 平均 TTFT | 121.712 ms | 121.803 ms |
+| 平均吞吐 | 129.386 token/s | 132.457 token/s |
+| Accuracy | 3374/4029（83.7429%） | 3374/4029（83.7429%） |
+| 未解析答案 | 20 | 20 |
+
+成对吞吐中位/均值为 `1.02380x/1.02525x`，2932/4029 样本更快；P25/P75 为
+`0.9967x/1.0519x`。两路答案解析结果（包括 20 条相同未解析状态）4029/4029 一致，
+正确性逐题一致；完整文本 3873/4029 一致，token 数 3932/4029 一致。
+
+因此严格 bit-exact 门禁失败，但性能、答案和 Accuracy 门禁通过。该候选正式归入显式
+`performance_accuracy_budget` 档，继续默认关闭；精度优先默认档仍使用四次 GEMV。
+汇总见
+[`results/acblas-gdn-single-gemv-cn-full4029-summary-20260831.json`](../../results/acblas-gdn-single-gemv-cn-full4029-summary-20260831.json)，
+原始 4029 对 JSON 的 SHA-256 为
+`87ca4fa23282af3bda0642abd6c06de926be1e46c9866faacb7d61ac18cfa118`。
+
+### 4.2 性能档相对原始 eager 的直接总加速
+
+完成中文全量 Accuracy 门禁后，再按独立进程
+`eager A → single-GEMV A → single-GEMV B → eager B` 直接复测：
+
+| arm | A (token/s) | B (token/s) | 两次中位 (token/s) | Accuracy |
+|---|---:|---:|---:|---:|
+| 原始 eager | 49.027 | 47.991 | 48.509 | 85% / 85% |
+| single-GEMV 完整性能栈 | 135.452 | 133.183 | 134.3175 | 85% / 85% |
+
+直接总加速为 `2.76892x`，即吞吐提升 `176.89%`；两次对应比值为
+`2.76280x/2.77517x`，逐样本中位/均值为 `2.77347x/2.76986x`，20/20 样本更快。
+四次 Accuracy、解析答案和正确性一致。TTFT 两次中位从 119.7845 ms 降至
+118.6130 ms，约 `0.98%`，仍不把它宣称为显著 TTFT 优化。证据见
+[`results/ppu-single-gemv-vs-eager-cn20-abba-20260831.json`](../../results/ppu-single-gemv-vs-eager-cn20-abba-20260831.json)。
+
 ## 5. 已止损、不会在最终日重跑的方向
 
 - workspace：不减少设备查询、释放或 kernel 数，整模中位 `0.9846x`；
@@ -99,4 +135,3 @@ GDN 四个投影共享同一个输入，且权重已按 qkv/z/b/a 连续存为 `
   再挑样本重试；
 - A16W8/A16W4：官方 acext/PPU-vLLM weight-only 依赖不在当前镜像，不能在截止日前可靠
   补齐，因此只保留为后续平台依赖方向。
-

@@ -16,6 +16,13 @@
   16-token 当前栈 profile 的紧凑审计，记录 14,003 次 launch、5,705 次设备属性查询、
   3,259 次释放，以及每 decode token 120 次小 BF16 GEMV 的主要矛盾。原始 trace 在
   本地 ignored 目录保存，并以 SHA-256 关联。
+- [`acblas-gdn-single-gemv-cn-full4029-summary-20260831.json`](acblas-gdn-single-gemv-cn-full4029-summary-20260831.json)：
+  single-GEMV 性能档中文全量门禁；两路 Accuracy 均为 3374/4029，答案解析结果
+  4029/4029 一致，平均吞吐 `129.386→132.457 token/s`，成对中位 `1.0238x`、
+  2932/4029 获胜；全文 3873/4029 一致，故只进入显式 accuracy-budget 档；
+- [`ppu-single-gemv-vs-eager-cn20-abba-20260831.json`](ppu-single-gemv-vs-eager-cn20-abba-20260831.json)：
+  性能档与原始 eager 的独立进程直接 ABBA；两次吞吐中位 `48.509→134.3175
+  token/s`，即 `2.7689x`、提升 `176.89%`，四次 Accuracy 均为 85%。
 
 2026-08-28 的 acBLAS runtime 候选结果：
 

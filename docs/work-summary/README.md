@@ -268,6 +268,12 @@ gate/up GEMV、bit-exact HGGC SwiGLU 和 down GEMV，并复用每层 scratch。
   四次 Accuracy 均为 85%，20/20 解析答案和正确性一致。公开入口不保存全文哈希，
   因此该轮不宣称全文 bit-exact；证据见
   [总加速 ABBA 汇总](../../results/ppu-total-stack-vs-eager-cn20-abba-20260831.json)；
+- single-GEMV 性能档完成中文 4029 条门禁：两路 Accuracy 均为 3374/4029，答案
+  解析结果 4029/4029 一致，成对吞吐中位/均值 `1.0238x/1.0253x`；由于全文仅
+  3873/4029 一致，它只能作为显式 accuracy-budget 档。该档相对 eager 的独立进程
+  CN20 ABBA 总加速为 `2.7689x`（`+176.89%`），证据见
+  [中文全量](../../results/acblas-gdn-single-gemv-cn-full4029-summary-20260831.json)和
+  [直接总加速](../../results/ppu-single-gemv-vs-eager-cn20-abba-20260831.json)；
 - 五类融合相对初始 eager 的 CN20 吞吐提升：`88.83%/90.78%`；
 - gate-prep 相对前一优化栈的中文完整集配对中位提升：`8.62%`；
 - 单入口 packed-MLP 相对前一优化栈的中英文完整集提升：`11.25%/10.93%`；
@@ -305,7 +311,7 @@ gate/up GEMV、bit-exact HGGC SwiGLU 和 down GEMV，并复用每层 scratch。
 | Graph Capture | 16 段链 `1.8303x` | packed-MLP 含 copy `0.9316x` | 动态输入 copy 抵消 replay 收益 |
 | residual-RMSNorm scratch | 模块级 `1.3373x` | fixed-128 `0.9862x`、2/8 胜 | 未进入 CN20/profile |
 | 24-edge residual 融合 | 语义正确 | fixed-128 `0.9821x` | 扩到完整 48-edge 才晋级 |
-| 单次 8224-row GDN GEMV | CN100 `1.0261x` | 99/100 exact | 只作 accuracy-budget 候选 |
+| 单次 8224-row GDN GEMV | CN4029 中位 `1.0238x` | Accuracy/答案不变，3873/4029 exact | 进入显式 accuracy-budget 性能档，默认关闭 |
 
 主要证据入口：
 
@@ -381,8 +387,9 @@ ccf81e2  新 PPU 镜像环境一键恢复
    Bash 语法、帮助入口和无 PPU 测试，不能提前宣称新实例恢复已上机通过。
 2. 原始 eager 与当前完整栈的 CN20 直接 ABBA 已完成；若资源允许，再扩大到完整集，
    但不能把当前 CN20 总加速外推。
-3. 当前 profile 已复现 120 次小 BF16 GEMV/token 的主矛盾；最终日优先完成减少 54 次
-   GDN GEMV/token 的 single-GEMV 全量 Accuracy 门禁，不再堆叠短 elementwise kernel。
+3. 当前 profile 已复现 120 次小 BF16 GEMV/token 的主矛盾；减少 54 次 GDN
+   GEMV/token 的 single-GEMV 已通过中文 4029 的 Accuracy/答案/性能门禁并进入显式
+   accuracy-budget 档，英文完整集仍作为跨语言确认门禁。
 4. b/a-GEMV 仍作为 bit-exact 小增量候选；只有 4029/4029 exact 且性能门禁通过才考虑
    进入精度优先档。
 5. 所有候选继续保持显式 opt-in；主办方镜像、SDK、模型 revision 或评测入口变化时，
