@@ -119,6 +119,10 @@
 - 最终性能栈相对原始 eager 又运行了两个独立 ABBA block：每臂四次吞吐中位
   `49.3415→132.1895 token/s`，即 `2.67907x`、提升 `167.91%`；8 次 Accuracy
   均为 85%，20/20 解析答案和正确性一致。一次候选低值未剔除，最终采用四次中位。
+- 首 Token 收尾先后验证 KV/linear-state 预分配与视觉 Token 上限。KV 候选未通过
+  双语 TTFT 门槛；视觉 192-token 档保持 400/400 答案一致但英文 TTFT 中位
+  `0.99803x`，176/128 档开始出现答案漂移或吞吐回退。因此正式 profile 保持两类
+  实验默认关闭，不以噪声级变化冒充提升。
 - 资源释放前完成独立 SwiGLU HGGC 核负实验：四组线程均 bit-exact，但最好只有
   `0.7901x`，因此未接入正式 wrapper；后续改走 packed GEMM epilogue fusion。
 - 已将 PPU 源码、编译产物、小型结果、pip/设备清单、全部原始 trace 和 MMBench
@@ -146,6 +150,8 @@ PPU 侧已完成 SDK、真实模型闭环、20 条稳态基线、算子级 profi
 [PPU residual-RMSNorm scratch 负实验](docs/experiments/2026-08-28-ppu-residual-rmsnorm-scratch.md)、
 [PPU raw stream 查询优化](docs/experiments/2026-08-28-ppu-raw-stream-query.md)、
 [PPU acBLAS 运行时主要矛盾与 single-GEMV 候选](docs/experiments/2026-08-28-ppu-acblas-runtime-overhead.md)、
+[PPU 首 Token cache 负实验](docs/experiments/2026-09-01-ppu-first-token-cache.md)、
+[PPU 视觉 Token / TTFT 负实验](docs/experiments/2026-09-01-ppu-visual-token.md)、
 [PPU SwiGLU 融合负实验](docs/experiments/2026-08-27-ppu-swiglu-negative.md)、
 [PPU decode 融合算子与问题记录](ppu/custom_ops/README.md)、
 [PPU 兼容性矩阵](docs/ppu-compatibility-matrix.md) 和 [需要向主办方确认的问题](docs/questions-for-organizer.md)。

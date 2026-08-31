@@ -41,7 +41,11 @@ def main() -> int:
         raise ValueError("--max-pixels must be positive")
     repo_root = args.repo_root.resolve()
     custom_ops = repo_root / "ppu" / "custom_ops"
-    for path in (repo_root, custom_ops):
+    # Insert custom_ops first so the repository root ends up at sys.path[0].
+    # A packaged/custom_ops directory may contain a stale wrapper copied by an
+    # earlier deployment; the benchmark must always exercise this checkout's
+    # evaluation_wrapper.py.
+    for path in (custom_ops, repo_root):
         if str(path) not in sys.path:
             sys.path.insert(0, str(path))
 
@@ -118,6 +122,7 @@ def main() -> int:
     ttft_speedups = []
     throughput_speedups = []
     visual_ratios = []
+    changed_visual_pairs = 0
     exact_text_pairs = 0
     equal_answer_pairs = 0
     for index, sample in enumerate(samples):
@@ -134,6 +139,7 @@ def main() -> int:
         visual_ratios.append(
             float(candidate["visual_tokens"]) / float(baseline["visual_tokens"])
         )
+        changed_visual_pairs += candidate["visual_tokens"] != baseline["visual_tokens"]
         exact_text_pairs += baseline["text_sha256"] == candidate["text_sha256"]
         equal_answer_pairs += baseline["answer"] == candidate["answer"]
         if (index + 1) % args.progress_every == 0 or index + 1 == len(samples):
@@ -170,7 +176,12 @@ def main() -> int:
         statistics.median(throughput_speedups) >= 1.0
         and statistics.fmean(throughput_speedups) >= 1.0
     )
-    reduction_passed = statistics.median(visual_ratios) < 1.0
+    # A mild cap intentionally changes only oversized images, so its median
+    # ratio can remain 1.0 even when it performs a real reduction.  Require at
+    # least one changed pair and a lower arithmetic mean instead.
+    reduction_passed = (
+        changed_visual_pairs > 0 and statistics.fmean(visual_ratios) < 1.0
+    )
     payload = {
         "sample_offset": args.sample_offset,
         "sample_count": len(samples),
@@ -198,6 +209,7 @@ def main() -> int:
         "paired": {
             "median_visual_token_ratio": statistics.median(visual_ratios),
             "mean_visual_token_ratio": statistics.fmean(visual_ratios),
+            "changed_visual_pairs": changed_visual_pairs,
             "median_ttft_speedup": statistics.median(ttft_speedups),
             "mean_ttft_speedup": statistics.fmean(ttft_speedups),
             "ttft_wins": sum(value > 1.0 for value in ttft_speedups),

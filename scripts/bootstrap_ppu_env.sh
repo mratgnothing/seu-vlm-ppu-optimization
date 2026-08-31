@@ -143,6 +143,18 @@ PY
     "${VENV_PYTHON}" smoke_acblas_linear_module.py \
       --build-dir build/acblas_linear_extension \
       --input-features 2048 --output-features 2048 --warmup 1 --iters 2
+    "${VENV_PYTHON}" - <<'PY'
+import sys
+import torch  # Load the official runtime libraries before the C++ extension.
+
+sys.path.insert(0, "build/acblas_linear_extension")
+import seu_acblas_linear_ext as extension
+
+assert hasattr(extension, "set_gdn_batched_ba"), (
+    "stale acBLAS linear extension: set_gdn_batched_ba is missing"
+)
+print("acBLAS b/a-GEMV symbol: available")
+PY
     "${VENV_PYTHON}" smoke_acblas_packed_mlp_module.py \
       --build-dir build/acblas_packed_mlp_extension --warmup 1 --iters 2
   )

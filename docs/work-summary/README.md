@@ -454,10 +454,21 @@ e1df537  paired 长测可恢复
 ccf81e2  新 PPU 镜像环境一键恢复
 ```
 
+### 8.1 首 Token 与视觉 Token 收尾（2026-09-01）
+
+首 Token 阶段先测试了 KV/linear-state 预分配，随后按风险递增测试视觉 Token 上限。
+可复用 KV 在 CN20/EN20 上均未通过 TTFT 门槛；视觉 192-token 档虽保持双语
+400/400 答案一致，但英文 TTFT 配对中位为 `0.99803x`，176/128 档又分别出现答案
+漂移或吞吐回退。因此两类候选都保持默认关闭，未用噪声级数字覆盖正式配置。完整视觉
+证据见 [实验说明](../experiments/2026-09-01-ppu-visual-token.md) 与
+[精简结果](../../results/ppu-visual-token-ab-20260901.json)。
+
 ## 9. 当前限制与下一步
 
-1. 在新官方 PPU 镜像上实际执行一次 `bootstrap_ppu_env.sh` 全流程；目前只完成本地
-   Bash 语法、帮助入口和无 PPU 测试，不能提前宣称新实例恢复已上机通过。
+1. 新实例恢复脚本增加了最终 b/a-GEMV 符号检查，避免重启后误载旧扩展；每次新镜像
+   仍应执行 `bootstrap_ppu_env.sh`，不能直接复用上个实例遗留的 `build/`。本轮已在
+   重启实例真实重编三类扩展，并通过设备、GDN、Linear、符号、packed-MLP smoke 与
+   正式 profile 单样本生成。
 2. 原始 eager 与最终性能栈的 CN20 两个独立 ABBA block 已完成；若资源允许，再扩大
    总栈直接对比到完整集，但不能把当前 CN20 总加速外推。
 3. 当前 profile 已复现 120 次小 BF16 GEMV/token 的主矛盾；减少 54 次 GDN

@@ -1,0 +1,118 @@
+{
+  "date": "2026-09-01",
+  "device": "PPU-ZW810E",
+  "model": "Qwen3.5-2B",
+  "dataset": "MMBench dev CN/EN",
+  "decision": "rejected_keep_native_resolution",
+  "method": {
+    "pairing": "per-sample alternating AB/BA in one loaded model",
+    "max_new_tokens": 64,
+    "accuracy_gate": "candidate accuracy >= baseline and parsed answers identical",
+    "performance_gate": "paired TTFT median and mean > 1; throughput median and mean >= 1"
+  },
+  "processor_scan_200_per_language": {
+    "baseline": {
+      "cn_mean_visual_tokens": 172.4,
+      "en_mean_visual_tokens": 154.315
+    },
+    "max_pixels_196608": {
+      "equivalent_token_cap": 192,
+      "cn_mean_visual_tokens": 167.5,
+      "cn_changed_samples": 15,
+      "en_mean_visual_tokens": 145.355,
+      "en_changed_samples": 24
+    },
+    "max_pixels_180224": {
+      "equivalent_token_cap": 176,
+      "cn_mean_visual_tokens": 160.47,
+      "cn_changed_samples": 61,
+      "en_mean_visual_tokens": 137.42,
+      "en_changed_samples": 79
+    },
+    "max_pixels_131072": {
+      "equivalent_token_cap": 128,
+      "cn_mean_visual_tokens": 113.91,
+      "cn_changed_samples": 178,
+      "en_mean_visual_tokens": 104.92,
+      "en_changed_samples": 143
+    }
+  },
+  "paired_ab": {
+    "max_pixels_196608": {
+      "samples_per_language": 200,
+      "cn": {
+        "accuracy": "189/200 -> 189/200",
+        "equal_answers": "200/200",
+        "mean_visual_token_ratio": 0.979878634386447,
+        "median_ttft_speedup": 1.0014086414803183,
+        "mean_ttft_speedup": 1.005199418816511,
+        "median_throughput_speedup": 1.004692267770657,
+        "mean_throughput_speedup": 1.0081850615929573
+      },
+      "en": {
+        "accuracy": "154/200 -> 154/200",
+        "equal_answers": "200/200",
+        "mean_visual_token_ratio": 0.9642698317307692,
+        "median_ttft_speedup": 0.9980290394334013,
+        "mean_ttft_speedup": 1.0068106000563182,
+        "median_throughput_speedup": 1.0024479941301663,
+        "mean_throughput_speedup": 1.0094709254469978
+      },
+      "decision": "reject_no_bilingual_ttft_median_gain"
+    },
+    "max_pixels_180224": {
+      "samples_per_language": 20,
+      "cn": {
+        "accuracy": "17/20 -> 17/20",
+        "equal_answers": "19/20",
+        "mean_visual_token_ratio": 0.9337890625,
+        "median_ttft_speedup": 0.993360569144548,
+        "mean_throughput_speedup": 1.0115408491731324
+      },
+      "en": {
+        "accuracy": "18/20 -> 18/20",
+        "equal_answers": "20/20",
+        "mean_visual_token_ratio": 0.9548828125,
+        "median_ttft_speedup": 1.0048551417761407,
+        "mean_throughput_speedup": 0.9795943422855808
+      },
+      "decision": "reject_answer_drift_and_throughput_regression"
+    },
+    "max_pixels_131072": {
+      "samples_per_language": 20,
+      "cn": {
+        "accuracy": "17/20 -> 17/20",
+        "equal_answers": "18/20",
+        "mean_visual_token_ratio": 0.6771460700757576,
+        "median_ttft_speedup": 1.0056599438222333,
+        "mean_ttft_speedup": 0.9901231433881907,
+        "mean_throughput_speedup": 0.9900184537039063
+      },
+      "en": {
+        "accuracy": "18/20 -> 18/20",
+        "equal_answers": "20/20",
+        "mean_visual_token_ratio": 0.7785570549242424,
+        "median_ttft_speedup": 1.008438032651347,
+        "mean_ttft_speedup": 1.0124731794071147,
+        "mean_throughput_speedup": 0.9903708789893141
+      },
+      "decision": "reject_answer_drift_and_throughput_regression"
+    }
+  },
+  "formal_profile": {
+    "SEU_VISION_MAX_PIXELS": "unset",
+    "reason": "no tested cap passed the bilingual no-regression gate",
+    "post_rebuild_smoke": {
+      "sample_id": "3000985",
+      "parsed_answer": "B",
+      "reference": "B",
+      "correct": true,
+      "vision_max_pixels": null,
+      "first_token_cache_enabled": false,
+      "gdn_ba_gemv_enabled": true,
+      "gdn_single_gemv_enabled": false,
+      "note": "cold-start functional smoke; TTFT is not used as performance evidence"
+    }
+  },
+  "raw_artifacts": "artifacts/ppu-visual-token-20260901 (gitignored local archive)"
+}
