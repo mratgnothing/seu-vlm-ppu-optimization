@@ -58,6 +58,12 @@ unset SEU_PPU_PACK_GDN_PROJECTIONS_ENABLE
 unset SEU_PPU_PACK_GDN_PROJECTIONS_GROUPS
 unset SEU_PPU_ACBLAS_ATTENTION_PREP_BUILD_DIR
 unset SEU_PPU_ACBLAS_WORKSPACE_MIB
+# Reusable first-token cache variants failed the bilingual PPU gate on
+# 2026-09-01.  Explicitly clear them so a stale experimental shell cannot
+# contaminate the evidence-backed profiles.
+unset SEU_PPU_FIRST_TOKEN_CACHE_ENABLE
+unset SEU_PPU_FIRST_TOKEN_CACHE_CAPACITY
+unset SEU_PPU_FIRST_TOKEN_CACHE_MODE
 
 if [[ "${_seu_profile}" == "performance" ]]; then
   # Bilingual MMBench 4029/4029 exact in both languages. This combines only

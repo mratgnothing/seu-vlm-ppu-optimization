@@ -12,9 +12,11 @@ from dataclasses import dataclass
 import torch
 from transformers.cache_utils import (
     CacheLayerMixin,
+    DYNAMIC_LAYER_TYPE_MAPPING,
     DynamicCache,
     DynamicLayer,
     LinearAttentionCacheLayerMixin,
+    get_layer_types_and_kwargs,
 )
 
 
@@ -106,11 +108,16 @@ class CacheAllocation:
 class Qwen35CachePool:
     """Own one reusable cache for sequential batch-one benchmark requests."""
 
-    def __init__(self, model, *, capacity: int = 4096) -> None:
+    def __init__(self, model, *, capacity: int = 4096, mode: str = "all") -> None:
         if capacity <= 0:
             raise ValueError("cache capacity must be positive")
+        if mode not in {"all", "kv", "linear"}:
+            raise ValueError("cache mode must be one of: all, kv, linear")
         self.model = model
         self.capacity = capacity
+        self.mode = mode
+        self.reserve_attention = mode in {"all", "kv"}
+        self.reserve_linear = mode in {"all", "linear"}
         self.cache: DynamicCache | None = None
         self.allocation: CacheAllocation | None = None
         self.batch_size: int | None = None
@@ -150,7 +157,7 @@ class Qwen35CachePool:
         element_size = torch.empty((), dtype=dtype).element_size()
 
         for index, layer_type in enumerate(text_config.layer_types):
-            if layer_type != "full_attention":
+            if layer_type != "full_attention" or not self.reserve_attention:
                 continue
             layer = ReservedDynamicLayer(self.capacity)
             layer.reserve(
@@ -177,7 +184,10 @@ class Qwen35CachePool:
             if type(module).__name__ == "Qwen3_5GatedDeltaNet"
         }
         for index, layer in enumerate(cache.layers):
-            if not isinstance(layer, LinearAttentionCacheLayerMixin):
+            if (
+                not isinstance(layer, LinearAttentionCacheLayerMixin)
+                or not self.reserve_linear
+            ):
                 continue
             module = gdn_modules.get(index)
             if module is None:
@@ -219,15 +229,25 @@ class Qwen35CachePool:
             reserved_bytes=reserved_bytes,
         )
 
-    @staticmethod
-    def _fast_reset(cache: DynamicCache) -> None:
-        for layer in cache.layers:
+    def _fresh_layer(self, layer_idx: int):
+        text_config = self.model.config.get_text_config(decoder=True)
+        layer_types, layer_kwargs = get_layer_types_and_kwargs(text_config)
+        return DYNAMIC_LAYER_TYPE_MAPPING[layer_types[layer_idx]](**layer_kwargs)
+
+    def _fast_reset(self, cache: DynamicCache) -> None:
+        for index, layer in enumerate(cache.layers):
             if isinstance(layer, ReservedDynamicLayer):
                 layer.reset()
             elif isinstance(layer, LinearAttentionCacheLayerMixin):
-                # A fresh prefill overwrites both fixed-shape states in full.
-                # Keeping the backing tensors avoids allocation and memset.
-                for state_idx in range(layer.number_of_states):
-                    layer.has_previous_state[state_idx] = False
+                if self.reserve_linear:
+                    # A fresh prefill overwrites both fixed-shape states in full.
+                    # Keeping the backing tensors avoids allocation and memset.
+                    for state_idx in range(layer.number_of_states):
+                        layer.has_previous_state[state_idx] = False
+                else:
+                    cache.layers[index] = self._fresh_layer(index)
             elif isinstance(layer, CacheLayerMixin):
-                layer.reset()
+                # DynamicLayer.reset() zeroes storage but does not shorten it.
+                # Recreate non-reserved attention layers to preserve the exact
+                # baseline behavior for the linear-only ablation.
+                cache.layers[index] = self._fresh_layer(index)

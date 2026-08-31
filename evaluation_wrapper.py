@@ -217,6 +217,7 @@ class VLMModel:
             self._ppu_first_token_cache_pool = Qwen35CachePool(
                 self._model,
                 capacity=int(os.getenv("SEU_PPU_FIRST_TOKEN_CACHE_CAPACITY", "4096")),
+                mode=os.getenv("SEU_PPU_FIRST_TOKEN_CACHE_MODE", "all"),
             )
         self._tokenizer = getattr(self._processor, "tokenizer", None)
         self._ppu_gdn_patched_modules = 0
@@ -704,6 +705,11 @@ class VLMModel:
                     self._ppu_first_token_cache_pool.capacity
                     if self._ppu_first_token_cache_pool is not None
                     else 0
+                ),
+                "ppu_first_token_cache_mode": (
+                    self._ppu_first_token_cache_pool.mode
+                    if self._ppu_first_token_cache_pool is not None
+                    else "disabled"
                 ),
                 "ppu_gdn_patched_modules": self._ppu_gdn_patched_modules,
                 "ppu_conv_patched_modules": getattr(

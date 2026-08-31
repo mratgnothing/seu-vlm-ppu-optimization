@@ -46,6 +46,14 @@ class ActivatePPUProfileContractTest(unittest.TestCase):
         self.assertIn("export SEU_PPU_ACBLAS_GDN_BA_GEMV_ENABLE=1", self.text)
         self.assertIn("Bilingual MMBench 4029/4029 exact", self.text)
 
+    def test_rejected_first_token_cache_is_always_disabled(self) -> None:
+        for variable in (
+            "SEU_PPU_FIRST_TOKEN_CACHE_ENABLE",
+            "SEU_PPU_FIRST_TOKEN_CACHE_CAPACITY",
+            "SEU_PPU_FIRST_TOKEN_CACHE_MODE",
+        ):
+            self.assertIn(f"unset {variable}", self.text)
+
 
 if __name__ == "__main__":
     unittest.main()

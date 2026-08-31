@@ -21,6 +21,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--sample-offset", type=int, default=0)
     parser.add_argument("--max-new-tokens", type=int, default=64)
     parser.add_argument("--cache-capacity", type=int, default=4096)
+    parser.add_argument("--cache-mode", choices=("all", "kv", "linear"), default="all")
     parser.add_argument("--progress-every", type=int, default=5)
     return parser.parse_args()
 
@@ -56,6 +57,7 @@ def main() -> int:
 
     os.environ["SEU_PPU_FIRST_TOKEN_CACHE_ENABLE"] = "1"
     os.environ["SEU_PPU_FIRST_TOKEN_CACHE_CAPACITY"] = str(args.cache_capacity)
+    os.environ["SEU_PPU_FIRST_TOKEN_CACHE_MODE"] = args.cache_mode
     model = VLMModel(str(args.model_path), backend="transformers", device="auto")
     config = fixed_generation_config()
     config.max_new_tokens = args.max_new_tokens
@@ -75,7 +77,7 @@ def main() -> int:
             "sample_id": sample.sample_id,
             "pair_index": pair_index,
             "pair_order": "AB" if pair_index % 2 == 0 else "BA",
-            "mode": "reserved_cache" if enabled else "dynamic_cache",
+            "mode": f"reserved_cache_{args.cache_mode}" if enabled else "dynamic_cache",
             "token_count": result.token_count,
             "ttft_ms": result.ttft_seconds * 1000.0,
             "elapsed_ms": result.elapsed_seconds * 1000.0,
@@ -150,6 +152,7 @@ def main() -> int:
         "sample_count": len(samples),
         "max_new_tokens": args.max_new_tokens,
         "cache_capacity": args.cache_capacity,
+        "cache_mode": args.cache_mode,
         "baseline": {
             "mode": "dynamic_cache",
             "avg_ttft_ms": mean(baseline_records, "ttft_ms"),
@@ -159,7 +162,7 @@ def main() -> int:
             "correct": sum(bool(x["correct"]) for x in baseline_records),
         },
         "candidate": {
-            "mode": "reserved_cache",
+            "mode": f"reserved_cache_{args.cache_mode}",
             "avg_ttft_ms": mean(candidate_records, "ttft_ms"),
             "avg_throughput_tokens_per_sec": mean(
                 candidate_records, "throughput_tokens_per_sec"
