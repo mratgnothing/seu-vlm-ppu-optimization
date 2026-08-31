@@ -53,6 +53,7 @@ class ActivatePPUProfileContractTest(unittest.TestCase):
             "SEU_PPU_FIRST_TOKEN_CACHE_MODE",
         ):
             self.assertIn(f"unset {variable}", self.text)
+        self.assertIn("unset SEU_VISION_MAX_PIXELS", self.text)
 
 
 if __name__ == "__main__":

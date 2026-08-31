@@ -188,10 +188,21 @@ class VLMModel:
         from transformers import AutoModelForImageTextToText, AutoProcessor
 
         self._torch = torch
+        processor_kwargs = {}
+        vision_max_pixels = os.getenv("SEU_VISION_MAX_PIXELS")
+        if vision_max_pixels:
+            vision_max_pixels_value = int(vision_max_pixels)
+            if vision_max_pixels_value <= 0:
+                raise ValueError("SEU_VISION_MAX_PIXELS must be positive")
+            processor_kwargs["max_pixels"] = vision_max_pixels_value
+        self._vision_max_pixels = (
+            int(vision_max_pixels) if vision_max_pixels else None
+        )
         self._processor = AutoProcessor.from_pretrained(
             self.model_path,
             local_files_only=True,
             trust_remote_code=True,
+            **processor_kwargs,
         )
         self._model = AutoModelForImageTextToText.from_pretrained(
             self.model_path,
@@ -615,6 +626,15 @@ class VLMModel:
             return_tensors="pt",
         ).to(self._model.device)
         input_len = inputs.input_ids.shape[1]
+        image_grid_thw = getattr(inputs, "image_grid_thw", None)
+        visual_tokens = None
+        image_grid = None
+        if image_grid_thw is not None and image_grid_thw.numel() > 0:
+            image_grid = [int(value) for value in image_grid_thw[0].tolist()]
+            merge_size = int(self._processor.image_processor.merge_size)
+            visual_tokens = (
+                image_grid[0] * image_grid[1] * image_grid[2] // merge_size**2
+            )
         streamer = TimedTextIteratorStreamer(
             self._processor.tokenizer,
             skip_prompt=True,
@@ -698,6 +718,10 @@ class VLMModel:
                 ),
                 "optimization_profile": self.optimization_profile,
                 "ttft_measurement": "first_generated_token_put",
+                "prompt_tokens": int(input_len),
+                "image_grid_thw": image_grid,
+                "visual_tokens": visual_tokens,
+                "vision_max_pixels": self._vision_max_pixels,
                 "ppu_first_token_cache_enabled": (
                     self._ppu_first_token_cache_enabled
                 ),

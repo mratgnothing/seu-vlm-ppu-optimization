@@ -64,6 +64,9 @@ unset SEU_PPU_ACBLAS_WORKSPACE_MIB
 unset SEU_PPU_FIRST_TOKEN_CACHE_ENABLE
 unset SEU_PPU_FIRST_TOKEN_CACHE_CAPACITY
 unset SEU_PPU_FIRST_TOKEN_CACHE_MODE
+# Visual token reduction is an accuracy-risk experiment and is never inherited
+# by an evidence-backed profile until it passes the bilingual/full-set gate.
+unset SEU_VISION_MAX_PIXELS
 
 if [[ "${_seu_profile}" == "performance" ]]; then
   # Bilingual MMBench 4029/4029 exact in both languages. This combines only
