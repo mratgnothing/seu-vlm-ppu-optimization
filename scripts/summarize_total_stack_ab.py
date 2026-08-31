@@ -136,10 +136,15 @@ def summarize(eager_paths: list[Path], candidate_paths: list[Path]) -> dict[str,
             raise ValueError(f"{run['_source']}: inconsistent PPU module metadata")
         module_signatures.append(json.loads(signatures.pop()))
 
+    process_order = (
+        "eager_A, candidate_A, candidate_B, eager_B"
+        if len(eager_runs) == 2
+        else f"{len(eager_runs) // 2} independent ABBA blocks"
+    )
     payload = {
         "comparison": "original_eager_vs_complete_optimized_stack",
         "method": {
-            "process_order": "eager_A, candidate_A, candidate_B, eager_B",
+            "process_order": process_order,
             "runs_per_arm": len(eager_runs),
             "sample_count": len(sample_ids),
             "metric": "official decode throughput: (tokens - 1) / (elapsed - TTFT)",

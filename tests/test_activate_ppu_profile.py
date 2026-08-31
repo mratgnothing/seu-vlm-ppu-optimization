@@ -15,7 +15,7 @@ class ActivatePPUProfileContractTest(unittest.TestCase):
 
     def test_requires_sourcing_and_known_profile(self) -> None:
         self.assertIn('${BASH_SOURCE[0]}" == "$0', self.text)
-        self.assertIn("precision|experimental-single", self.text)
+        self.assertIn("precision|performance|experimental-single", self.text)
         self.assertIn("Unknown PPU profile", self.text)
 
     def test_enables_every_validated_precision_component(self) -> None:
@@ -40,6 +40,11 @@ class ActivatePPUProfileContractTest(unittest.TestCase):
         self.assertIn("export SEU_PPU_ACBLAS_GDN_BA_GEMV_ENABLE=0", self.text)
         self.assertIn("unset SEU_PPU_ACBLAS_ATTENTION_PREP_BUILD_DIR", self.text)
         self.assertIn("lost one correct answer", self.text)
+
+    def test_performance_profile_only_adds_ba_gemv(self) -> None:
+        self.assertIn('if [[ "${_seu_profile}" == "performance" ]]', self.text)
+        self.assertIn("export SEU_PPU_ACBLAS_GDN_BA_GEMV_ENABLE=1", self.text)
+        self.assertIn("Bilingual MMBench 4029/4029 exact", self.text)
 
 
 if __name__ == "__main__":

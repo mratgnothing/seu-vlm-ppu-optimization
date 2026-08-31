@@ -95,6 +95,29 @@ class SummarizeTotalStackABTest(unittest.TestCase):
                 "unavailable_in_benchmark_public_output",
             )
 
+    def test_labels_repeated_abba_blocks(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            eager = root / "eager.json"
+            candidate = root / "candidate.json"
+            write_run(eager, ttft=10, throughput=50, sample_throughputs=(40, 60))
+            write_run(
+                candidate,
+                ttft=9,
+                throughput=100,
+                sample_throughputs=(80, 120),
+            )
+
+            payload = summarize(
+                [eager, eager, eager, eager],
+                [candidate, candidate, candidate, candidate],
+            )
+
+            self.assertEqual(
+                payload["method"]["process_order"],
+                "2 independent ABBA blocks",
+            )
+
 
 if __name__ == "__main__":
     unittest.main()

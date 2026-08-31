@@ -28,6 +28,16 @@
   尽管成对中位为 `1.0253x`，仍未通过 accuracy-budget 门禁；
 - [`acblas-gdn-single-gemv-bilingual-decision-20260831.json`](acblas-gdn-single-gemv-bilingual-decision-20260831.json)：
   汇总中英文门禁并将 single-GEMV 最终判为 `experimental_only`，默认关闭。
+- [`acblas-gdn-ba-gemv-cn-full4029-summary-20260831.json`](acblas-gdn-ba-gemv-cn-full4029-summary-20260831.json) / [`acblas-gdn-ba-gemv-en-full4029-summary-20260831.json`](acblas-gdn-ba-gemv-en-full4029-summary-20260831.json)：
+  保守 b/a-GEMV 的双语完整集门禁；两种语言均 4029/4029 全文、答案和 token 数
+  一致，正确数分别保持 3374 和 3214，成对中位分别为 `1.00696x/1.00697x`；
+- [`ppu-ba-gemv-vs-eager-cn20-abba-20260831.json`](ppu-ba-gemv-vs-eager-cn20-abba-20260831.json)：
+  两个独立 ABBA block、每臂四次的最终总栈直接复测；中位
+  `49.3415→132.1895 token/s`，即 `2.67907x`、提升 `167.91%`，8 次 Accuracy
+  均为 85%；
+- [`ppu-ba-gemv-profile-20260831.json`](ppu-ba-gemv-profile-20260831.json)：
+  16-token profile 与固定 128-token 复测；`cuLaunchKernel` 精确减少 270 次，
+  对应 `18 层×15 decode step`，固定长两对中位 `1.01990x` 且全文一致。
 
 2026-08-28 的 acBLAS runtime 候选结果：
 
@@ -49,8 +59,8 @@
   负实验，二者均未改变主要运行时事件。
 
 长 paired A/B 使用 `--pair-log <path> --resume-pair-log` 保存与恢复逐题检查点。恢复器会
-拒绝不连续索引或样本 ID 不匹配的 JSONL。b/a GEMV 当前完成到 CN100；中英文 4029 尚未
-在本轮资源窗口内运行，不能把 CN100 exact 外推为完整集结论。
+拒绝不连续索引或样本 ID 不匹配的 JSONL。b/a-GEMV 已完成中英文各 4029 条，并通过
+双语严格一致性和性能门；CN100 只保留为早期晋级记录，不再承担最终结论。
 
 ## 当前可公开精度结果
 

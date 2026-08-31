@@ -1,12 +1,42 @@
 # Qwen3.5-2B PPU 推理优化完整工作说明
 
-更新时间：2026-08-29
+更新时间：2026-08-31
 
 开发分支：`5070ti`
 
 目标硬件：PPU-ZW810E
 
 模型：`Qwen/Qwen3.5-2B`，BF16，batch size 1
+
+## 0. 一页结论
+
+本项目已经完成从原始 Transformers eager、真实 PPU profile、模型专用融合算子、
+结构化 acBLAS 提交，到中英文完整公开集门禁的闭环。当前最严格、可直接复述的总性能
+结论来自同一张 PPU、同一模型和同一 CN20 数据上的两个独立 ABBA block：原始 eager
+每臂四次吞吐中位 `49.3415 token/s`，最终 performance 栈为
+`132.1895 token/s`，即 `2.67907x`，吞吐提升 `167.91%`；8 次 Accuracy 均为
+85%，20/20 解析答案和正确性一致。该轮公开入口未保存全文哈希，因而不宣称总栈相对
+eager 全文 bit-exact，也不把 CN20 结果外推为完整集或私有评测成绩。
+
+性能来源不是 PPU 峰值算力突然提高，而是逐步消除 batch size 1 自回归解码中的主机
+调度、短 kernel、重复 stream 查询、临时张量和过细的 GEMV 提交边界。最初五类
+HGGC decode 融合把 CN20 吞吐从约 `49.7` 提到约 `94.9 token/s`；之后
+gate-prep、单入口 packed-MLP 和 raw-stream 查询在各自前一优化栈上，经中英文完整集
+获得约 `8%--11%` 的独立增量。后期 profile 仍显示每个 decode token 有 120 次小
+BF16 GEMV，因此最终日集中处理 GDN 四投影的提交次数，而不是继续增加几十微秒的独立
+elementwise kernel。
+
+一次合并 qkv/z/b/a 四个投影的 single-GEMV 虽使中文 CN20 总栈达到 `2.7689x`，
+并在中英文完整集分别获得约 `2.4%/2.5%` 的中位增量，但英文 4029 条中少答对 1 题，
+所以已明确降级为 `experimental_only`。更保守的 b/a-GEMV 只合并两个相邻
+`[16,2048]` 投影；中英文 4029 条均得到 4029/4029 全文 exact、正确数分别保持
+3374/4029 和 3214/4029，成对中位分别为 `1.00696x/1.00697x`。两轮独立 ABBA
+block 的最终总栈复测（每臂 4 次）为 `49.3415→132.1895 token/s`，即
+`2.67907x`、提升 `167.91%`，所以它已进入显式 `performance` 配置。
+
+仓库同时保留所有失败路线及其负门禁。它们不是“没来得及删掉的代码”，而是说明
+PPU 优化边界的实验记录：局部微基准更快不等于整模更快，减少 API 次数不等于减少设备
+kernel，数学等价也不等于 BF16 自回归逐 token 完全等价。
 
 ## 1. 文档目的与结论边界
 
@@ -22,10 +52,9 @@
 
 当前可以直接证明的结论是：五类 decode 融合在 CN20 同口径实验中相对 eager 提升
 `88.83%/90.78%`；后续 gate-prep、单入口 packed-MLP 和 raw-stream 查询分别在前一版
-优化栈上通过中英文完整集 paired 门禁。最初 eager 的 `49.737 token/s` 与当前 CN20
-的 `130.264/133.136 token/s` 表明工程演进约为 `2.62x/2.68x`，但它们不是一次
-“最终栈 vs 原始 eager”的完整集同轮 A/B，因此该比例只作为演进参考，不作为最终
-比赛总加速声明。
+优化栈上通过中英文完整集 paired 门禁。最终 performance 栈又以两个独立 ABBA block
+直接对比原始 eager，每臂四次中位给出 `2.67907x` 总加速。该直接总加速的范围仍是
+CN20，不是 4029 条或私有集；双语完整集承担的是每个后期增量的精度与配对性能门禁。
 
 目前的主要收益是**解码吞吐**。完整集各后期增量的 TTFT 基本持平或轻微上升，不能
 宣称 TTFT 获得显著改善。所有结果均为公开开发集工程证据，不代表主办方私有评测。
@@ -66,7 +95,9 @@ cd seu-vlm-ppu-optimization
 bash scripts/bootstrap_ppu_env.sh --check-only
 bash scripts/bootstrap_ppu_env.sh
 source scripts/activate_ppu_env.sh
-source scripts/activate_ppu_profile.sh precision
+source scripts/activate_ppu_profile.sh performance
+# 如需保守复测四次原形状 GDN GEMV：
+# source scripts/activate_ppu_profile.sh precision
 # 只为复现被双语门禁拒绝的性能实验：
 # source scripts/activate_ppu_profile.sh experimental-single
 ```
@@ -247,30 +278,50 @@ gate/up GEMV、bit-exact HGGC SwiGLU 和 down GEMV，并复用每层 scratch。
 [英文完整集](../../results/raw-stream-query-en4029-summary-20260828.json)、
 [实验说明](../experiments/2026-08-28-ppu-raw-stream-query.md)。
 
-### 4.8 GDN 尾部 GEMV 候选
+### 4.8 最终日 GDN GEMV 收口
 
 资源窗口最后继续调查 GDN 四投影：
 
-- 将 qkv/z/b/a 合为一次 8224-row GEMV，CN100 中位 `1.0261x`、Accuracy
-  `93%→93%`，但只有 99/100 完整文本一致，故作为 accuracy-budget 候选默认关闭；
-- 只将相邻 b/a 两个 `[16,2048]` 合为 `[32,2048]` GEMV，CN100 中位
-  `1.0068x`、Accuracy `93%→93%`、100/100 完整文本一致；
-- b/a 候选尚未完成中英文 4029，不能将 CN100 exact 外推为完整集结论。
+- 将 qkv/z/b/a 合为一次 8224-row GEMV，每 token 将 GDN GEMV 从 72 次降到
+  18 次；中文 4029 的正确数不变，但英文 4029 少答对 1 题，因此降级为
+  `experimental_only`；
+- 只将相邻 b/a 两个 `[16,2048]` 合为 `[32,2048]` GEMV，每 token 将完整模型
+  GEMV 从 120 次降到 102 次。中文 4029 条中 baseline/candidate 正确数均为
+  3374，全文、答案和 token 数均 4029/4029 一致，成对中位/均值
+  `1.00696x/1.00814x`；英文对应正确数均为 3214，三类一致性均 4029/4029，
+  成对中位/均值 `1.00697x/1.01243x`；
+- 固定 128-token 最终复测 2/2 获胜、全文一致，中位 `1.01990x`。16-token profile
+  中 `cuLaunchKernel` `2561→2291`，恰好减少 `18 层×15 decode step=270` 次
+  acBLAS 提交；540 个小 b/a `gemvt` kernel 被 216 个合并后端 kernel 取代，设备
+  kernel 净减 324 个；
+- 两个独立 ABBA block、每臂四次的总栈复测为 eager
+  `49.3415 token/s`、b/a 性能栈 `132.1895 token/s`，即 `2.67907x`、提升
+  `167.91%`。8 次 Accuracy 均为 85%，20/20 解析答案和正确性一致。候选首个
+  block 中一次只有 `128.970 token/s` 的低值未剔除，而是通过四次中位吸收。
 
 证据：
 [single-GEMV CN100](../../results/acblas-gdn-single-gemv-cn100-r1-20260828.json)、
 [b/a-GEMV CN100](../../results/acblas-gdn-ba-gemv-cn100-r1-20260829.json)、
+[中文 4029](../../results/acblas-gdn-ba-gemv-cn-full4029-summary-20260831.json)、
+[英文 4029](../../results/acblas-gdn-ba-gemv-en-full4029-summary-20260831.json)、
+[最终总栈](../../results/ppu-ba-gemv-vs-eager-cn20-abba-20260831.json)、
+[最终 profile](../../results/ppu-ba-gemv-profile-20260831.json)和
 [运行时瓶颈实验](../experiments/2026-08-28-ppu-acblas-runtime-overhead.md)。
 
 ## 5. 当前性能应该怎样表述
 
 ### 5.1 可以正式引用
 
-- 原始 eager 与当前精度优先完整栈已在同一 PPU 实例按独立进程 ABBA 直接复测：
-  CN20 两次吞吐中位 `49.445→132.4265 token/s`，即 `2.6783x`、提升 `167.83%`；
-  四次 Accuracy 均为 85%，20/20 解析答案和正确性一致。公开入口不保存全文哈希，
-  因此该轮不宣称全文 bit-exact；证据见
-  [总加速 ABBA 汇总](../../results/ppu-total-stack-vs-eager-cn20-abba-20260831.json)；
+- 原始 eager 与最终 b/a-GEMV 性能栈在同一 PPU 实例跑了两个独立 ABBA block：
+  CN20 每臂四次吞吐中位 `49.3415→132.1895 token/s`，即 `2.67907x`、提升
+  `167.91%`；8 次 Accuracy 均为 85%，20/20 解析答案和正确性一致。公开入口不保存
+  全文哈希，因此该轮不宣称全文 bit-exact；证据见
+  [最终总加速](../../results/ppu-ba-gemv-vs-eager-cn20-abba-20260831.json)；
+- 不启用 b/a-GEMV 的 `precision` 栈也完成过一次独立进程 ABBA：两次吞吐中位
+  `49.445→132.4265 token/s`，即 `2.6783x`、提升 `167.83%`。该短样本总栈数字与
+  performance 档的差异小于运行间波动；b/a 的独立增量应引用双语完整集 paired
+  `1.00696x/1.00697x`，而不是相减两次 CN20 总加速。证据见
+  [精度栈总加速](../../results/ppu-total-stack-vs-eager-cn20-abba-20260831.json)；
 - single-GEMV 完成中文 4029 条门禁：两路 Accuracy 均为 3374/4029，答案
   解析结果 4029/4029 一致，成对吞吐中位/均值 `1.0238x/1.0253x`；由于全文仅
   3873/4029 一致，中文范围内只算 accuracy-budget 候选。该档相对 eager 的独立进程
@@ -285,22 +336,25 @@ gate/up GEMV、bit-exact HGGC SwiGLU 和 down GEMV，并复用每层 scratch。
 - gate-prep 相对前一优化栈的中文完整集配对中位提升：`8.62%`；
 - 单入口 packed-MLP 相对前一优化栈的中英文完整集提升：`11.25%/10.93%`；
 - raw-stream 相对前一优化栈的中英文完整集提升：`9.06%/9.01%`；
+- b/a-GEMV 相对精度栈的中英文完整集成对中位提升：`0.696%/0.697%`，两种语言
+  都是 4029/4029 全文、答案和 token 数一致，Accuracy 不变；
 - 上述完整集增量均保持对应 baseline/candidate 的 Accuracy、完整文本、答案和 token
   数一致。
 
 ### 5.2 只能作为演进参考
 
 旧口径把不同阶段的 eager `49.737 token/s` 与后期 CN20 `130.264/133.136 token/s`
-直接相除，只能说明约 `2.62x/2.68x` 的量级，现已由同环境独立进程 ABBA 的
-`2.6783x` 直接实验替代。不同后期增量的中位 speedup 仍不能简单相乘后当作总加速。
+直接相除，只能说明约 `2.62x/2.68x` 的量级，现已由同环境、每臂四次独立进程 ABBA
+的 `2.67907x` 直接实验替代。不同后期增量的中位 speedup 仍不能简单相乘后当作总加速。
 
 ### 5.3 当前不能宣称
 
-- 不能把 CN20 的直接 `2.6783x` 外推成 4029 条或私有集总加速；
+- 不能把 CN20 的直接 `2.67907x` 外推成 4029 条或私有集总加速；
 - 不能宣称 TTFT 显著提升；
 - 不能把模块级 `4x` 或微基准 `7x` 写成整模提升；
 - 不能把公开开发集结果外推为私有测试集成绩；
-- 不能把 CN100 的 b/a-GEMV `0.68%` 外推为完整集结果。
+- 不能把双语 4029 paired 的 b/a-GEMV `0.696%/0.697%` 误写成总栈相对 eager
+  的额外百分点；两类实验的 baseline 和统计口径不同。
 
 ## 6. 保留的失败方向与止损依据
 
@@ -319,6 +373,12 @@ gate/up GEMV、bit-exact HGGC SwiGLU 和 down GEMV，并复用每层 scratch。
 | residual-RMSNorm scratch | 模块级 `1.3373x` | fixed-128 `0.9862x`、2/8 胜 | 未进入 CN20/profile |
 | 24-edge residual 融合 | 语义正确 | fixed-128 `0.9821x` | 扩到完整 48-edge 才晋级 |
 | 单次 8224-row GDN GEMV | CN/EN4029 中位 `1.0238x/1.0253x` | 中文 Accuracy 不变；英文少 1 个正确答案 | 双语门禁失败，降级为 experimental-only |
+| acBLAS persistent workspace | 可复用工作区 | fixed-128 中位 `0.9846x` | 查询/释放/kernel 数未消除，停止 |
+| b/a strided-batched GEMM | host API 更少 | fixed-128 约 `0.9852x` | 未减少设备 kernel，停止 |
+| GDN output scratch | 避免重复输出分配 | 两轮 `1.0105x/0.9934x` | 方向不稳定，不晋级 |
+| GemmEx-for-GemvEx / 算法枚举 | API/算法可切换 | 最佳约 `1.0036x` | 运行时事件未变，收益低于门限 |
+| qkv 保留、仅合并 z/b/a | 比 single-GEMV 保守 | 同一样本仍发生确定性 token 漂移 | 未解决数值问题，停止 |
+| A16W8/A16W4 | 理论可减权重带宽 | 当前镜像缺官方 acext/PPU-vLLM weight-only 依赖 | 未伪造本地量化结果，留作平台依赖方向 |
 
 主要证据入口：
 
@@ -393,13 +453,13 @@ ccf81e2  新 PPU 镜像环境一键恢复
 
 1. 在新官方 PPU 镜像上实际执行一次 `bootstrap_ppu_env.sh` 全流程；目前只完成本地
    Bash 语法、帮助入口和无 PPU 测试，不能提前宣称新实例恢复已上机通过。
-2. 原始 eager 与当前完整栈的 CN20 直接 ABBA 已完成；若资源允许，再扩大到完整集，
-   但不能把当前 CN20 总加速外推。
+2. 原始 eager 与最终性能栈的 CN20 两个独立 ABBA block 已完成；若资源允许，再扩大
+   总栈直接对比到完整集，但不能把当前 CN20 总加速外推。
 3. 当前 profile 已复现 120 次小 BF16 GEMV/token 的主矛盾；减少 54 次 GDN
    GEMV/token 的 single-GEMV 虽通过中文门禁，却因英文 4029 少 1 个正确答案而止损。
-   当前继续验证只减少 18 次/token、保持更多原始 BF16 路径的 b/a-GEMV。
-4. b/a-GEMV 仍作为 bit-exact 小增量候选；只有 4029/4029 exact 且性能门禁通过才考虑
-   进入精度优先档。
+   b/a-GEMV 只减少 18 次/token、保持更多原始 BF16 路径，现已通过双语全量门禁。
+4. b/a-GEMV 已作为显式 `performance` 档；中英文均 4029/4029 exact 且性能为正。
+   `precision` 档仍保留原四 GEMV，`experimental-single` 只用于负实验复现。
 5. 所有候选继续保持显式 opt-in；主办方镜像、SDK、模型 revision 或评测入口变化时，
    必须重新跑环境、精度和性能门禁。
 
@@ -412,7 +472,8 @@ Qwen3.5 在 PPU Transformers eager 路径上受到大量小 kernel、临时张�
 获得经完整集验证的 `8%--11%` 级增量。同时保留所有局部快、整模慢的负实验，以实验
 门禁而不是直觉决定是否接入。
 
-当前最可信的结论是：后期精度优先候选在中英文 4029 条上均保持对应 A/B 的 Accuracy、
-完整文本、答案和 token 数一致，并获得可复现的解码吞吐提升；同环境 CN20 直接总加速
-为 `2.6783x`，Accuracy、解析答案和正确性不变。该数字的证据边界是 CN20，完整集和
-私有集不能由此外推。最终日继续以 GEMV 数量为主要矛盾验证显式性能档。
+当前最可信的结论是：最终 performance 栈中的 b/a-GEMV 在中英文 4029 条上均保持
+对应 A/B 的 Accuracy、完整文本、答案和 token 数一致，成对中位分别为
+`1.00696x/1.00697x`；同环境 CN20、每臂四次的直接总加速为 `2.67907x`，Accuracy、
+解析答案和正确性不变。该总加速数字的证据边界是 CN20，完整集和私有集不能由此外推。
+最终日已围绕 GEMV 数量完成一次核心迭代，同时通过英文反例拒绝更激进但掉精度的路线。

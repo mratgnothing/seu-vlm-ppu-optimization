@@ -111,10 +111,14 @@
   CN20 ABBA 直接总加速为 `2.7689x`（`+176.89%`），四次 Accuracy 均为 85%。但
   英文 4029 中候选正确数 `3214→3213`、答案 4028/4029 一致，因此双语门禁失败，
   最终降级为 `experimental_only`，不得作为比赛推荐性能档。
-- 精度优先增量只合并相邻的 b/a 两个 `[16,2048]` 投影为一个 `[32,2048]`
-  GEMV：fixed-128 两轮全文 exact，中位 `1.0011x/1.0051x`；CN100 Accuracy
-  `93%→93%`、100/100 完整文本一致，成对中位 `1.0068x`。该路径默认关闭，通过
-  `SEU_PPU_ACBLAS_GDN_BA_GEMV_ENABLE=1` 显式启用，等待完整公开集门禁。
+- 最终保守增量只合并相邻的 b/a 两个 `[16,2048]` 投影为一个 `[32,2048]`
+  GEMV。中文/英文 4029 条都达到 4029/4029 全文、答案和 token 数一致，正确数分别
+  保持 3374 和 3214，成对中位 `1.00696x/1.00697x`。16-token profile 中
+  `cuLaunchKernel` 减少 270 次，精确对应 18 层和 15 个 decode step。该路径已进入
+  显式 `performance` 档，`precision` 档继续保留原四次 GEMV。
+- 最终性能栈相对原始 eager 又运行了两个独立 ABBA block：每臂四次吞吐中位
+  `49.3415→132.1895 token/s`，即 `2.67907x`、提升 `167.91%`；8 次 Accuracy
+  均为 85%，20/20 解析答案和正确性一致。一次候选低值未剔除，最终采用四次中位。
 - 资源释放前完成独立 SwiGLU HGGC 核负实验：四组线程均 bit-exact，但最好只有
   `0.7901x`，因此未接入正式 wrapper；后续改走 packed GEMM epilogue fusion。
 - 已将 PPU 源码、编译产物、小型结果、pip/设备清单、全部原始 trace 和 MMBench
@@ -172,8 +176,10 @@ bash scripts/bootstrap_ppu_env.sh --check-only
 bash scripts/bootstrap_ppu_env.sh
 source scripts/activate_ppu_env.sh
 
-# 默认：中英文 4029/4029 全文一致的精度优先档。
-source scripts/activate_ppu_profile.sh precision
+# 推荐性能档：b/a-GEMV 已通过中英文各 4029/4029 全文一致门禁。
+source scripts/activate_ppu_profile.sh performance
+# 保守复测档：保持 GDN 四次原形状 GEMV。
+# source scripts/activate_ppu_profile.sh precision
 # 仅复现实验：中文中位 +2.38%，但英文完整集少 1 个正确答案。
 source scripts/activate_ppu_profile.sh experimental-single
 ```

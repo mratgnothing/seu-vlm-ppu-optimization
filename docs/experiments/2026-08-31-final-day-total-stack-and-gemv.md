@@ -146,6 +146,43 @@ GDN 四个投影共享同一个输入，且权重已按 qkv/z/b/a 连续存为 `
 一个 `[32,2048]` GEMV，每 token 从 120 次降至 102 次；以中英文 4029 全量结果决定
 它能否成为真正的精度优先小增量。
 
+### 4.4 b/a-GEMV 双语完整集结果
+
+b/a-GEMV 保留 qkv 与 z 两个大投影的原形状和调用顺序，只把连续存储的 b/a 权重从
+两次 `16×2048` GEMV 合为一次 `32×2048` GEMV。它在 18 层 GDN 中每 token 少
+18 次 GEMV，完整模型从 120 次降到 102 次；相比 single-GEMV 少消除 36 次，但也
+显著缩小了 BF16 归约路径变化的范围。
+
+| 数据 | baseline 平均 token/s | b/a-GEMV 平均 token/s | 成对中位/均值 | wins | Accuracy | 全文/答案/token 数 |
+|---|---:|---:|---:|---:|---:|---:|
+| CN 4029 | 129.860 | 130.722 | `1.00696x/1.00814x` | 2325/4029 | 3374/4029 → 3374/4029 | 4029/4029 |
+| EN 4029 | 131.093 | 132.143 | `1.00697x/1.01243x` | 2376/4029 | 3214/4029 → 3214/4029 | 4029/4029 |
+
+两份 append-only pair log 均审计为 4029 个唯一题号、顶层 index 和两路 pair_index
+连续、A/B 题号逐项对齐。中文/英文原始汇总 SHA-256 分别为
+`5dc10a45753e72f40707ba3648f0f6fec5b4513cebe1ac339427f3c2523cd5c5` 和
+`7958b3a765eaaddc61bd3d33b72112e65b62afc11dca49224548b5665b3be597`。
+
+该候选同时通过双语严格 bit-exact、Accuracy 和性能门，因此晋级为显式
+`performance` 配置。`precision` 仍保持四次原形状 GEMV，供 SDK/模型 revision
+改变后的保守复测；`experimental-single` 继续只用于复现英文掉一题的负实验。证据见
+[`results/acblas-gdn-ba-gemv-cn-full4029-summary-20260831.json`](../../results/acblas-gdn-ba-gemv-cn-full4029-summary-20260831.json)和
+[`results/acblas-gdn-ba-gemv-en-full4029-summary-20260831.json`](../../results/acblas-gdn-ba-gemv-en-full4029-summary-20260831.json)。
+
+随后用两个独立 ABBA block 直接比较原始 eager 与最终 performance 栈，每臂四次：
+eager 为 `49.735/49.578/48.529/49.105 token/s`，候选为
+`133.234/128.970/132.193/132.186 token/s`。不剔除候选的单次低值，两臂中位为
+`49.3415→132.1895 token/s`，总加速 `2.67907x`、提升 `167.91%`；8 次 Accuracy
+均为 85%，20/20 解析答案和正确性一致。汇总见
+[`results/ppu-ba-gemv-vs-eager-cn20-abba-20260831.json`](../../results/ppu-ba-gemv-vs-eager-cn20-abba-20260831.json)。
+
+最后的固定 128-token 两对复测为 2/2 获胜、全文 exact、中位 `1.01990x`。16-token
+profile 中，baseline/candidate 的 `cuLaunchKernel` 为 `2561→2291`，减少 270 次，
+恰好等于 `18 层×15 decode step`；540 个小 b/a `gemvt` kernel 消失，增加 216 个
+合并后端 kernel，设备 kernel 净减 324 个。`cudaLaunchKernel` 不变是因为这组 acBLAS
+调用走 driver 路径，不能据此误判没有减少底层工作。紧凑证据见
+[`results/ppu-ba-gemv-profile-20260831.json`](../../results/ppu-ba-gemv-profile-20260831.json)。
+
 ## 5. 已止损、不会在最终日重跑的方向
 
 - workspace：不减少设备查询、释放或 kernel 数，整模中位 `0.9846x`；
