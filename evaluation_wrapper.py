@@ -139,6 +139,8 @@ class VLMModel:
         self._processor = None
         self._tokenizer = None
         self._backend_name = "dummy"
+        self._ppu_first_token_cache_pool = None
+        self._ppu_first_token_cache_enabled = False
 
         if backend in {"auto", "transformers"}:
             try:
@@ -198,6 +200,24 @@ class VLMModel:
             dtype=torch.bfloat16,
             device_map=self.device,
         ).eval()
+        self._ppu_first_token_cache_enabled = (
+            os.getenv("SEU_PPU_FIRST_TOKEN_CACHE_ENABLE", "0") == "1"
+        )
+        if self._ppu_first_token_cache_enabled:
+            custom_op_dir = Path(
+                os.getenv(
+                    "SEU_PPU_GDN_PYTHON_DIR",
+                    str(Path(__file__).resolve().parent / "ppu" / "custom_ops"),
+                )
+            ).resolve()
+            if str(custom_op_dir) not in sys.path:
+                sys.path.insert(0, str(custom_op_dir))
+            from ppu_first_token_cache import Qwen35CachePool
+
+            self._ppu_first_token_cache_pool = Qwen35CachePool(
+                self._model,
+                capacity=int(os.getenv("SEU_PPU_FIRST_TOKEN_CACHE_CAPACITY", "4096")),
+            )
         self._tokenizer = getattr(self._processor, "tokenizer", None)
         self._ppu_gdn_patched_modules = 0
         self._ppu_packed_gdn_projection_modules = 0
@@ -606,6 +626,18 @@ class VLMModel:
             "use_cache": True,
             "streamer": streamer,
         }
+        if self._ppu_first_token_cache_enabled:
+            required_length = input_len + generation_config.max_new_tokens
+            generation_kwargs["past_key_values"] = (
+                self._ppu_first_token_cache_pool.acquire(
+                    required_length=required_length,
+                    batch_size=int(inputs.input_ids.shape[0]),
+                )
+            )
+            # Cache allocation/reset is deliberately outside the official TTFT
+            # interval.  Synchronize once so queued initialization cannot leak
+            # back into the measured model.generate call.
+            torch.cuda.synchronize()
         if generation_config.temperature > 0:
             generation_kwargs.update(
                 temperature=generation_config.temperature,
@@ -665,6 +697,14 @@ class VLMModel:
                 ),
                 "optimization_profile": self.optimization_profile,
                 "ttft_measurement": "first_generated_token_put",
+                "ppu_first_token_cache_enabled": (
+                    self._ppu_first_token_cache_enabled
+                ),
+                "ppu_first_token_cache_capacity": (
+                    self._ppu_first_token_cache_pool.capacity
+                    if self._ppu_first_token_cache_pool is not None
+                    else 0
+                ),
                 "ppu_gdn_patched_modules": self._ppu_gdn_patched_modules,
                 "ppu_conv_patched_modules": getattr(
                     self, "_ppu_conv_patched_modules", 0

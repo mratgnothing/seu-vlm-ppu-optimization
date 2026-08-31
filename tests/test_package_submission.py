@@ -25,6 +25,7 @@ class SubmissionPackageTest(unittest.TestCase):
 
         self.assertIn("evaluation_wrapper.py", relative)
         self.assertIn("ppu/microbench/qwen35_bf16_gemv.hg", relative)
+        self.assertIn("ppu/custom_ops/ppu_first_token_cache.py", relative)
         self.assertIn("submission/README.md", relative)
         self.assertNotIn("configs/local.psd1", relative)
         self.assertFalse(any(path.startswith("artifacts/") for path in relative))
