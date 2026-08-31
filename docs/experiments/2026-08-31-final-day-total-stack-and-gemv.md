@@ -103,7 +103,8 @@ GDN 四个投影共享同一个输入，且权重已按 qkv/z/b/a 连续存为 `
 正确性逐题一致；完整文本 3873/4029 一致，token 数 3932/4029 一致。
 
 因此严格 bit-exact 门禁失败，但性能、答案和 Accuracy 门禁通过。该候选正式归入显式
-`performance_accuracy_budget` 档，继续默认关闭；精度优先默认档仍使用四次 GEMV。
+中文限定的 `performance_accuracy_budget` 档，继续默认关闭；是否可作为比赛性能档还需
+英文完整集门禁，精度优先默认档仍使用四次 GEMV。
 汇总见
 [`results/acblas-gdn-single-gemv-cn-full4029-summary-20260831.json`](../../results/acblas-gdn-single-gemv-cn-full4029-summary-20260831.json)，
 原始 4029 对 JSON 的 SHA-256 为
@@ -124,6 +125,26 @@ GDN 四个投影共享同一个输入，且权重已按 qkv/z/b/a 连续存为 `
 四次 Accuracy、解析答案和正确性一致。TTFT 两次中位从 119.7845 ms 降至
 118.6130 ms，约 `0.98%`，仍不把它宣称为显著 TTFT 优化。证据见
 [`results/ppu-single-gemv-vs-eager-cn20-abba-20260831.json`](../../results/ppu-single-gemv-vs-eager-cn20-abba-20260831.json)。
+
+### 4.3 英文 4029 与最终决策
+
+英文完整集的性能仍为正：平均吞吐 `129.432→132.528 token/s`，成对中位/均值
+`1.02532x/1.02831x`、2999/4029 获胜；但它发现中文集没有暴露的精度回退：
+
+- baseline 正确数 3214，候选 3213；
+- 答案解析结果 4028/4029 一致，全文 4026/4029 一致；
+- 样本 `1001553` 的参考答案为 B，baseline 输出 B，single-GEMV 输出 A；
+- 另两条只发生文本漂移，没有改变答案或正确性。
+
+因此 single-GEMV 的双语答案/Accuracy 门禁失败。它最终降级为 `experimental_only`，
+不得成为默认或比赛推荐性能档；上面的 `2.7689x` 仍是有效的中文 CN20 性能实验，
+但不能绕过英文精度回退。英文汇总与双语决策分别见
+[`results/acblas-gdn-single-gemv-en-full4029-summary-20260831.json`](../../results/acblas-gdn-single-gemv-en-full4029-summary-20260831.json)和
+[`results/acblas-gdn-single-gemv-bilingual-decision-20260831.json`](../../results/acblas-gdn-single-gemv-bilingual-decision-20260831.json)。
+
+最终日随后转向保持更多原 BF16 路径的 b/a-GEMV：只把两个 `[16,2048]` 投影合为
+一个 `[32,2048]` GEMV，每 token 从 120 次降至 102 次；以中英文 4029 全量结果决定
+它能否成为真正的精度优先小增量。
 
 ## 5. 已止损、不会在最终日重跑的方向
 

@@ -108,7 +108,9 @@
   `1.0238x/1.0253x`、2932/4029 获胜。完整文本为 3873/4029 一致，因此该路径通过
   `SEU_PPU_ACBLAS_GDN_SINGLE_GEMV_ENABLE=1` 显式启用且默认关闭，只归入允许答案级
   精度预算的性能档；精度优先档仍保留四次 GEMV。该性能档相对原始 eager 的独立进程
-  CN20 ABBA 直接总加速为 `2.7689x`（`+176.89%`），四次 Accuracy 均为 85%。
+  CN20 ABBA 直接总加速为 `2.7689x`（`+176.89%`），四次 Accuracy 均为 85%。但
+  英文 4029 中候选正确数 `3214→3213`、答案 4028/4029 一致，因此双语门禁失败，
+  最终降级为 `experimental_only`，不得作为比赛推荐性能档。
 - 精度优先增量只合并相邻的 b/a 两个 `[16,2048]` 投影为一个 `[32,2048]`
   GEMV：fixed-128 两轮全文 exact，中位 `1.0011x/1.0051x`；CN100 Accuracy
   `93%→93%`、100/100 完整文本一致，成对中位 `1.0068x`。该路径默认关闭，通过
@@ -169,6 +171,11 @@ bash scripts/bootstrap_ppu_env.sh --check-only
 # 创建仓库外的独立 venv、安装非 Torch 依赖、重编译三个扩展并做短 smoke。
 bash scripts/bootstrap_ppu_env.sh
 source scripts/activate_ppu_env.sh
+
+# 默认：中英文 4029/4029 全文一致的精度优先档。
+source scripts/activate_ppu_profile.sh precision
+# 仅复现实验：中文中位 +2.38%，但英文完整集少 1 个正确答案。
+source scripts/activate_ppu_profile.sh experimental-single
 ```
 
 部署脚本默认使用 `/usr/local/bin/python3`、`/usr/local/PPU_SDK` 和

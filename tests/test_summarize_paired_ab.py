@@ -110,6 +110,76 @@ class SummarizePairedABTest(unittest.TestCase):
             expected_source_sha256,
         )
 
+    def test_classifies_answer_equivalent_non_exact_candidate(self) -> None:
+        def record(speed: float, text: str) -> dict[str, object]:
+            return {
+                "throughput_tokens_per_sec": speed,
+                "correct": True,
+                "text_sha256": text,
+                "answer": "A",
+                "token_count": 8,
+            }
+
+        payload = {
+            "sample_offset": 0,
+            "sample_count": 2,
+            "max_new_tokens": 64,
+            "ab_target": "acblas_gdn_single_gemv",
+            "projection_backend": "acblas-grouped",
+            "raw_stream_query_ab_enabled": False,
+            "packed_gdn_modules": 18,
+            "residual_rmsnorm_modules": 24,
+            "gdn_gate_prep_modules": 18,
+            "acblas_packed_mlp_modules": 24,
+            "acblas_attention_prep_modules": 0,
+            "performance_gate_required": True,
+            "performance_passed": True,
+            "baseline": {
+                "avg_ttft_ms": 10.0,
+                "avg_throughput_tokens_per_sec": 100.0,
+                "accuracy": 1.0,
+                "records": [record(100.0, "a"), record(100.0, "b")],
+            },
+            "acblas_gdn_single_gemv": {
+                "avg_ttft_ms": 10.0,
+                "avg_throughput_tokens_per_sec": 103.0,
+                "accuracy": 1.0,
+                "records": [record(103.0, "a"), record(103.0, "changed")],
+            },
+            "passed": False,
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            input_path = Path(directory) / "input.json"
+            output_path = Path(directory) / "summary.json"
+            input_path.write_text(json.dumps(payload), encoding="utf-8")
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    str(SCRIPT),
+                    str(input_path),
+                    "--output",
+                    str(output_path),
+                ],
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            summary = json.loads(output_path.read_text(encoding="utf-8"))
+
+        self.assertEqual(completed.returncode, 1)
+        self.assertFalse(summary["decision_gates"]["strict_bit_exact_passed"])
+        self.assertTrue(
+            summary["decision_gates"]["answer_accuracy_budget_passed"]
+        )
+        self.assertEqual(
+            summary["decision_gates"]["recommended_profile"],
+            "performance_accuracy_budget",
+        )
+        self.assertEqual(
+            summary["decision_gates"]["raw_stream_query_mode"],
+            "enabled_both_arms",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

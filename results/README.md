@@ -23,6 +23,11 @@
 - [`ppu-single-gemv-vs-eager-cn20-abba-20260831.json`](ppu-single-gemv-vs-eager-cn20-abba-20260831.json)：
   性能档与原始 eager 的独立进程直接 ABBA；两次吞吐中位 `48.509→134.3175
   token/s`，即 `2.7689x`、提升 `176.89%`，四次 Accuracy 均为 85%。
+- [`acblas-gdn-single-gemv-en-full4029-summary-20260831.json`](acblas-gdn-single-gemv-en-full4029-summary-20260831.json)：
+  英文全量揭示一条答案/正确性回退：正确数 `3214→3213`，答案 4028/4029 一致，
+  尽管成对中位为 `1.0253x`，仍未通过 accuracy-budget 门禁；
+- [`acblas-gdn-single-gemv-bilingual-decision-20260831.json`](acblas-gdn-single-gemv-bilingual-decision-20260831.json)：
+  汇总中英文门禁并将 single-GEMV 最终判为 `experimental_only`，默认关闭。
 
 2026-08-28 的 acBLAS runtime 候选结果：
 

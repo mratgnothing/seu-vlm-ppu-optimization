@@ -146,6 +146,32 @@ class WorkSummaryEvidenceTest(unittest.TestCase):
             )
         )
 
+        english = load_json(
+            "results/acblas-gdn-single-gemv-en-full4029-summary-20260831.json"
+        )
+        self.assertEqual(english["sample_count"], 4029)
+        self.assertEqual(english["baseline"]["correct"], 3214)
+        self.assertEqual(english["acblas_gdn_single_gemv"]["correct"], 3213)
+        self.assertEqual(english["pair_consistency"]["same_answer"], 4028)
+        self.assertFalse(
+            english["decision_gates"]["answer_accuracy_budget_passed"]
+        )
+        self.assertEqual(
+            english["decision_gates"]["recommended_profile"],
+            "experimental_only",
+        )
+
+        decision = load_json(
+            "results/acblas-gdn-single-gemv-bilingual-decision-20260831.json"
+        )
+        self.assertFalse(
+            decision["overall"]["bilingual_answer_accuracy_gate_passed"]
+        )
+        self.assertFalse(decision["overall"]["default_enabled"])
+        self.assertEqual(
+            decision["en"]["regression_sample"]["sample_id"], "1001553"
+        )
+
     def test_negative_results_are_not_presented_as_wins(self) -> None:
         swiglu = load_json("results/ppu-swiglu-thread-sweep-negative-20260827.json")
         acblas = load_json("results/ppu-acblas-ab128-final-20260827.json")
@@ -179,6 +205,8 @@ class WorkSummaryEvidenceTest(unittest.TestCase):
             "residual-rmsnorm-scratch-ab128-20260828.json",
             "acblas-gdn-single-gemv-cn-full4029-summary-20260831.json",
             "ppu-single-gemv-vs-eager-cn20-abba-20260831.json",
+            "acblas-gdn-single-gemv-en-full4029-summary-20260831.json",
+            "acblas-gdn-single-gemv-bilingual-decision-20260831.json",
         ):
             self.assertIn(filename, text)
 
