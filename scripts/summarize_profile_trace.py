@@ -23,7 +23,12 @@ TRACKED_NAMES = {
     "aten::mul",
     "aten::sum",
     "aten::to",
+    "cuLaunchKernel",
+    "cudaDeviceSynchronize",
+    "cudaFree",
+    "cudaGetDeviceProperties_v2",
     "cudaLaunchKernel",
+    "cudaStreamSynchronize",
 }
 
 DEFAULT_SHAPE_OPS = {

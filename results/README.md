@@ -5,6 +5,18 @@
 
 所有结论应能追溯到原始结果、配置和代码提交。
 
+2026-08-31 的同环境总加速与最终日 profile：
+
+- [`ppu-total-stack-vs-eager-cn20-abba-20260831.json`](ppu-total-stack-vs-eager-cn20-abba-20260831.json)：
+  四个独立进程按 ABBA 顺序直接比较原始 eager 与当前精度优先完整栈；两次吞吐中位
+  `49.445→132.4265 token/s`，总加速 `2.6783x`、提升 `167.83%`，四次 Accuracy
+  均为 85%，20/20 解析答案和正确性一致。公开入口未保存全文哈希，不能据此宣称全文
+  bit-exact；
+- [`ppu-current-stack-profile-20260831.json`](ppu-current-stack-profile-20260831.json)：
+  16-token 当前栈 profile 的紧凑审计，记录 14,003 次 launch、5,705 次设备属性查询、
+  3,259 次释放，以及每 decode token 120 次小 BF16 GEMV 的主要矛盾。原始 trace 在
+  本地 ignored 目录保存，并以 SHA-256 关联。
+
 2026-08-28 的 acBLAS runtime 候选结果：
 
 - `acblas-workspace-fixed128-r1-20260828.json`：workspace 负实验；

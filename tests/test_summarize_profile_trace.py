@@ -48,6 +48,29 @@ class SummarizeProfileTraceTest(unittest.TestCase):
         self.assertEqual(mul["duration_ms"], 0.01)
         self.assertEqual(summary["aten_mm_shapes"][0]["count"], 1)
 
+    def test_tracks_runtime_overhead_events(self) -> None:
+        events = [
+            {
+                "ph": "X",
+                "name": "cudaGetDeviceProperties_v2",
+                "cat": "cuda_runtime",
+                "dur": 3.0,
+            },
+            {
+                "ph": "X",
+                "name": "cudaFree",
+                "cat": "cuda_runtime",
+                "dur": 5.0,
+            },
+        ]
+
+        summary = summarize_trace(events, top=10, shape_ops=set())
+
+        self.assertEqual(
+            summary["tracked_events"]["cudaGetDeviceProperties_v2"]["count"], 1
+        )
+        self.assertEqual(summary["tracked_events"]["cudaFree"]["duration_ms"], 0.005)
+
 
 if __name__ == "__main__":
     unittest.main()

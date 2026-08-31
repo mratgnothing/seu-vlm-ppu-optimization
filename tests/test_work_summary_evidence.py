@@ -82,6 +82,38 @@ class WorkSummaryEvidenceTest(unittest.TestCase):
             3214,
         )
 
+    def test_direct_total_stack_claim(self) -> None:
+        result = load_json(
+            "results/ppu-total-stack-vs-eager-cn20-abba-20260831.json"
+        )
+        self.assertTrue(result["passed"])
+        self.assertEqual(result["method"]["process_order"], "eager_A, candidate_A, candidate_B, eager_B")
+        self.assertEqual(result["method"]["sample_count"], 20)
+        self.assertTrue(
+            math.isclose(
+                result["aggregate"]["throughput_speedup"],
+                2.6782586712508842,
+                rel_tol=0.0,
+                abs_tol=1e-12,
+            )
+        )
+        self.assertEqual(result["consistency"]["same_parsed_answer_all_runs"], 20)
+        self.assertEqual(result["consistency"]["same_correctness_all_runs"], 20)
+        self.assertEqual(
+            result["consistency"]["strict_full_text_comparison"],
+            "unavailable_in_benchmark_public_output",
+        )
+
+    def test_current_profile_identifies_gemv_bottleneck(self) -> None:
+        result = load_json("results/ppu-current-stack-profile-20260831.json")
+        self.assertEqual(result["runtime_events"]["cudaLaunchKernel"], 14003)
+        self.assertEqual(result["runtime_events"]["cudaGetDeviceProperties_v2"], 5705)
+        self.assertEqual(result["derived"]["acblas_gemv_per_decode_step"], 120)
+        self.assertEqual(
+            result["derived"]["single_gemv_candidate_expected_gemv_reduction_per_decode_step"],
+            54,
+        )
+
     def test_negative_results_are_not_presented_as_wins(self) -> None:
         swiglu = load_json("results/ppu-swiglu-thread-sweep-negative-20260827.json")
         acblas = load_json("results/ppu-acblas-ab128-final-20260827.json")

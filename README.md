@@ -94,6 +94,14 @@
   profile 和正式入口 smoke 均通过。英文完整集同样 4029/4029 exact、Accuracy
   均为 3214/4029，平均吞吐 `118.577→129.398 token/s`、成对中位 `1.0901x`，
   3704/4029 获胜。
+- 在同一 PPU 实例上用四个独立进程按 `eager A→当前栈 A→当前栈 B→eager B` 直接
+  复测总加速：CN20 两次吞吐中位 `49.445→132.4265 token/s`，即 `2.6783x`、提升
+  `167.83%`；四次 Accuracy 均为 85%，20/20 解析答案与正确性一致，TTFT 基本持平。
+  公开结果不保存全文哈希，因此该轮不宣称全文 bit-exact，也不把 CN20 外推到完整集。
+- 最终日 16-token profile 再次记录到 14,003 次 `cudaLaunchKernel`、5,705 次
+  `cudaGetDeviceProperties_v2`、3,259 次 `cudaFree`；15 个 decode step 中每 token
+  仍有 120 次小 BF16 GEMV。由此冻结短 elementwise 小修，转而全量验证每 token 少
+  54 次 GDN GEMV 的 single-GEMV 性能档。
 - 将 grouped-GDN 已连续存放的 qkv/z/b/a 四路权重从每层 4 次 GEMV 合为 1 次后，
   fixed-128 两轮均为正，CN100 成对吞吐中位 `1.0261x`、Accuracy `93%→93%`、
   答案 100/100 一致。由于完整文本只有 99/100 一致，该路径通过
