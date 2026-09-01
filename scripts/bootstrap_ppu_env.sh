@@ -150,8 +150,8 @@ import torch  # Load the official runtime libraries before the C++ extension.
 sys.path.insert(0, "build/acblas_linear_extension")
 import seu_acblas_linear_ext as extension
 
-assert hasattr(extension, "set_gdn_batched_ba"), (
-    "stale acBLAS linear extension: set_gdn_batched_ba is missing"
+assert hasattr(extension, "gdn_projections_bf16"), (
+    "stale acBLAS linear extension: gdn_projections_bf16 is missing"
 )
 print("acBLAS b/a-GEMV symbol: available")
 PY

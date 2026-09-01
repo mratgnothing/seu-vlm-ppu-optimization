@@ -24,10 +24,6 @@ extern "C" int seu_acblas_gdn_projections_bf16(
 extern "C" int seu_acblas_linear_set_workspace(
     void* workspace,
     size_t workspace_bytes);
-extern "C" void seu_acblas_gdn_set_batched_ba(int enabled);
-extern "C" void seu_acblas_gdn_set_ba_gemv(int enabled);
-extern "C" void seu_acblas_gdn_set_single_gemv(int enabled);
-extern "C" void seu_acblas_gdn_set_tail_gemv(int enabled);
 
 namespace {
 
@@ -46,22 +42,6 @@ void set_workspace(const torch::Tensor& workspace) {
 void clear_workspace() {
   const int status = seu_acblas_linear_set_workspace(nullptr, 0);
   TORCH_CHECK(status == 0, "acBLAS linear workspace clear failed: ", status);
-}
-
-void set_gdn_batched_ba(bool enabled) {
-  seu_acblas_gdn_set_batched_ba(enabled ? 1 : 0);
-}
-
-void set_gdn_ba_gemv(bool enabled) {
-  seu_acblas_gdn_set_ba_gemv(enabled ? 1 : 0);
-}
-
-void set_gdn_single_gemv(bool enabled) {
-  seu_acblas_gdn_set_single_gemv(enabled ? 1 : 0);
-}
-
-void set_gdn_tail_gemv(bool enabled) {
-  seu_acblas_gdn_set_tail_gemv(enabled ? 1 : 0);
 }
 
 torch::Tensor acblas_linear_bf16(
@@ -161,22 +141,6 @@ torch::Tensor acblas_gdn_projections_bf16(
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, module) {
   module.def("set_workspace", &set_workspace, "Set persistent acBLAS workspace");
   module.def("clear_workspace", &clear_workspace, "Clear acBLAS workspace");
-  module.def(
-      "set_gdn_batched_ba",
-      &set_gdn_batched_ba,
-      "Batch the two homogeneous 16x2048 GDN b/a projections");
-  module.def(
-      "set_gdn_ba_gemv",
-      &set_gdn_ba_gemv,
-      "Run the adjacent GDN b/a weights as one 32x2048 GEMV");
-  module.def(
-      "set_gdn_single_gemv",
-      &set_gdn_single_gemv,
-      "Run the packed 8224x2048 GDN projection as one GEMV");
-  module.def(
-      "set_gdn_tail_gemv",
-      &set_gdn_tail_gemv,
-      "Run GDN qkv separately and packed z/b/a as one GEMV");
   module.def("linear_bf16", &acblas_linear_bf16, "PPU acBLAS BF16 decode linear");
   module.def(
       "gdn_projections_bf16",

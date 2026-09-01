@@ -1,7 +1,6 @@
-# Secrets and credentials
+# Secrets and local configuration
 .env
 .env.*
-!.env.example
 *.pem
 *.key
 *.p12
@@ -9,67 +8,45 @@
 id_rsa*
 id_ed25519*
 
-# Model weights and caches
-models/*
-!models/README.md
-Qwen3.5-2B/
+# Model weights, datasets and archives
+models/
+data/
+datasets/
 *.safetensors
 *.bin
 *.ckpt
 *.pt
 *.pth
 *.onnx
-.cache/
-huggingface/
-modelscope/
-
-# Competition data and organizer attachments
-data/*
-!data/README.md
-datasets/
 *.tsv
 *.parquet
 *.arrow
 *.pdf
-!conprehension/pdf/*.pdf
-# Local offline mirrors of third-party Chinese documentation. Keep for personal
-# study, but do not redistribute them through this repository.
-conprehension/pdf/cuda-programming-guide-zh.pdf
-conprehension/pdf/ppu-sdk-quick-start-zh.pdf
-conprehension/chinese/cuda-programming-guide-zh/
-conprehension/chinese/external/
 *.zip
 *.7z
 *.rar
-*群*聊天记录*
-*测试环境登录*
 
-# Local experiment artifacts
-artifacts/
-results/raw/
-results/summary.csv
-logs/
-ppu/microbench/build/
+# Generated PPU/Python artifacts
 ppu/custom_ops/build/
-.playwright-cli/
-*.log
+.cache/
+artifacts/
+results/
+logs/
 tmp/
-configs/local.psd1
-
-# Python
 .venv/
-.venv-ppu/
 venv/
 __pycache__/
 *.py[cod]
-.pytest_cache/
-.ruff_cache/
-.mypy_cache/
+*.so
+*.dll
+*.pyd
+*.o
+*.log
 
-# IDE and operating system
+# Editors and operating systems
 .idea/
 .vscode/
 .DS_Store
 Thumbs.db
 desktop.ini
-__MACOSX/
+__MACOSX__/

@@ -36,7 +36,7 @@ residual+RMSNorm、grouped acBLAS 投影、b/a-GEMV 和 multi-row prefill 融合
 - `scripts/activate_ppu_profile.sh performance`：选择最终性能栈；
 - `scripts/run_submission.sh`：按上述顺序启动公开自测；
 - `environment-ppu.yml`：环境结构说明。PPU patched torch 必须使用镜像自带版本。
-- `COMPETITION.md`：根据赛题与评分截图整理的任务、优化方案和实测边界。
+- `COMPETITION.md`：面向评委的完整技术演进、Qwen 架构、实验依据、失败方向、评分对齐与 VLA 应用设计。
 
 `environment-ppu.yml` 用于记录 Python 与用户态依赖，不应在官方 PPU 镜像中直接安装
 普通 PyPI/Conda torch。实际部署以 `bootstrap_ppu_env.sh` 为准：它创建可读取镜像

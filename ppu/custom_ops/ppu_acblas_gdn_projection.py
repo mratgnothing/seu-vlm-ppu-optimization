@@ -21,7 +21,7 @@ _PROJECTIONS = (
 
 
 class PPUACBLASGDNProjectionExtension:
-    """Load the experimental grouped acBLAS extension and patch GDN modules."""
+    """Load the evidence-backed grouped acBLAS extension and patch GDN modules."""
 
     def __init__(
         self,
@@ -30,17 +30,9 @@ class PPUACBLASGDNProjectionExtension:
         algorithm: int = -1,
         workspace_bytes: int = 0,
         workspace_enabled: bool = True,
-        batched_ba: bool = False,
-        ba_gemv: bool = False,
-        single_gemv: bool = False,
-        tail_gemv: bool = False,
     ) -> None:
         if workspace_bytes < 0:
             raise ValueError("workspace_bytes must be non-negative")
-        if sum((batched_ba, ba_gemv, single_gemv, tail_gemv)) > 1:
-            raise ValueError(
-                "batched_ba, ba_gemv, single_gemv and tail_gemv are mutually exclusive"
-            )
         if workspace_enabled and workspace_bytes == 0:
             workspace_enabled = False
         build_dir = Path(build_dir).resolve()
@@ -51,46 +43,8 @@ class PPUACBLASGDNProjectionExtension:
         self.workspace_bytes = workspace_bytes
         self.workspace_enabled = workspace_enabled
         self.workspace: torch.Tensor | None = None
-        self.batched_ba = batched_ba
-        self.extension.set_gdn_batched_ba(batched_ba)
-        self.ba_gemv = ba_gemv
-        self.extension.set_gdn_ba_gemv(ba_gemv)
-        self.single_gemv = single_gemv
-        self.extension.set_gdn_single_gemv(single_gemv)
-        self.tail_gemv = tail_gemv
-        self.extension.set_gdn_tail_gemv(tail_gemv)
-
-    def set_batched_ba(self, enabled: bool) -> None:
-        self.extension.set_gdn_batched_ba(enabled)
-        self.batched_ba = enabled
-        if enabled:
-            self.ba_gemv = False
-            self.single_gemv = False
-            self.tail_gemv = False
-
-    def set_ba_gemv(self, enabled: bool) -> None:
-        self.extension.set_gdn_ba_gemv(enabled)
-        self.ba_gemv = enabled
-        if enabled:
-            self.batched_ba = False
-            self.single_gemv = False
-            self.tail_gemv = False
-
-    def set_single_gemv(self, enabled: bool) -> None:
-        self.extension.set_gdn_single_gemv(enabled)
-        self.single_gemv = enabled
-        if enabled:
-            self.batched_ba = False
-            self.ba_gemv = False
-            self.tail_gemv = False
-
-    def set_tail_gemv(self, enabled: bool) -> None:
-        self.extension.set_gdn_tail_gemv(enabled)
-        self.tail_gemv = enabled
-        if enabled:
-            self.batched_ba = False
-            self.ba_gemv = False
-            self.single_gemv = False
+        # The final C++ extension contains only the exact b/a 32x2048 GEMV
+        # path. Broader single/tail/batched experiments were removed.
 
     def _ensure_workspace(self, device: torch.device) -> None:
         if self.workspace_bytes == 0 or self.workspace is not None:
