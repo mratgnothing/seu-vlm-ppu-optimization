@@ -56,8 +56,9 @@ kernel，数学等价也不等于 BF16 自回归逐 token 完全等价。
 直接对比原始 eager，每臂四次中位给出 `2.67907x` 总加速。该直接总加速的范围仍是
 CN20，不是 4029 条或私有集；双语完整集承担的是每个后期增量的精度与配对性能门禁。
 
-目前的主要收益是**解码吞吐**。完整集各后期增量的 TTFT 基本持平或轻微上升，不能
-宣称 TTFT 获得显著改善。所有结果均为公开开发集工程证据，不代表主办方私有评测。
+目前最大的收益仍是**解码吞吐**；随后独立首 Token profile 驱动的 multi-row
+prefill 融合又在 CN20/EN20 上获得 `4.86%/4.48%` TTFT 配对中位提升。该 TTFT
+结论只覆盖 20 题双语样本，尚无完整集或私有集证据。所有结果均为公开开发集工程证据。
 
 2026-09-01 又在 PPU 上拆分测试了 KV 预留与 GDN 固定状态复用。所有 40 对双语
 KV-only 输出全文一致，但中文 TTFT 成对中位慢 `2.36%`，英文慢 `0.83%` 且吞吐
@@ -355,7 +356,7 @@ gate/up GEMV、bit-exact HGGC SwiGLU 和 down GEMV，并复用每层 scratch。
 ### 5.3 当前不能宣称
 
 - 不能把 CN20 的直接 `2.67907x` 外推成 4029 条或私有集总加速；
-- 不能宣称 TTFT 显著提升；
+- 不能把 CN20/EN20 的 `4.86%/4.48%` TTFT 提升外推到完整集或私有集；
 - 不能把模块级 `4x` 或微基准 `7x` 写成整模提升；
 - 不能把公开开发集结果外推为私有测试集成绩；
 - 不能把双语 4029 paired 的 b/a-GEMV `0.696%/0.697%` 误写成总栈相对 eager
@@ -466,10 +467,22 @@ ccf81e2  新 PPU 镜像环境一键恢复
 随后新增只生成一个 token 的独立 warm prefill profiler。它显示首 Token 的主要可融合
 空间来自大量 elementwise/reduction，而非单个 GEMM；据此把现有三个按行 norm/residual
 核接到 prefill。CN20/EN20 TTFT 配对中位分别提升 `4.86%/4.48%`，解析答案和 Accuracy
-不变；但 CN20 吞吐中位为 `0.98318x`、全文仅 12/20 一致。因此候选进入显式
-`experimental-prefill`，不覆盖正式 `performance`。证据见
+不变；CN20 吞吐中位为 `0.98318x`。最终规则允许不超过 5% 的吞吐回退且不要求全文
+逐字一致，因此该候选已进入正式 `performance`；解析答案仍为 40/40 一致。证据见
 [实验说明](../experiments/2026-09-01-ppu-first-token-prefill.md) 与
 [结果](../../results/ppu-first-token-prefill-row-fusions-20260901.json)。
+
+最后一轮继续尝试 MLP prefill SwiGLU 融合。仅合并 `SiLU+mul` 时，CN20 TTFT 中位仅
+`1.00331x`，EN20 为 `0.97769x`；进一步把 gate/up 两次投影合成一次宽 GEMM 后，CN2
+冒烟 TTFT 为 `0.96925x`、吞吐为 `0.94718x`。两版 Accuracy 和解析答案均不变，但
+TTFT 门槛失败，故从最终源码移除、只保留负结果，不进入正式配置。见
+[最终实验说明](../experiments/2026-09-01-ppu-prefill-swiglu-final.md)。
+
+源码收尾后再次执行独立进程 CN20 ABBA。原始 eager 与最终提交栈吞吐中位为
+`49.2195→133.623 token/s`，直接总加速 `2.71484x`、提升 171.48%；TTFT 中位
+`120.059→114.313 ms`，降低 4.79%。四次 Accuracy 均为 17/20，20/20 解析答案和
+正确性一致，20/20 样本吞吐更快。精简证据见
+[`results/ppu-final-best-vs-eager-cn20-abba-20260901.json`](../../results/ppu-final-best-vs-eager-cn20-abba-20260901.json)。
 
 ## 9. 当前限制与下一步
 

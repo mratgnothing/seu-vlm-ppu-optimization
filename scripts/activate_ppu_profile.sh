@@ -67,20 +67,19 @@ unset SEU_PPU_FIRST_TOKEN_CACHE_MODE
 # Visual token reduction is an accuracy-risk experiment and is never inherited
 # by an evidence-backed profile until it passes the bilingual/full-set gate.
 unset SEU_VISION_MAX_PIXELS
-# Multi-row norm/residual kernels are an experimental prefill candidate until
-# the paired TTFT and accuracy gate is complete.
+# Clear prefill controls before selecting the requested evidence-backed profile.
 unset SEU_PPU_PREFILL_ROW_FUSIONS_ENABLE
 
 if [[ "${_seu_profile}" == "performance" ]]; then
-  # Bilingual MMBench 4029/4029 exact in both languages. This combines only
-  # the adjacent b/a projections and leaves qkv/z on their original GEMVs.
+  # Full-set exact b/a-GEMV plus the bilingual prefill candidate accepted
+  # under the final <=5% throughput-regression policy.
   export SEU_PPU_ACBLAS_GDN_BA_GEMV_ENABLE=1
+  export SEU_PPU_PREFILL_ROW_FUSIONS_ENABLE=1
 elif [[ "${_seu_profile}" == "experimental-single" ]]; then
   echo "WARNING: single-GEMV lost one correct answer on English MMBench 4029." >&2
   echo "Use only for reproducing the accuracy-budget experiment." >&2
   export SEU_PPU_ACBLAS_GDN_SINGLE_GEMV_ENABLE=1
 elif [[ "${_seu_profile}" == "experimental-prefill" ]]; then
-  echo "WARNING: prefill row fusion improves TTFT but CN20 decode throughput regressed." >&2
   export SEU_PPU_ACBLAS_GDN_BA_GEMV_ENABLE=1
   export SEU_PPU_PREFILL_ROW_FUSIONS_ENABLE=1
 fi

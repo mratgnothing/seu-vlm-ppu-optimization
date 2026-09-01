@@ -41,15 +41,15 @@ class ActivatePPUProfileContractTest(unittest.TestCase):
         self.assertIn("unset SEU_PPU_ACBLAS_ATTENTION_PREP_BUILD_DIR", self.text)
         self.assertIn("lost one correct answer", self.text)
 
-    def test_performance_profile_only_adds_ba_gemv(self) -> None:
+    def test_performance_profile_adds_ba_gemv_and_prefill_fusions(self) -> None:
         self.assertIn('if [[ "${_seu_profile}" == "performance" ]]', self.text)
         self.assertIn("export SEU_PPU_ACBLAS_GDN_BA_GEMV_ENABLE=1", self.text)
-        self.assertIn("Bilingual MMBench 4029/4029 exact", self.text)
+        self.assertIn("export SEU_PPU_PREFILL_ROW_FUSIONS_ENABLE=1", self.text)
+        self.assertIn("final <=5% throughput-regression policy", self.text)
 
-    def test_prefill_profile_is_explicitly_experimental(self) -> None:
+    def test_prefill_profile_remains_a_reproduction_alias(self) -> None:
         self.assertIn('"${_seu_profile}" == "experimental-prefill"', self.text)
         self.assertIn("export SEU_PPU_PREFILL_ROW_FUSIONS_ENABLE=1", self.text)
-        self.assertIn("CN20 decode throughput regressed", self.text)
 
     def test_rejected_first_token_cache_is_always_disabled(self) -> None:
         for variable in (

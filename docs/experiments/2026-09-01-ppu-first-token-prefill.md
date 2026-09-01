@@ -56,13 +56,13 @@ TTFT 在两个语言上都获得约 4.5%--4.9% 的配对中位提升，且 18/20
 39.1 变为 40.5 token，只有 12/20 全文一致，使基于生成序列的吞吐比较受到输出漂移
 影响。解析答案和 Accuracy 未变，但不满足当前正式 `performance` 档的严格无回退要求。
 
-## 决策
+## 最终决策
 
-- 正式 `performance` profile 保持不变；
-- 新增显式 `experimental-prefill` 档用于复现本轮 TTFT 收益；
-- 默认 profile 明确清除 `SEU_PPU_PREFILL_ROW_FUSIONS_ENABLE`；
-- PPU 实机验证从 `experimental-prefill` 切回 `performance` 后，该变量确实被清除；
-- 本轮到此止损，不继续为 1%--2% 吞吐变化增加第二套实现。
+- 最终规则允许吞吐回退不超过 5%，但 Accuracy 与解析答案不得下降；
+- CN20 吞吐中位回退 1.68%，双语 Accuracy 与 40/40 解析答案均不变，因此正式
+  `performance` profile 启用 multi-row prefill 融合；
+- `experimental-prefill` 作为同配置的复现别名保留；
+- 后续 SwiGLU 融合没有通过 TTFT 门槛，见同日最终实验说明。
 
 复现入口：
 

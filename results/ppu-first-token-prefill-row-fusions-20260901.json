@@ -49,10 +49,10 @@
     }
   },
   "decision": {
-    "formal_performance_profile": "unchanged",
+    "formal_performance_profile": "enabled after final policy allowed up to 5% throughput regression with no accuracy loss",
     "experimental_profile": "experimental-prefill",
-    "reason": "TTFT improves in both languages, but CN20 throughput median regresses 1.68% and text is not exact",
-    "profile_isolation_check": "PPU verified: switching from experimental-prefill to performance clears SEU_PPU_PREFILL_ROW_FUSIONS_ENABLE"
+    "reason": "TTFT improves in both languages, Accuracy and parsed answers are unchanged, and the CN20 median throughput regression is only 1.68%",
+    "profile_isolation_check": "formal performance enables SEU_PPU_PREFILL_ROW_FUSIONS_ENABLE; rejected prefill SwiGLU is absent from the final source"
   },
   "raw_artifacts": "artifacts/ppu-prefill-row-fusions-20260901 (gitignored local archive)"
 }

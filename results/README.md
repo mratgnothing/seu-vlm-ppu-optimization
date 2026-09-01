@@ -331,3 +331,19 @@ bit-exact，但最优 128-thread 配置为 `0.7901x`，未通过单算子性能�
 
 - [`ppu-swiglu-thread-sweep-negative-20260827.json`](ppu-swiglu-thread-sweep-negative-20260827.json)
 - [实验说明](../docs/experiments/2026-08-27-ppu-swiglu-negative.md)
+
+## PPU 首 Token prefill 收尾
+
+独立 `max_new_tokens=1` profile 后，multi-row RMSNorm、gated-RMSNorm 与
+residual+RMSNorm 在 CN20/EN20 上使 TTFT 配对中位提升 `4.86%/4.48%`，双语
+Accuracy 与 40/40 解析答案不变；CN20 吞吐回退 1.68%，满足最终不超过 5% 的规则，
+已进入正式 `performance`。
+
+最后一轮 MLP prefill SwiGLU 两版均保持 Accuracy 和答案，但只融合激活的版本在
+EN20 上 TTFT 为 `0.97769x`，宽 gate/up GEMM 版 CN2 为 `0.96925x`，均被拒绝。
+
+- [`ppu-first-token-prefill-row-fusions-20260901.json`](ppu-first-token-prefill-row-fusions-20260901.json)
+- [`ppu-prefill-swiglu-final-20260901.json`](ppu-prefill-swiglu-final-20260901.json)
+- [`ppu-final-best-vs-eager-cn20-abba-20260901.json`](ppu-final-best-vs-eager-cn20-abba-20260901.json)
+- [接受路径说明](../docs/experiments/2026-09-01-ppu-first-token-prefill.md)
+- [最后一轮负实验](../docs/experiments/2026-09-01-ppu-prefill-swiglu-final.md)
