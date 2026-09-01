@@ -55,4 +55,7 @@ bash scripts/run_submission.sh \
   result.json
 ```
 
+快速冒烟可在命令前设置 `SEU_NUM_SAMPLES=2 SEU_WARMUP_SAMPLES=1`；正式复测不要设置
+`SEU_NUM_SAMPLES`，脚本将运行整个数据文件。
+
 不要把模型权重、评测数据、SSH 密钥或本地缓存放入提交目录。
