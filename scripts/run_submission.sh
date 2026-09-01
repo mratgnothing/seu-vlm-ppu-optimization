@@ -18,8 +18,17 @@ OUTPUT_JSON="${3:-result_submission.json}"
 source "${SCRIPT_DIR}/activate_ppu_env.sh"
 source "${SCRIPT_DIR}/activate_ppu_profile.sh" performance
 
+EXTRA_ARGS=()
+if [[ -n "${SEU_NUM_SAMPLES:-}" ]]; then
+  EXTRA_ARGS+=(--num-samples "${SEU_NUM_SAMPLES}")
+fi
+if [[ -n "${SEU_WARMUP_SAMPLES:-}" ]]; then
+  EXTRA_ARGS+=(--warmup-samples "${SEU_WARMUP_SAMPLES}")
+fi
+
 python "${REPO_ROOT}/benchmark_public.py" \
   --dataset-path "${DATASET_PATH}" \
   --model-path "${MODEL_PATH}" \
   --backend transformers \
-  --output "${OUTPUT_JSON}"
+  --output "${OUTPUT_JSON}" \
+  "${EXTRA_ARGS[@]}"
