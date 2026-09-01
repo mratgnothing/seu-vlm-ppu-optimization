@@ -1,0 +1,18 @@
+# User-space packages verified on the 2026-08-29 official PPU image.
+#
+# Deliberately do NOT add torch/torchvision here. The image supplies a
+# PPU-patched torch build (observed: 2.11.0+v0.1.0.ppu2.1.1); installing the
+# CUDA or PyPI wheel would silently replace the accelerator runtime.
+accelerate==1.14.0
+ninja==1.13.0
+numpy==1.26.4
+packaging==26.3
+Pillow==12.2.0
+psutil==7.2.2
+PyYAML==6.0.3
+regex==2026.7.19
+safetensors==0.8.0
+scipy==1.17.1
+tokenizers==0.22.2
+tqdm==4.70.0
+transformers==5.14.1

@@ -1,0 +1,10 @@
+name: seu-vlm-ppu
+channels:
+  - conda-forge
+dependencies:
+  - python=3.12
+  - pip
+  - pip:
+      # Do not install torch/torchvision here. The official image supplies the
+      # PPU-patched torch runtime; scripts/bootstrap_ppu_env.sh reuses it.
+      - -r requirements-ppu.txt

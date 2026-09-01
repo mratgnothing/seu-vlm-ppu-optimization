@@ -1,0 +1,675 @@
+#include <hggc_bf16.h>
+#include <hggc_runtime.h>
+
+#include <cstddef>
+#include <cstdint>
+#include <type_traits>
+
+namespace {
+
+constexpr int kHeads = 16;
+constexpr int kKeyDim = 128;
+constexpr int kValueDim = 128;
+constexpr int kConvChannels = 6144;
+constexpr int kConvWidth = 4;
+constexpr int kHiddenSize = 2048;
+constexpr int kMlpIntermediateSize = 6144;
+constexpr int kGatedNormWidth = 128;
+constexpr int kAttentionHeads = 8;
+constexpr int kKeyValueHeads = 2;
+constexpr int kAttentionHeadDim = 256;
+constexpr int kRotaryDim = 64;
+constexpr int kThreads = 128;
+constexpr int kWarpSize = 32;
+constexpr unsigned kFullWarpMask = 0xffffffffU;
+constexpr float kNormEpsilon = 1.0e-6F;
+
+__device__ float warp_sum(float value) {
+  for (int offset = kWarpSize / 2; offset > 0; offset >>= 1) {
+    value += __shfl_down_sync(kFullWarpMask, value, offset);
+  }
+  return value;
+}
+
+__device__ float round_to_bf16(float value) {
+  return __bfloat162float(__float2bfloat16_rn(value));
+}
+
+__device__ float block_sum(float value) {
+  __shared__ float warp_sums[32];
+  const int lane = threadIdx.x & (kWarpSize - 1);
+  const int warp = threadIdx.x / kWarpSize;
+  const int warp_count = blockDim.x / kWarpSize;
+  value = warp_sum(value);
+  if (lane == 0) warp_sums[warp] = value;
+  __syncthreads();
+  if (warp == 0) {
+    value = lane < warp_count ? warp_sums[lane] : 0.0F;
+    value = warp_sum(value);
+  }
+  return value;
+}
+
+__global__ void gdn_gate_prep_decode_kernel(
+    const __ppu_bfloat16* raw_a,
+    const __ppu_bfloat16* raw_b,
+    const float* exp_a_log,
+    const __ppu_bfloat16* dt_bias,
+    float* g,
+    __ppu_bfloat16* beta,
+    int batch_size,
+    int64_t a_batch_stride,
+    int64_t b_batch_stride,
+    int64_t g_batch_stride,
+    int64_t beta_batch_stride) {
+  const int head = threadIdx.x;
+  const int batch = blockIdx.x;
+  if (batch >= batch_size || head >= kHeads) return;
+
+  const float a_value = __bfloat162float(
+      raw_a[static_cast<int64_t>(batch) * a_batch_stride + head]);
+  const float b_value = __bfloat162float(
+      raw_b[static_cast<int64_t>(batch) * b_batch_stride + head]);
+  const float dt_value = __bfloat162float(dt_bias[head]);
+  const float softplus_input = a_value + dt_value;
+  // Match torch.nn.functional.softplus(beta=1, threshold=20) without
+  // evaluating expf for the overflow-prone positive tail.
+  const float softplus_value = softplus_input > 20.0F
+      ? softplus_input
+      : log1pf(expf(softplus_input));
+  const float sigmoid_value = 1.0F / (1.0F + expf(-b_value));
+
+  g[static_cast<int64_t>(batch) * g_batch_stride + head] =
+      -exp_a_log[head] * softplus_value;
+  beta[static_cast<int64_t>(batch) * beta_batch_stride + head] =
+      __float2bfloat16_rn(sigmoid_value);
+}
+
+template <int kTilesPerHead>
+__global__ void gdn_recurrent_decode_kernel(
+    const __ppu_bfloat16* query,
+    const __ppu_bfloat16* key,
+    const __ppu_bfloat16* value,
+    const float* g,
+    const __ppu_bfloat16* beta,
+    float* state,
+    __ppu_bfloat16* output,
+    int batch_size,
+    int64_t query_batch_stride,
+    int64_t key_batch_stride,
+    int64_t value_batch_stride,
+    int64_t g_batch_stride,
+    int64_t beta_batch_stride) {
+  const int batch_head = blockIdx.x / kTilesPerHead;
+  const int tile = blockIdx.x % kTilesPerHead;
+  const int batch = batch_head / kHeads;
+  const int head = batch_head % kHeads;
+  const int thread = threadIdx.x;
+  if (batch >= batch_size) return;
+
+  __shared__ float normalized_query[kKeyDim];
+  __shared__ float normalized_key[kKeyDim];
+  __shared__ float query_inv_norm;
+  __shared__ float key_inv_norm;
+
+  const int64_t query_offset =
+      static_cast<int64_t>(batch) * query_batch_stride + head * kKeyDim;
+  const int64_t key_offset =
+      static_cast<int64_t>(batch) * key_batch_stride + head * kKeyDim;
+  const int64_t value_offset =
+      static_cast<int64_t>(batch) * value_batch_stride + head * kValueDim;
+
+  float query_square_partial = 0.0F;
+  float key_square_partial = 0.0F;
+  for (int index = thread; index < kKeyDim; index += blockDim.x) {
+    const float query_value = __bfloat162float(query[query_offset + index]);
+    const float key_value = __bfloat162float(key[key_offset + index]);
+    query_square_partial += round_to_bf16(query_value * query_value);
+    key_square_partial += round_to_bf16(key_value * key_value);
+  }
+  const float query_square_sum = block_sum(query_square_partial);
+  if (thread == 0) {
+    const float bf16_sum = round_to_bf16(query_square_sum);
+    query_inv_norm = round_to_bf16(
+        rsqrtf(round_to_bf16(bf16_sum + kNormEpsilon)));
+  }
+  __syncthreads();
+  const float key_square_sum = block_sum(key_square_partial);
+  if (thread == 0) {
+    const float bf16_sum = round_to_bf16(key_square_sum);
+    key_inv_norm = round_to_bf16(
+        rsqrtf(round_to_bf16(bf16_sum + kNormEpsilon)));
+  }
+  __syncthreads();
+  for (int index = thread; index < kKeyDim; index += blockDim.x) {
+    const float query_value = __bfloat162float(query[query_offset + index]);
+    const float key_value = __bfloat162float(key[key_offset + index]);
+    normalized_query[index] =
+        round_to_bf16(query_value * query_inv_norm) /
+        sqrtf(static_cast<float>(kKeyDim));
+    normalized_key[index] = round_to_bf16(key_value * key_inv_norm);
+  }
+  __syncthreads();
+
+  constexpr int kValuesPerTile = kValueDim / kTilesPerHead;
+  static_assert(kThreads % kTilesPerHead == 0);
+  if (thread >= kValuesPerTile) return;
+
+  const float decay = expf(g[static_cast<int64_t>(batch) * g_batch_stride + head]);
+  const float beta_value = __bfloat162float(
+      beta[static_cast<int64_t>(batch) * beta_batch_stride + head]);
+  const size_t state_head_offset =
+      static_cast<size_t>(batch_head) * kKeyDim * kValueDim;
+  const int value_index = tile * kValuesPerTile + thread;
+
+  float memory_projection = 0.0F;
+  for (int key_index = 0; key_index < kKeyDim; ++key_index) {
+    const size_t state_offset = state_head_offset +
+        static_cast<size_t>(key_index) * kValueDim + value_index;
+    memory_projection +=
+        (state[state_offset] * decay) * normalized_key[key_index];
+  }
+  const float delta =
+      (__bfloat162float(value[value_offset + value_index]) -
+       memory_projection) * beta_value;
+
+  float result = 0.0F;
+  for (int key_index = 0; key_index < kKeyDim; ++key_index) {
+    const size_t state_offset = state_head_offset +
+        static_cast<size_t>(key_index) * kValueDim + value_index;
+    const float updated = state[state_offset] * decay +
+                          normalized_key[key_index] * delta;
+    state[state_offset] = updated;
+    result += updated * normalized_query[key_index];
+  }
+  output[static_cast<size_t>(batch_head) * kValueDim + value_index] =
+      __float2bfloat16_rn(result);
+}
+
+__global__ void causal_conv1d_decode_kernel(
+    const __ppu_bfloat16* hidden_states,
+    __ppu_bfloat16* conv_state,
+    const __ppu_bfloat16* weight,
+    const __ppu_bfloat16* bias,
+    __ppu_bfloat16* output,
+    int batch_size,
+    int64_t hidden_batch_stride,
+    int64_t state_batch_stride,
+    bool has_bias) {
+  const int channel = blockIdx.x * blockDim.x + threadIdx.x;
+  const int batch = blockIdx.y;
+  if (batch >= batch_size || channel >= kConvChannels) return;
+
+  const int64_t state_offset =
+      static_cast<int64_t>(batch) * state_batch_stride + channel * kConvWidth;
+  const int64_t hidden_offset =
+      static_cast<int64_t>(batch) * hidden_batch_stride + channel;
+  const int64_t weight_offset = channel * kConvWidth;
+  const float current = __bfloat162float(hidden_states[hidden_offset]);
+  const float state_1 = __bfloat162float(conv_state[state_offset + 1]);
+  const float state_2 = __bfloat162float(conv_state[state_offset + 2]);
+  const float state_3 = __bfloat162float(conv_state[state_offset + 3]);
+
+  float convolution = has_bias ? __bfloat162float(bias[channel]) : 0.0F;
+  convolution += state_1 * __bfloat162float(weight[weight_offset]);
+  convolution += state_2 * __bfloat162float(weight[weight_offset + 1]);
+  convolution += state_3 * __bfloat162float(weight[weight_offset + 2]);
+  convolution += current * __bfloat162float(weight[weight_offset + 3]);
+  const float bf16_convolution = round_to_bf16(convolution);
+  const float activated =
+      bf16_convolution / (1.0F + expf(-bf16_convolution));
+
+  conv_state[state_offset] = conv_state[state_offset + 1];
+  conv_state[state_offset + 1] = conv_state[state_offset + 2];
+  conv_state[state_offset + 2] = conv_state[state_offset + 3];
+  conv_state[state_offset + 3] = __float2bfloat16_rn(current);
+  output[static_cast<int64_t>(batch) * kConvChannels + channel] =
+      __float2bfloat16_rn(activated);
+}
+
+__global__ void rmsnorm_decode_kernel(
+    const __ppu_bfloat16* input,
+    const __ppu_bfloat16* weight,
+    __ppu_bfloat16* output,
+    int rows,
+    int64_t row_stride,
+    float epsilon) {
+  const int row = blockIdx.x;
+  const int thread = threadIdx.x;
+  if (row >= rows) return;
+  const int64_t row_offset = static_cast<int64_t>(row) * row_stride;
+  float square_sum = 0.0F;
+  for (int index = thread; index < kHiddenSize; index += blockDim.x) {
+    const float value = __bfloat162float(input[row_offset + index]);
+    square_sum += value * value;
+  }
+  square_sum = block_sum(square_sum);
+  __shared__ float inv_rms;
+  if (thread == 0) {
+    inv_rms = rsqrtf(square_sum / static_cast<float>(kHiddenSize) + epsilon);
+  }
+  __syncthreads();
+  for (int index = thread; index < kHiddenSize; index += blockDim.x) {
+    const float value = __bfloat162float(input[row_offset + index]);
+    const float scale = 1.0F + __bfloat162float(weight[index]);
+    output[static_cast<int64_t>(row) * kHiddenSize + index] =
+        __float2bfloat16_rn(value * inv_rms * scale);
+  }
+}
+
+__global__ void residual_rmsnorm_decode_kernel(
+    const __ppu_bfloat16* residual,
+    __ppu_bfloat16* update,
+    const __ppu_bfloat16* weight,
+    __ppu_bfloat16* normalized_output,
+    int rows,
+    int64_t residual_row_stride,
+    int64_t update_row_stride,
+    float epsilon) {
+  const int row = blockIdx.x;
+  const int thread = threadIdx.x;
+  if (row >= rows) return;
+  const int64_t residual_offset =
+      static_cast<int64_t>(row) * residual_row_stride;
+  const int64_t update_offset = static_cast<int64_t>(row) * update_row_stride;
+  float square_sum = 0.0F;
+  for (int index = thread; index < kHiddenSize; index += blockDim.x) {
+    const float added = round_to_bf16(
+        __bfloat162float(residual[residual_offset + index]) +
+        __bfloat162float(update[update_offset + index]));
+    update[update_offset + index] = __float2bfloat16_rn(added);
+    square_sum += added * added;
+  }
+  square_sum = block_sum(square_sum);
+  __shared__ float inv_rms;
+  if (thread == 0) {
+    inv_rms = rsqrtf(square_sum / static_cast<float>(kHiddenSize) + epsilon);
+  }
+  __syncthreads();
+  for (int index = thread; index < kHiddenSize; index += blockDim.x) {
+    const float value = __bfloat162float(update[update_offset + index]);
+    const float scale = 1.0F + __bfloat162float(weight[index]);
+    normalized_output[static_cast<int64_t>(row) * kHiddenSize + index] =
+        __float2bfloat16_rn(value * inv_rms * scale);
+  }
+}
+
+__global__ void swiglu_decode_kernel(
+    const __ppu_bfloat16* gate,
+    const __ppu_bfloat16* up,
+    __ppu_bfloat16* output,
+    int elements) {
+  const int index = blockIdx.x * blockDim.x + threadIdx.x;
+  if (index >= elements) return;
+  const float gate_value = __bfloat162float(gate[index]);
+  const float activated = round_to_bf16(
+      gate_value / (1.0F + expf(-gate_value)));
+  output[index] = __float2bfloat16_rn(
+      activated * __bfloat162float(up[index]));
+}
+
+__global__ void gated_rmsnorm_decode_kernel(
+    const __ppu_bfloat16* hidden_states,
+    const __ppu_bfloat16* gate,
+    const __ppu_bfloat16* weight,
+    __ppu_bfloat16* output,
+    int rows,
+    int64_t hidden_row_stride,
+    int64_t gate_row_stride,
+    float epsilon) {
+  const int row = blockIdx.x;
+  const int thread = threadIdx.x;
+  if (row >= rows) return;
+  const int64_t hidden_offset =
+      static_cast<int64_t>(row) * hidden_row_stride;
+  const int64_t gate_offset = static_cast<int64_t>(row) * gate_row_stride;
+  float square_sum = 0.0F;
+  for (int index = thread; index < kGatedNormWidth; index += blockDim.x) {
+    const float value = __bfloat162float(hidden_states[hidden_offset + index]);
+    square_sum += value * value;
+  }
+  square_sum = block_sum(square_sum);
+  __shared__ float inv_rms;
+  if (thread == 0) {
+    inv_rms = rsqrtf(
+        square_sum / static_cast<float>(kGatedNormWidth) + epsilon);
+  }
+  __syncthreads();
+  for (int index = thread; index < kGatedNormWidth; index += blockDim.x) {
+    const float value = __bfloat162float(hidden_states[hidden_offset + index]);
+    const float normalized_bf16 = round_to_bf16(value * inv_rms);
+    const float weighted_bf16 = round_to_bf16(
+        __bfloat162float(weight[index]) * normalized_bf16);
+    const float gate_value = __bfloat162float(gate[gate_offset + index]);
+    const float silu_gate = gate_value / (1.0F + expf(-gate_value));
+    output[static_cast<int64_t>(row) * kGatedNormWidth + index] =
+        __float2bfloat16_rn(weighted_bf16 * silu_gate);
+  }
+}
+
+__global__ void qk_rmsnorm_rope_decode_kernel(
+    const __ppu_bfloat16* query,
+    const __ppu_bfloat16* key,
+    const __ppu_bfloat16* query_weight,
+    const __ppu_bfloat16* key_weight,
+    const __ppu_bfloat16* cosine,
+    const __ppu_bfloat16* sine,
+    __ppu_bfloat16* query_output,
+    __ppu_bfloat16* key_output,
+    int batch_size,
+    int64_t query_batch_stride,
+    int64_t query_head_stride,
+    int64_t key_batch_stride,
+    int64_t key_head_stride,
+    int64_t cosine_batch_stride,
+    int64_t sine_batch_stride,
+    float epsilon) {
+  const int batch_head = blockIdx.x;
+  const int heads_per_batch = kAttentionHeads + kKeyValueHeads;
+  const int batch = batch_head / heads_per_batch;
+  const int local_head = batch_head % heads_per_batch;
+  const int thread = threadIdx.x;
+  if (batch >= batch_size || thread >= kAttentionHeadDim) return;
+
+  const bool is_query = local_head < kAttentionHeads;
+  const int head = is_query ? local_head : local_head - kAttentionHeads;
+  const __ppu_bfloat16* input = is_query ? query : key;
+  const __ppu_bfloat16* weight = is_query ? query_weight : key_weight;
+  __ppu_bfloat16* output = is_query ? query_output : key_output;
+  const int64_t input_batch_stride =
+      is_query ? query_batch_stride : key_batch_stride;
+  const int64_t input_head_stride =
+      is_query ? query_head_stride : key_head_stride;
+  const int head_count = is_query ? kAttentionHeads : kKeyValueHeads;
+  const int64_t row_offset =
+      static_cast<int64_t>(batch) * input_batch_stride +
+      head * input_head_stride;
+
+  const float value = __bfloat162float(input[row_offset + thread]);
+  float square_sum = block_sum(value * value);
+  __shared__ float inv_rms;
+  __shared__ float normalized[kAttentionHeadDim];
+  if (thread == 0) {
+    inv_rms = rsqrtf(
+        square_sum / static_cast<float>(kAttentionHeadDim) + epsilon);
+  }
+  __syncthreads();
+
+  const float scale = 1.0F + __bfloat162float(weight[thread]);
+  normalized[thread] = round_to_bf16(value * inv_rms * scale);
+  __syncthreads();
+
+  float result = normalized[thread];
+  if (thread < kRotaryDim) {
+    constexpr int kRotaryHalf = kRotaryDim / 2;
+    const int pair = thread < kRotaryHalf
+        ? thread + kRotaryHalf
+        : thread - kRotaryHalf;
+    const float rotated = thread < kRotaryHalf
+        ? -normalized[pair]
+        : normalized[pair];
+    const float cos_value = __bfloat162float(
+        cosine[static_cast<int64_t>(batch) * cosine_batch_stride + thread]);
+    const float sin_value = __bfloat162float(
+        sine[static_cast<int64_t>(batch) * sine_batch_stride + thread]);
+    const float cosine_product = round_to_bf16(result * cos_value);
+    const float sine_product = round_to_bf16(rotated * sin_value);
+    result = round_to_bf16(cosine_product + sine_product);
+  }
+
+  const int64_t output_offset =
+      (static_cast<int64_t>(batch) * head_count + head) *
+      kAttentionHeadDim;
+  output[output_offset + thread] = __float2bfloat16_rn(result);
+}
+
+}  // namespace
+
+extern "C" int seu_ppu_gdn_recurrent_decode_bf16(
+    const uint16_t* query,
+    const uint16_t* key,
+    const uint16_t* value,
+    const float* g,
+    const uint16_t* beta,
+    float* state,
+    uint16_t* output,
+    int batch_size,
+    int64_t query_batch_stride,
+    int64_t key_batch_stride,
+    int64_t value_batch_stride,
+    int64_t g_batch_stride,
+    int64_t beta_batch_stride,
+    int tiles_per_head,
+    void* stream_handle) {
+  if (batch_size <= 0) return static_cast<int>(hggcErrorInvalidValue);
+  const hggcStream_t stream = reinterpret_cast<hggcStream_t>(stream_handle);
+  const auto launch = [&](auto tile_tag) {
+    constexpr int kTiles = decltype(tile_tag)::value;
+    gdn_recurrent_decode_kernel<kTiles>
+        <<<batch_size * kHeads * kTiles, kThreads, 0, stream>>>(
+            reinterpret_cast<const __ppu_bfloat16*>(query),
+            reinterpret_cast<const __ppu_bfloat16*>(key),
+            reinterpret_cast<const __ppu_bfloat16*>(value),
+            g,
+            reinterpret_cast<const __ppu_bfloat16*>(beta),
+            state,
+            reinterpret_cast<__ppu_bfloat16*>(output),
+            batch_size,
+            query_batch_stride,
+            key_batch_stride,
+            value_batch_stride,
+            g_batch_stride,
+            beta_batch_stride);
+  };
+  if (tiles_per_head == 1) {
+    launch(std::integral_constant<int, 1>{});
+  } else if (tiles_per_head == 2) {
+    launch(std::integral_constant<int, 2>{});
+  } else if (tiles_per_head == 4) {
+    launch(std::integral_constant<int, 4>{});
+  } else {
+    return static_cast<int>(hggcErrorInvalidValue);
+  }
+  return static_cast<int>(hggcGetLastError());
+}
+
+extern "C" int seu_ppu_gdn_gate_prep_decode_bf16(
+    const uint16_t* raw_a,
+    const uint16_t* raw_b,
+    const float* exp_a_log,
+    const uint16_t* dt_bias,
+    float* g,
+    uint16_t* beta,
+    int batch_size,
+    int64_t a_batch_stride,
+    int64_t b_batch_stride,
+    int64_t g_batch_stride,
+    int64_t beta_batch_stride,
+    void* stream_handle) {
+  if (batch_size <= 0) return static_cast<int>(hggcErrorInvalidValue);
+  const hggcStream_t stream = reinterpret_cast<hggcStream_t>(stream_handle);
+  gdn_gate_prep_decode_kernel<<<batch_size, 32, 0, stream>>>(
+      reinterpret_cast<const __ppu_bfloat16*>(raw_a),
+      reinterpret_cast<const __ppu_bfloat16*>(raw_b),
+      exp_a_log,
+      reinterpret_cast<const __ppu_bfloat16*>(dt_bias),
+      g,
+      reinterpret_cast<__ppu_bfloat16*>(beta),
+      batch_size,
+      a_batch_stride,
+      b_batch_stride,
+      g_batch_stride,
+      beta_batch_stride);
+  return static_cast<int>(hggcGetLastError());
+}
+
+extern "C" int seu_ppu_causal_conv1d_decode_bf16(
+    const uint16_t* hidden_states,
+    uint16_t* conv_state,
+    const uint16_t* weight,
+    const uint16_t* bias,
+    uint16_t* output,
+    int batch_size,
+    int64_t hidden_batch_stride,
+    int64_t state_batch_stride,
+    int threads,
+    void* stream_handle) {
+  if (batch_size <= 0 || threads <= 0 || threads > 1024 || threads % 32 != 0) {
+    return static_cast<int>(hggcErrorInvalidValue);
+  }
+  const hggcStream_t stream = reinterpret_cast<hggcStream_t>(stream_handle);
+  const dim3 grid((kConvChannels + threads - 1) / threads, batch_size);
+  causal_conv1d_decode_kernel<<<grid, threads, 0, stream>>>(
+      reinterpret_cast<const __ppu_bfloat16*>(hidden_states),
+      reinterpret_cast<__ppu_bfloat16*>(conv_state),
+      reinterpret_cast<const __ppu_bfloat16*>(weight),
+      reinterpret_cast<const __ppu_bfloat16*>(bias),
+      reinterpret_cast<__ppu_bfloat16*>(output),
+      batch_size,
+      hidden_batch_stride,
+      state_batch_stride,
+      bias != nullptr);
+  return static_cast<int>(hggcGetLastError());
+}
+
+extern "C" int seu_ppu_rmsnorm_decode_bf16(
+    const uint16_t* input,
+    const uint16_t* weight,
+    uint16_t* output,
+    int rows,
+    int64_t row_stride,
+    float epsilon,
+    int threads,
+    void* stream_handle) {
+  if (rows <= 0 || threads <= 0 || threads > 1024 || threads % 32 != 0) {
+    return static_cast<int>(hggcErrorInvalidValue);
+  }
+  const hggcStream_t stream = reinterpret_cast<hggcStream_t>(stream_handle);
+  rmsnorm_decode_kernel<<<rows, threads, 0, stream>>>(
+      reinterpret_cast<const __ppu_bfloat16*>(input),
+      reinterpret_cast<const __ppu_bfloat16*>(weight),
+      reinterpret_cast<__ppu_bfloat16*>(output),
+      rows,
+      row_stride,
+      epsilon);
+  return static_cast<int>(hggcGetLastError());
+}
+
+extern "C" int seu_ppu_residual_rmsnorm_decode_bf16(
+    const uint16_t* residual,
+    uint16_t* update,
+    const uint16_t* weight,
+    uint16_t* normalized_output,
+    int rows,
+    int64_t residual_row_stride,
+    int64_t update_row_stride,
+    float epsilon,
+    int threads,
+    void* stream_handle) {
+  if (rows <= 0 || threads <= 0 || threads > 1024 || threads % 32 != 0) {
+    return static_cast<int>(hggcErrorInvalidValue);
+  }
+  const hggcStream_t stream = reinterpret_cast<hggcStream_t>(stream_handle);
+  residual_rmsnorm_decode_kernel<<<rows, threads, 0, stream>>>(
+      reinterpret_cast<const __ppu_bfloat16*>(residual),
+      reinterpret_cast<__ppu_bfloat16*>(update),
+      reinterpret_cast<const __ppu_bfloat16*>(weight),
+      reinterpret_cast<__ppu_bfloat16*>(normalized_output),
+      rows,
+      residual_row_stride,
+      update_row_stride,
+      epsilon);
+  return static_cast<int>(hggcGetLastError());
+}
+
+extern "C" int seu_ppu_swiglu_decode_bf16(
+    const uint16_t* gate,
+    const uint16_t* up,
+    uint16_t* output,
+    int elements,
+    int threads,
+    void* stream_handle) {
+  if (elements <= 0 || elements % kMlpIntermediateSize != 0 ||
+      threads <= 0 || threads > 1024 || threads % 32 != 0) {
+    return static_cast<int>(hggcErrorInvalidValue);
+  }
+  const hggcStream_t stream = reinterpret_cast<hggcStream_t>(stream_handle);
+  const int blocks = (elements + threads - 1) / threads;
+  swiglu_decode_kernel<<<blocks, threads, 0, stream>>>(
+      reinterpret_cast<const __ppu_bfloat16*>(gate),
+      reinterpret_cast<const __ppu_bfloat16*>(up),
+      reinterpret_cast<__ppu_bfloat16*>(output),
+      elements);
+  return static_cast<int>(hggcGetLastError());
+}
+
+extern "C" int seu_ppu_gated_rmsnorm_decode_bf16(
+    const uint16_t* hidden_states,
+    const uint16_t* gate,
+    const uint16_t* weight,
+    uint16_t* output,
+    int rows,
+    int64_t hidden_row_stride,
+    int64_t gate_row_stride,
+    float epsilon,
+    int threads,
+    void* stream_handle) {
+  if (rows <= 0 || threads <= 0 || threads > 1024 || threads % 32 != 0) {
+    return static_cast<int>(hggcErrorInvalidValue);
+  }
+  const hggcStream_t stream = reinterpret_cast<hggcStream_t>(stream_handle);
+  gated_rmsnorm_decode_kernel<<<rows, threads, 0, stream>>>(
+      reinterpret_cast<const __ppu_bfloat16*>(hidden_states),
+      reinterpret_cast<const __ppu_bfloat16*>(gate),
+      reinterpret_cast<const __ppu_bfloat16*>(weight),
+      reinterpret_cast<__ppu_bfloat16*>(output),
+      rows,
+      hidden_row_stride,
+      gate_row_stride,
+      epsilon);
+  return static_cast<int>(hggcGetLastError());
+}
+
+extern "C" int seu_ppu_qk_rmsnorm_rope_decode_bf16(
+    const uint16_t* query,
+    const uint16_t* key,
+    const uint16_t* query_weight,
+    const uint16_t* key_weight,
+    const uint16_t* cosine,
+    const uint16_t* sine,
+    uint16_t* query_output,
+    uint16_t* key_output,
+    int batch_size,
+    int64_t query_batch_stride,
+    int64_t query_head_stride,
+    int64_t key_batch_stride,
+    int64_t key_head_stride,
+    int64_t cosine_batch_stride,
+    int64_t sine_batch_stride,
+    float epsilon,
+    void* stream_handle) {
+  if (batch_size <= 0) return static_cast<int>(hggcErrorInvalidValue);
+  const hggcStream_t stream = reinterpret_cast<hggcStream_t>(stream_handle);
+  qk_rmsnorm_rope_decode_kernel<<<
+      batch_size * (kAttentionHeads + kKeyValueHeads),
+      kAttentionHeadDim,
+      0,
+      stream>>>(
+      reinterpret_cast<const __ppu_bfloat16*>(query),
+      reinterpret_cast<const __ppu_bfloat16*>(key),
+      reinterpret_cast<const __ppu_bfloat16*>(query_weight),
+      reinterpret_cast<const __ppu_bfloat16*>(key_weight),
+      reinterpret_cast<const __ppu_bfloat16*>(cosine),
+      reinterpret_cast<const __ppu_bfloat16*>(sine),
+      reinterpret_cast<__ppu_bfloat16*>(query_output),
+      reinterpret_cast<__ppu_bfloat16*>(key_output),
+      batch_size,
+      query_batch_stride,
+      query_head_stride,
+      key_batch_stride,
+      key_head_stride,
+      cosine_batch_stride,
+      sine_batch_stride,
+      epsilon);
+  return static_cast<int>(hggcGetLastError());
+}
