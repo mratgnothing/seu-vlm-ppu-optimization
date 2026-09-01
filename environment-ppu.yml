@@ -5,6 +5,7 @@ dependencies:
   - python=3.12
   - pip
   - pip:
-      # Do not install torch/torchvision here. The official image supplies the
-      # PPU-patched torch runtime; scripts/bootstrap_ppu_env.sh reuses it.
+      # Do not install torch here. The official image supplies the PPU-patched
+      # runtime. bootstrap_ppu_env.sh adds CPU-only torchvision with --no-deps
+      # for Qwen image preprocessing without replacing patched torch.
       - -r requirements-ppu.txt

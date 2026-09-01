@@ -6,6 +6,7 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 PYTHON_BIN="${PYTHON_BIN:-/usr/local/bin/python3}"
 PPU_SDK="${PPU_SDK:-/usr/local/PPU_SDK}"
 VENV_DIR="${SEU_PPU_VENV_DIR:-${HOME}/.cache/seu-vlm-ppu/venv}"
+TORCHVISION_VERSION="${SEU_TORCHVISION_VERSION:-0.26.0+cpu}"
 WHEELHOUSE=""
 INSTALL_DEPS=1
 BUILD_EXTENSIONS=1
@@ -99,7 +100,35 @@ if [[ "${INSTALL_DEPS}" -eq 1 ]]; then
     PIP_ARGS+=(--no-index --find-links "${WHEELHOUSE}")
   fi
   "${VENV_PYTHON}" -m pip "${PIP_ARGS[@]}" -r "${REPO_ROOT}/requirements-ppu.txt"
-  "${VENV_PYTHON}" -m pip check
+  if [[ -n "${WHEELHOUSE}" ]]; then
+    "${VENV_PYTHON}" -m pip install --no-deps --no-index \
+      --find-links "${WHEELHOUSE}" "torchvision==${TORCHVISION_VERSION}"
+  else
+    # Qwen3.5's processor imports torchvision. The PPU image supplies patched
+    # torch but not torchvision, so install only the matching CPU preprocessing
+    # wheel. --no-deps prevents pip from replacing the patched torch runtime.
+    "${VENV_PYTHON}" -m pip install --no-deps \
+      --index-url https://download.pytorch.org/whl/cpu \
+      "torchvision==${TORCHVISION_VERSION}"
+  fi
+  # The official image exposes system packages through --system-site-packages.
+  # Its unrelated tools may carry metadata conflicts (for example pyre-check
+  # versus the Click version required by current Transformers).  Report those
+  # conflicts, but gate this project on importing its own runtime dependencies.
+  "${VENV_PYTHON}" -m pip check || \
+    echo "WARNING: ignored unrelated official-image package metadata conflicts" >&2
+  "${VENV_PYTHON}" - <<'PY'
+import accelerate
+import PIL
+import regex
+import tokenizers
+import torch
+import torchvision
+import transformers
+import yaml
+
+print("submission Python dependencies: importable")
+PY
 fi
 
 VENV_TORCH_INFO="$(${VENV_PYTHON} - <<'PY'
