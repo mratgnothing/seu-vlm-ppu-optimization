@@ -1,0 +1,147 @@
+{
+  "comparison": "original_eager_vs_complete_optimized_stack",
+  "method": {
+    "process_order": "eager_A, candidate_A, candidate_B, eager_B",
+    "runs_per_arm": 2,
+    "sample_count": 20,
+    "metric": "official decode throughput: (tokens - 1) / (elapsed - TTFT)",
+    "full_text_hash_available": false
+  },
+  "eager": {
+    "runs": [
+      {
+        "source": "artifacts\\ppu-total-ab-20260831\\eager-a.json",
+        "sha256": "f264f7b75aa13de70eb98fa1cdaab41ea6c67716a8fb94ae626a7e986a06f857",
+        "avg_ttft_ms": 120.696,
+        "avg_throughput_tokens_per_sec": 49.308,
+        "accuracy": 0.85,
+        "correct": 17,
+        "public_validation_passed": true
+      },
+      {
+        "source": "artifacts\\ppu-total-ab-20260831\\eager-b.json",
+        "sha256": "ebfae45c3d9fac9578715914d981f2e2421f4ca5acb6d551d57ab18550506b5d",
+        "avg_ttft_ms": 117.133,
+        "avg_throughput_tokens_per_sec": 49.582,
+        "accuracy": 0.85,
+        "correct": 17,
+        "public_validation_passed": true
+      }
+    ],
+    "median_avg_ttft_ms": 118.9145,
+    "median_avg_throughput_tokens_per_sec": 49.445
+  },
+  "candidate": {
+    "runs": [
+      {
+        "source": "artifacts\\ppu-total-ab-20260831\\current-a.json",
+        "sha256": "01b9e4f13cb6e4aab3698f1b0576fafd506a200f7757b46416e4e89f513153d7",
+        "avg_ttft_ms": 119.286,
+        "avg_throughput_tokens_per_sec": 132.337,
+        "accuracy": 0.85,
+        "correct": 17,
+        "public_validation_passed": true
+      },
+      {
+        "source": "artifacts\\ppu-total-ab-20260831\\current-b.json",
+        "sha256": "2736a7aeb13f5fd44c2a32716e6ba24d5892ac3863cb998c416ba3b78834f0f7",
+        "avg_ttft_ms": 118.334,
+        "avg_throughput_tokens_per_sec": 132.516,
+        "accuracy": 0.85,
+        "correct": 17,
+        "public_validation_passed": true
+      }
+    ],
+    "median_avg_ttft_ms": 118.81,
+    "median_avg_throughput_tokens_per_sec": 132.42649999999998,
+    "module_metadata": [
+      {
+        "ppu_acblas_attention_prep_modules": 0,
+        "ppu_acblas_gdn_ba_gemv_enabled": false,
+        "ppu_acblas_gdn_single_gemv_enabled": false,
+        "ppu_acblas_packed_mlp_modules": 24,
+        "ppu_acblas_workspace_bytes_per_handle": 0,
+        "ppu_conv_patched_modules": 18,
+        "ppu_gated_rmsnorm_patched_modules": 18,
+        "ppu_gdn_gate_prep_modules": 18,
+        "ppu_gdn_patched_modules": 18,
+        "ppu_gdn_projection_backend": "acblas-grouped",
+        "ppu_packed_gdn_projection_groups": "4",
+        "ppu_packed_gdn_projection_modules": 18,
+        "ppu_packed_mlp_modules": 24,
+        "ppu_qk_rope_patched_modules": 6,
+        "ppu_raw_stream_query_enabled": true,
+        "ppu_residual_rmsnorm_modules": 24,
+        "ppu_rmsnorm_patched_modules": 49
+      },
+      {
+        "ppu_acblas_attention_prep_modules": 0,
+        "ppu_acblas_gdn_ba_gemv_enabled": false,
+        "ppu_acblas_gdn_single_gemv_enabled": false,
+        "ppu_acblas_packed_mlp_modules": 24,
+        "ppu_acblas_workspace_bytes_per_handle": 0,
+        "ppu_conv_patched_modules": 18,
+        "ppu_gated_rmsnorm_patched_modules": 18,
+        "ppu_gdn_gate_prep_modules": 18,
+        "ppu_gdn_patched_modules": 18,
+        "ppu_gdn_projection_backend": "acblas-grouped",
+        "ppu_packed_gdn_projection_groups": "4",
+        "ppu_packed_gdn_projection_modules": 18,
+        "ppu_packed_mlp_modules": 24,
+        "ppu_qk_rope_patched_modules": 6,
+        "ppu_raw_stream_query_enabled": true,
+        "ppu_residual_rmsnorm_modules": 24,
+        "ppu_rmsnorm_patched_modules": 49
+      }
+    ]
+  },
+  "aggregate": {
+    "throughput_speedup": 2.6782586712508842,
+    "throughput_improvement_percent": 167.82586712508842,
+    "ttft_reduction_percent": 0.08787826547645983,
+    "run_paired_speedups": [
+      2.683884967956518,
+      2.6726634665806137
+    ],
+    "per_sample_median_speedup": 2.68095848806398,
+    "per_sample_mean_speedup": 2.680524887562786,
+    "per_sample_wins": 20,
+    "per_sample_ratios": [
+      2.6655179689148323,
+      2.847496230374221,
+      2.6686571703756274,
+      2.6876946491024727,
+      2.7654262835609984,
+      2.5192828646012906,
+      2.5310218797846598,
+      2.8895650788593277,
+      2.4404348557240505,
+      2.753959688775143,
+      2.802071381740699,
+      2.808389843873206,
+      2.5445201410068523,
+      2.7814482880375517,
+      2.71983538440128,
+      2.606180176828253,
+      2.547008287851223,
+      2.6422155089628685,
+      2.7155497414556766,
+      2.6742223270254875
+    ]
+  },
+  "consistency": {
+    "accuracy_values": [
+      0.85,
+      0.85,
+      0.85,
+      0.85
+    ],
+    "same_accuracy_all_runs": true,
+    "same_parsed_answer_all_runs": 20,
+    "same_correctness_all_runs": 20,
+    "same_token_count_all_runs": 15,
+    "total": 20,
+    "strict_full_text_comparison": "unavailable_in_benchmark_public_output"
+  },
+  "passed": true
+}

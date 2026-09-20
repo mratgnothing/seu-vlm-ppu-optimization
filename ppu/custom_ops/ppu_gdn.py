@@ -760,6 +760,7 @@ def pack_qwen35_decoder_residual_rmsnorm(
         raise TypeError("residual RMSNorm requires BF16 PPU decoder weights")
 
     original_forward = module.forward
+    module._seu_prefill_residual_rmsnorm_enabled = False
     module._seu_residual_rmsnorm_scratch_enabled = False
     module._seu_residual_rmsnorm_scratch_stream = None
     next_norm_cache = None
@@ -798,7 +799,10 @@ def pack_qwen35_decoder_residual_rmsnorm(
     ) -> torch.Tensor:
         # Decoder-layer construction and the PPU library validate hidden size,
         # dtype and device once. Keep the per-token guard to a single shape read.
-        if hidden_states.shape[1] != 1:
+        if hidden_states.shape[1] != 1 and not (
+            module._seu_prefill_residual_rmsnorm_enabled
+            and hidden_states.shape[0] == 1
+        ):
             return original_forward(
                 hidden_states=hidden_states,
                 position_embeddings=position_embeddings,

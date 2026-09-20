@@ -53,6 +53,13 @@ def main() -> int:
     computed_performance_passed = (
         statistics.median(ratios) > 1.0 and statistics.fmean(ratios) > 1.0
     )
+    baseline_correct = sum(bool(record["correct"]) for record in baseline_records)
+    candidate_correct = sum(bool(record["correct"]) for record in candidate_records)
+    answer_accuracy_gate_passed = (
+        computed_performance_passed
+        and answer_pairs == len(ratios)
+        and baseline_correct == candidate_correct
+    )
     if (
         "performance_passed" in payload
         and bool(payload["performance_passed"]) != computed_performance_passed
@@ -67,6 +74,7 @@ def main() -> int:
             ),
             "accuracy": float(payload[name]["accuracy"]),
             "correct": sum(bool(record["correct"]) for record in records),
+            "unparsed_answers": sum(record.get("answer") is None for record in records),
         }
 
     summary = {
@@ -129,6 +137,29 @@ def main() -> int:
             "same_answer": answer_pairs,
             "same_token_count": token_count_pairs,
             "total": len(ratios),
+        },
+        "decision_gates": {
+            "strict_bit_exact_passed": bool(payload["passed"]),
+            "answer_accuracy_budget_passed": answer_accuracy_gate_passed,
+            "recommended_profile": (
+                "strict_bit_exact"
+                if bool(payload["passed"])
+                else "performance_accuracy_budget"
+                if answer_accuracy_gate_passed
+                else "experimental_only"
+            ),
+            "raw_stream_query_mode": (
+                "enabled_both_arms"
+                if target
+                in {
+                    "acblas_gdn_single_gemv",
+                    "acblas_gdn_ba_gemv",
+                    "acblas_workspace",
+                }
+                else "ab_target"
+                if bool(payload.get("raw_stream_query_ab_enabled"))
+                else "disabled"
+            ),
         },
         **(
             {

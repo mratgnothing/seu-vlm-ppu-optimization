@@ -82,6 +82,162 @@ class WorkSummaryEvidenceTest(unittest.TestCase):
             3214,
         )
 
+    def test_direct_total_stack_claim(self) -> None:
+        result = load_json(
+            "results/ppu-total-stack-vs-eager-cn20-abba-20260831.json"
+        )
+        self.assertTrue(result["passed"])
+        self.assertEqual(result["method"]["process_order"], "eager_A, candidate_A, candidate_B, eager_B")
+        self.assertEqual(result["method"]["sample_count"], 20)
+        self.assertTrue(
+            math.isclose(
+                result["aggregate"]["throughput_speedup"],
+                2.6782586712508842,
+                rel_tol=0.0,
+                abs_tol=1e-12,
+            )
+        )
+        self.assertEqual(result["consistency"]["same_parsed_answer_all_runs"], 20)
+        self.assertEqual(result["consistency"]["same_correctness_all_runs"], 20)
+        self.assertEqual(
+            result["consistency"]["strict_full_text_comparison"],
+            "unavailable_in_benchmark_public_output",
+        )
+
+    def test_current_profile_identifies_gemv_bottleneck(self) -> None:
+        result = load_json("results/ppu-current-stack-profile-20260831.json")
+        self.assertEqual(result["runtime_events"]["cudaLaunchKernel"], 14003)
+        self.assertEqual(result["runtime_events"]["cudaGetDeviceProperties_v2"], 5705)
+        self.assertEqual(result["derived"]["acblas_gemv_per_decode_step"], 120)
+        self.assertEqual(
+            result["derived"]["single_gemv_candidate_expected_gemv_reduction_per_decode_step"],
+            54,
+        )
+
+    def test_single_gemv_accuracy_budget_profile(self) -> None:
+        result = load_json(
+            "results/acblas-gdn-single-gemv-cn-full4029-summary-20260831.json"
+        )
+        self.assertEqual(result["sample_count"], 4029)
+        self.assertTrue(result["performance_passed"])
+        self.assertFalse(result["passed"])
+        self.assertEqual(result["baseline"]["correct"], 3374)
+        self.assertEqual(result["acblas_gdn_single_gemv"]["correct"], 3374)
+        self.assertEqual(result["pair_consistency"]["same_answer"], 4029)
+        self.assertEqual(result["pair_consistency"]["exact_text"], 3873)
+        self.assertEqual(
+            result["decision_gates"]["recommended_profile"],
+            "performance_accuracy_budget",
+        )
+        self.assertTrue(
+            result["decision_gates"]["answer_accuracy_budget_passed"]
+        )
+
+        total = load_json(
+            "results/ppu-single-gemv-vs-eager-cn20-abba-20260831.json"
+        )
+        self.assertTrue(total["passed"])
+        self.assertTrue(
+            math.isclose(
+                total["aggregate"]["throughput_speedup"],
+                2.7689191696386235,
+                rel_tol=0.0,
+                abs_tol=1e-12,
+            )
+        )
+
+        english = load_json(
+            "results/acblas-gdn-single-gemv-en-full4029-summary-20260831.json"
+        )
+        self.assertEqual(english["sample_count"], 4029)
+        self.assertEqual(english["baseline"]["correct"], 3214)
+        self.assertEqual(english["acblas_gdn_single_gemv"]["correct"], 3213)
+        self.assertEqual(english["pair_consistency"]["same_answer"], 4028)
+        self.assertFalse(
+            english["decision_gates"]["answer_accuracy_budget_passed"]
+        )
+        self.assertEqual(
+            english["decision_gates"]["recommended_profile"],
+            "experimental_only",
+        )
+
+        decision = load_json(
+            "results/acblas-gdn-single-gemv-bilingual-decision-20260831.json"
+        )
+        self.assertFalse(
+            decision["overall"]["bilingual_answer_accuracy_gate_passed"]
+        )
+        self.assertFalse(decision["overall"]["default_enabled"])
+        self.assertEqual(
+            decision["en"]["regression_sample"]["sample_id"], "1001553"
+        )
+
+    def test_ba_gemv_bilingual_strict_gate(self) -> None:
+        for path, expected_correct, expected_median in (
+            (
+                "results/acblas-gdn-ba-gemv-cn-full4029-summary-20260831.json",
+                3374,
+                1.006958874497839,
+            ),
+            (
+                "results/acblas-gdn-ba-gemv-en-full4029-summary-20260831.json",
+                3214,
+                1.0069743412373764,
+            ),
+        ):
+            result = load_json(path)
+            self.assertEqual(result["sample_count"], 4029)
+            self.assertTrue(result["passed"])
+            self.assertTrue(result["performance_passed"])
+            self.assertEqual(result["baseline"]["correct"], expected_correct)
+            self.assertEqual(
+                result["acblas_gdn_ba_gemv"]["correct"], expected_correct
+            )
+            self.assertEqual(result["pair_consistency"]["exact_text"], 4029)
+            self.assertEqual(result["pair_consistency"]["same_answer"], 4029)
+            self.assertEqual(result["pair_consistency"]["same_token_count"], 4029)
+            self.assertEqual(
+                result["decision_gates"]["recommended_profile"],
+                "strict_bit_exact",
+            )
+            self.assertTrue(
+                math.isclose(
+                    result["paired_decode"]["median_speedup"],
+                    expected_median,
+                    rel_tol=0.0,
+                    abs_tol=1e-12,
+                )
+            )
+
+        total = load_json(
+            "results/ppu-ba-gemv-vs-eager-cn20-abba-20260831.json"
+        )
+        self.assertTrue(total["passed"])
+        self.assertEqual(total["method"]["runs_per_arm"], 4)
+        self.assertEqual(
+            total["method"]["process_order"], "2 independent ABBA blocks"
+        )
+        self.assertTrue(
+            math.isclose(
+                total["aggregate"]["throughput_speedup"],
+                2.6790733966336657,
+                rel_tol=0.0,
+                abs_tol=1e-12,
+            )
+        )
+        self.assertEqual(total["consistency"]["same_parsed_answer_all_runs"], 20)
+        self.assertEqual(total["consistency"]["same_correctness_all_runs"], 20)
+
+        profile = load_json("results/ppu-ba-gemv-profile-20260831.json")
+        self.assertTrue(profile["passed"])
+        self.assertEqual(
+            profile["derived"]["observed_removed_cuLaunchKernel"], 270
+        )
+        self.assertEqual(
+            profile["derived"]["expected_removed_acblas_submissions"], 270
+        )
+        self.assertEqual(profile["kernel_events"]["net_device_kernel_reduction"], 324)
+
     def test_negative_results_are_not_presented_as_wins(self) -> None:
         swiglu = load_json("results/ppu-swiglu-thread-sweep-negative-20260827.json")
         acblas = load_json("results/ppu-acblas-ab128-final-20260827.json")
@@ -113,6 +269,14 @@ class WorkSummaryEvidenceTest(unittest.TestCase):
             "ppu-swiglu-thread-sweep-negative-20260827.json",
             "acblas-attention-prep-cn20-r2-20260828.json",
             "residual-rmsnorm-scratch-ab128-20260828.json",
+            "acblas-gdn-single-gemv-cn-full4029-summary-20260831.json",
+            "ppu-single-gemv-vs-eager-cn20-abba-20260831.json",
+            "acblas-gdn-single-gemv-en-full4029-summary-20260831.json",
+            "acblas-gdn-single-gemv-bilingual-decision-20260831.json",
+            "acblas-gdn-ba-gemv-cn-full4029-summary-20260831.json",
+            "acblas-gdn-ba-gemv-en-full4029-summary-20260831.json",
+            "ppu-ba-gemv-vs-eager-cn20-abba-20260831.json",
+            "ppu-ba-gemv-profile-20260831.json",
         ):
             self.assertIn(filename, text)
 

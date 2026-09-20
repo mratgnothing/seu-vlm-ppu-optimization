@@ -1,0 +1,37 @@
+{
+  "date": "2026-09-01",
+  "device": "PPU-ZW810E",
+  "model": "Qwen3.5-2B",
+  "method": "independent-process CN20 ABBA: eager A, candidate A, candidate B, eager B; two warmup samples",
+  "eager": {
+    "avg_ttft_ms": [119.976, 120.142],
+    "avg_throughput_tokens_per_sec": [49.682, 48.757],
+    "median_avg_ttft_ms": 120.059,
+    "median_avg_throughput_tokens_per_sec": 49.2195,
+    "accuracy": [0.85, 0.85]
+  },
+  "candidate": {
+    "avg_ttft_ms": [114.478, 114.148],
+    "avg_throughput_tokens_per_sec": [132.806, 134.44],
+    "median_avg_ttft_ms": 114.313,
+    "median_avg_throughput_tokens_per_sec": 133.623,
+    "accuracy": [0.85, 0.85],
+    "prefill_row_fusions_enabled": true
+  },
+  "aggregate": {
+    "throughput_speedup": 2.7148386310303843,
+    "throughput_improvement_percent": 171.48386310303843,
+    "ttft_reduction_percent": 4.7859802263886975,
+    "per_sample_median_throughput_speedup": 2.729324045762927,
+    "per_sample_throughput_wins": "20/20"
+  },
+  "consistency": {
+    "same_accuracy_all_runs": true,
+    "same_parsed_answer_all_runs": "20/20",
+    "same_correctness_all_runs": "20/20",
+    "same_token_count_all_runs": "15/20",
+    "strict_full_text_comparison": "unavailable_in benchmark_public output"
+  },
+  "passed": true,
+  "raw_artifacts": "artifacts/final-best-vs-eager-20260901 (gitignored local archive)"
+}

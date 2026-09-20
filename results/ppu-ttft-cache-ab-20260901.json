@@ -1,0 +1,99 @@
+{
+  "experiment": "qwen3.5 reusable first-token cache ablation on PPU-ZW810E",
+  "status": "rejected",
+  "formal_profile_enabled": false,
+  "device": "PPU-ZW810E",
+  "model": "Qwen3.5-2B",
+  "timing_boundary": "first_generated_token_put",
+  "cache_shape_probe": {
+    "sample_id": "3000984",
+    "prompt_tokens": 226,
+    "total_cache_bytes_after_first_token": 22536192,
+    "full_attention_layers": 6,
+    "kv_shape_per_layer": [1, 2, 226, 256],
+    "kv_dtype": "torch.bfloat16",
+    "linear_attention_layers": 18,
+    "conv_state_shape_per_layer": [1, 6144, 4],
+    "conv_state_dtype": "torch.bfloat16",
+    "recurrent_state_shape_per_layer": [1, 16, 128, 128],
+    "recurrent_state_dtype": "torch.float32"
+  },
+  "ablations": [
+    {
+      "name": "reserve_kv_and_reuse_linear_states",
+      "dataset": "MMBench dev CN",
+      "samples": 2,
+      "max_new_tokens": 16,
+      "exact_text_pairs": 2,
+      "baseline_avg_ttft_ms": 119.77282049997484,
+      "candidate_avg_ttft_ms": 134.26835750033206,
+      "paired_median_ttft_speedup": 0.8951648809563325,
+      "paired_mean_throughput_speedup": 1.0235458639940287,
+      "passed": false
+    },
+    {
+      "name": "reuse_linear_states_only",
+      "dataset": "MMBench dev CN",
+      "samples": 2,
+      "max_new_tokens": 16,
+      "exact_text_pairs": 2,
+      "baseline_avg_ttft_ms": 117.93663599996762,
+      "candidate_avg_ttft_ms": 118.70962149987463,
+      "paired_median_ttft_speedup": 0.9933878487414537,
+      "paired_mean_throughput_speedup": 1.006122557900993,
+      "passed": false
+    },
+    {
+      "name": "reserve_kv_only_smoke",
+      "dataset": "MMBench dev CN",
+      "samples": 2,
+      "max_new_tokens": 16,
+      "exact_text_pairs": 2,
+      "baseline_avg_ttft_ms": 120.78068849996271,
+      "candidate_avg_ttft_ms": 117.61681250004585,
+      "paired_median_ttft_speedup": 1.0268704674989755,
+      "paired_mean_throughput_speedup": 1.0068627808915465,
+      "passed": true,
+      "interpretation": "small-sample false positive; rejected by bilingual n=20"
+    },
+    {
+      "name": "reserve_kv_only_cn20",
+      "dataset": "MMBench dev CN",
+      "samples": 20,
+      "max_new_tokens": 64,
+      "exact_text_pairs": 20,
+      "baseline_correct": 17,
+      "candidate_correct": 17,
+      "baseline_avg_ttft_ms": 120.60623575002865,
+      "candidate_avg_ttft_ms": 123.01941824996447,
+      "paired_median_ttft_speedup": 0.9763844318234269,
+      "paired_mean_ttft_speedup": 0.9839040566754826,
+      "paired_median_throughput_speedup": 1.0070239209716496,
+      "paired_mean_throughput_speedup": 1.0055738107522576,
+      "passed": false
+    },
+    {
+      "name": "reserve_kv_only_en20",
+      "dataset": "MMBench dev EN",
+      "samples": 20,
+      "max_new_tokens": 64,
+      "exact_text_pairs": 20,
+      "baseline_correct": 18,
+      "candidate_correct": 18,
+      "baseline_avg_ttft_ms": 121.53422759995465,
+      "candidate_avg_ttft_ms": 120.28463080007441,
+      "paired_median_ttft_speedup": 0.9916733373133441,
+      "paired_mean_ttft_speedup": 1.0123838824847773,
+      "paired_median_throughput_speedup": 1.0018008482840335,
+      "paired_mean_throughput_speedup": 0.9855200372860506,
+      "passed": false
+    }
+  ],
+  "gate": {
+    "accuracy_and_text_preserved": true,
+    "ttft_improved_bilingually": false,
+    "throughput_non_regression_bilingually": false,
+    "promote_to_formal_profile": false
+  },
+  "raw_evidence_local_ignored": "artifacts/ppu-ttft-cache-20260831/"
+}

@@ -1,0 +1,44 @@
+{
+  "experiment": "complete_precision_stack_profile",
+  "date": "2026-08-31",
+  "device": "PPU-ZW810E",
+  "profile_new_tokens": 16,
+  "decode_steps_in_profile": 15,
+  "candidate": {
+    "projection_backend": "acblas-grouped",
+    "packed_gdn_modules": 18,
+    "residual_rmsnorm_modules": 24,
+    "gdn_gate_prep_modules": 18,
+    "acblas_packed_mlp_modules": 24,
+    "raw_stream_query_enabled": true,
+    "single_gemv_enabled": false
+  },
+  "runtime_events": {
+    "cudaGetDeviceProperties_v2": 5705,
+    "cudaFree": 3259,
+    "cudaLaunchKernel": 14003,
+    "cuLaunchKernel": 2561,
+    "cudaStreamSynchronize": 124,
+    "cudaDeviceSynchronize": 2
+  },
+  "kernel_counts": {
+    "acblas_gemv_total": 2446,
+    "gdn_recurrent_decode": 270,
+    "residual_rmsnorm_decode": 720,
+    "gdn_gate_prep_decode": 270,
+    "swiglu_decode": 360
+  },
+  "derived": {
+    "acblas_gemv_per_decode_step": 120,
+    "gdn_projection_gemv_per_decode_step": 72,
+    "packed_mlp_gemv_per_decode_step": 48,
+    "single_gemv_candidate_expected_gdn_gemv_per_decode_step": 18,
+    "single_gemv_candidate_expected_gemv_reduction_per_decode_step": 54
+  },
+  "raw_evidence": {
+    "trace_sha256": "8bc8169063b7e437c7a09af5ab31fe6619b4e3a64f3814cd361110aecbe75c95",
+    "benchmark_result_sha256": "d8f71b44c1619cccf24b055fefdd50bf384b2b2705d9c4aff35f635871c06c30",
+    "storage": "local ignored artifacts/ppu-current-profile-20260831"
+  },
+  "conclusion": "The remaining feasible decode bottleneck is the 120 small BF16 acBLAS GEMV submissions per token. The final-day candidate therefore reduces GDN projection GEMV count instead of adding another short elementwise kernel."
+}

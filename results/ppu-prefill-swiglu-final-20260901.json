@@ -1,0 +1,48 @@
+{
+  "date": "2026-09-01",
+  "device": "PPU-ZW810E",
+  "model": "Qwen3.5-2B",
+  "baseline": "b/a-GEMV plus multi-row prefill norm/residual fusions",
+  "acceptance": {
+    "accuracy_regression_allowed": false,
+    "parsed_answer_regression_allowed": false,
+    "maximum_throughput_regression": 0.05,
+    "ttft_must_improve": true
+  },
+  "separate_projection_fused_swiglu": {
+    "cn20": {
+      "baseline_avg_ttft_ms": 114.237919349398,
+      "candidate_avg_ttft_ms": 113.68896785061224,
+      "median_ttft_speedup": 1.0033053406875727,
+      "mean_ttft_speedup": 1.0058858731122253,
+      "ttft_wins": "10/20",
+      "median_throughput_speedup": 1.0063346126277417,
+      "accuracy": "17/20 -> 17/20",
+      "equal_answers": "20/20",
+      "exact_text": "20/20"
+    },
+    "en20": {
+      "baseline_avg_ttft_ms": 114.93168044944468,
+      "candidate_avg_ttft_ms": 119.67394454914029,
+      "median_ttft_speedup": 0.9776925477376497,
+      "mean_ttft_speedup": 0.9675063019804631,
+      "ttft_wins": "7/20",
+      "median_throughput_speedup": 0.9674403600569942,
+      "accuracy": "18/20 -> 18/20",
+      "equal_answers": "20/20",
+      "exact_text": "20/20"
+    },
+    "decision": "rejected: bilingual TTFT gate failed"
+  },
+  "packed_wide_projection_smoke_cn2": {
+    "median_ttft_speedup": 0.9692465478210632,
+    "median_throughput_speedup": 0.9471782629479102,
+    "ttft_wins": "0/2",
+    "accuracy": "1/2 -> 1/2",
+    "equal_answers": "2/2",
+    "exact_text": "2/2",
+    "decision": "rejected without expansion"
+  },
+  "formal_performance": "multi-row prefill norm/residual enabled; failed prefill SwiGLU implementation removed",
+  "raw_artifacts": "artifacts/ppu-prefill-swiglu-final-20260901 (gitignored local archive)"
+}

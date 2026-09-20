@@ -139,6 +139,8 @@ class VLMModel:
         self._processor = None
         self._tokenizer = None
         self._backend_name = "dummy"
+        self._ppu_first_token_cache_pool = None
+        self._ppu_first_token_cache_enabled = False
 
         if backend in {"auto", "transformers"}:
             try:
@@ -186,10 +188,21 @@ class VLMModel:
         from transformers import AutoModelForImageTextToText, AutoProcessor
 
         self._torch = torch
+        processor_kwargs = {}
+        vision_max_pixels = os.getenv("SEU_VISION_MAX_PIXELS")
+        if vision_max_pixels:
+            vision_max_pixels_value = int(vision_max_pixels)
+            if vision_max_pixels_value <= 0:
+                raise ValueError("SEU_VISION_MAX_PIXELS must be positive")
+            processor_kwargs["max_pixels"] = vision_max_pixels_value
+        self._vision_max_pixels = (
+            int(vision_max_pixels) if vision_max_pixels else None
+        )
         self._processor = AutoProcessor.from_pretrained(
             self.model_path,
             local_files_only=True,
             trust_remote_code=True,
+            **processor_kwargs,
         )
         self._model = AutoModelForImageTextToText.from_pretrained(
             self.model_path,
@@ -198,6 +211,25 @@ class VLMModel:
             dtype=torch.bfloat16,
             device_map=self.device,
         ).eval()
+        self._ppu_first_token_cache_enabled = (
+            os.getenv("SEU_PPU_FIRST_TOKEN_CACHE_ENABLE", "0") == "1"
+        )
+        if self._ppu_first_token_cache_enabled:
+            custom_op_dir = Path(
+                os.getenv(
+                    "SEU_PPU_GDN_PYTHON_DIR",
+                    str(Path(__file__).resolve().parent / "ppu" / "custom_ops"),
+                )
+            ).resolve()
+            if str(custom_op_dir) not in sys.path:
+                sys.path.insert(0, str(custom_op_dir))
+            from ppu_first_token_cache import Qwen35CachePool
+
+            self._ppu_first_token_cache_pool = Qwen35CachePool(
+                self._model,
+                capacity=int(os.getenv("SEU_PPU_FIRST_TOKEN_CACHE_CAPACITY", "4096")),
+                mode=os.getenv("SEU_PPU_FIRST_TOKEN_CACHE_MODE", "all"),
+            )
         self._tokenizer = getattr(self._processor, "tokenizer", None)
         self._ppu_gdn_patched_modules = 0
         self._ppu_packed_gdn_projection_modules = 0
@@ -209,6 +241,9 @@ class VLMModel:
         self._ppu_acblas_workspace_bytes_per_handle = 0
         self._ppu_acblas_gdn_single_gemv_enabled = False
         self._ppu_acblas_gdn_ba_gemv_enabled = False
+        self._ppu_prefill_row_fusions_enabled = (
+            os.getenv("SEU_PPU_PREFILL_ROW_FUSIONS_ENABLE", "0") == "1"
+        )
         self._ppu_gdn_projection_backend = "disabled"
         self._ppu_gdn_projection_groups = "disabled"
         gdn_library_path = os.getenv("SEU_PPU_GDN_LIBRARY")
@@ -338,9 +373,19 @@ class VLMModel:
                     ):
                         continue
                     eager_forward = module.forward
+                    module._seu_prefill_rmsnorm_enabled = (
+                        self._ppu_prefill_row_fusions_enabled
+                    )
 
                     def decode_rmsnorm(x, *, _module=module, _eager=eager_forward):
-                        if x.ndim >= 2 and x.shape[-2] == 1 and x.shape[-1] == 2048:
+                        if (
+                            x.ndim >= 2
+                            and x.shape[-1] == 2048
+                            and (
+                                x.shape[-2] == 1
+                                or _module._seu_prefill_rmsnorm_enabled
+                            )
+                        ):
                             return self._ppu_gdn_library.rmsnorm_decode(
                                 x, _module.weight, _module.eps
                             )
@@ -359,6 +404,9 @@ class VLMModel:
                     if type(module).__name__ != "Qwen3_5RMSNormGated":
                         continue
                     eager_forward = module.forward
+                    module._seu_prefill_gated_rmsnorm_enabled = (
+                        self._ppu_prefill_row_fusions_enabled
+                    )
 
                     def decode_gated_rmsnorm(
                         hidden_states,
@@ -370,8 +418,12 @@ class VLMModel:
                         if (
                             gate is not None
                             and hidden_states.ndim == 2
-                            and hidden_states.shape == (16, 128)
+                            and hidden_states.shape[-1] == 128
                             and gate.shape == hidden_states.shape
+                            and (
+                                hidden_states.shape == (16, 128)
+                                or _module._seu_prefill_gated_rmsnorm_enabled
+                            )
                         ):
                             return self._ppu_gdn_library.gated_rmsnorm_decode(
                                 hidden_states,
@@ -537,6 +589,9 @@ class VLMModel:
                         self._ppu_gdn_library,
                         next_norm=next_norm,
                     )
+                    module._seu_prefill_residual_rmsnorm_enabled = (
+                        self._ppu_prefill_row_fusions_enabled
+                    )
                     self._ppu_residual_rmsnorm_modules += 1
                 if self._ppu_residual_rmsnorm_modules != 24:
                     raise RuntimeError(
@@ -594,6 +649,15 @@ class VLMModel:
             return_tensors="pt",
         ).to(self._model.device)
         input_len = inputs.input_ids.shape[1]
+        image_grid_thw = getattr(inputs, "image_grid_thw", None)
+        visual_tokens = None
+        image_grid = None
+        if image_grid_thw is not None and image_grid_thw.numel() > 0:
+            image_grid = [int(value) for value in image_grid_thw[0].tolist()]
+            merge_size = int(self._processor.image_processor.merge_size)
+            visual_tokens = (
+                image_grid[0] * image_grid[1] * image_grid[2] // merge_size**2
+            )
         streamer = TimedTextIteratorStreamer(
             self._processor.tokenizer,
             skip_prompt=True,
@@ -606,6 +670,18 @@ class VLMModel:
             "use_cache": True,
             "streamer": streamer,
         }
+        if self._ppu_first_token_cache_enabled:
+            required_length = input_len + generation_config.max_new_tokens
+            generation_kwargs["past_key_values"] = (
+                self._ppu_first_token_cache_pool.acquire(
+                    required_length=required_length,
+                    batch_size=int(inputs.input_ids.shape[0]),
+                )
+            )
+            # Cache allocation/reset is deliberately outside the official TTFT
+            # interval.  Synchronize once so queued initialization cannot leak
+            # back into the measured model.generate call.
+            torch.cuda.synchronize()
         if generation_config.temperature > 0:
             generation_kwargs.update(
                 temperature=generation_config.temperature,
@@ -665,6 +741,23 @@ class VLMModel:
                 ),
                 "optimization_profile": self.optimization_profile,
                 "ttft_measurement": "first_generated_token_put",
+                "prompt_tokens": int(input_len),
+                "image_grid_thw": image_grid,
+                "visual_tokens": visual_tokens,
+                "vision_max_pixels": self._vision_max_pixels,
+                "ppu_first_token_cache_enabled": (
+                    self._ppu_first_token_cache_enabled
+                ),
+                "ppu_first_token_cache_capacity": (
+                    self._ppu_first_token_cache_pool.capacity
+                    if self._ppu_first_token_cache_pool is not None
+                    else 0
+                ),
+                "ppu_first_token_cache_mode": (
+                    self._ppu_first_token_cache_pool.mode
+                    if self._ppu_first_token_cache_pool is not None
+                    else "disabled"
+                ),
                 "ppu_gdn_patched_modules": self._ppu_gdn_patched_modules,
                 "ppu_conv_patched_modules": getattr(
                     self, "_ppu_conv_patched_modules", 0
@@ -701,6 +794,9 @@ class VLMModel:
                 ),
                 "ppu_gdn_gate_prep_modules": getattr(
                     self, "_ppu_gdn_gate_prep_modules", 0
+                ),
+                "ppu_prefill_row_fusions_enabled": getattr(
+                    self, "_ppu_prefill_row_fusions_enabled", False
                 ),
                 "ppu_raw_stream_query_enabled": getattr(
                     self, "_ppu_raw_stream_query_enabled", False

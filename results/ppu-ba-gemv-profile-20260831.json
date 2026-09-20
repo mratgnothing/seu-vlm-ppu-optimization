@@ -1,0 +1,55 @@
+{
+  "comparison": "precision_stack_vs_ba_gemv_performance_stack",
+  "device": "PPU-ZW810E",
+  "profile": {
+    "new_tokens": 16,
+    "decode_steps": 15,
+    "exact_output_match": true,
+    "baseline_trace_sha256": "0f336f470cfdc43e229c6b59e9bd32ca9ff819ff8de2132ad947c209bdfa04a0",
+    "candidate_trace_sha256": "5a0c75c1a7a83ff2dab4f08d4b20ae6eb46c3064610565c40789de933a2f2866"
+  },
+  "fixed_128_token_ab": {
+    "source_sha256": "c8ce66c06a20444a8abfb4f43415ae60b009f07f786ae93e42effe34a1897c7d",
+    "repeats": 2,
+    "baseline_median_tokens_per_sec": 134.93633093253987,
+    "candidate_median_tokens_per_sec": 137.5916415931473,
+    "paired_median_speedup": 1.019897181995583,
+    "wins": 2,
+    "exact_output_match": true,
+    "passed": true
+  },
+  "runtime_events": {
+    "baseline": {
+      "cuLaunchKernel": 2561,
+      "cudaLaunchKernel": 14003,
+      "cudaGetDeviceProperties_v2": 5705,
+      "cudaFree": 3259
+    },
+    "candidate": {
+      "cuLaunchKernel": 2291,
+      "cudaLaunchKernel": 14003,
+      "cudaGetDeviceProperties_v2": 5165,
+      "cudaFree": 2989
+    },
+    "candidate_minus_baseline": {
+      "cuLaunchKernel": -270,
+      "cudaLaunchKernel": 0,
+      "cudaGetDeviceProperties_v2": -540,
+      "cudaFree": -270
+    }
+  },
+  "kernel_events": {
+    "removed_small_ba_gemvt_kernels": 540,
+    "added_merged_ba_gemm_kernels": 216,
+    "net_device_kernel_reduction": 324
+  },
+  "derived": {
+    "gdn_layers": 18,
+    "removed_acblas_submissions_per_decode_step": 18,
+    "expected_removed_acblas_submissions": 270,
+    "observed_removed_cuLaunchKernel": 270,
+    "baseline_small_bf16_gemv_per_decode_step": 120,
+    "candidate_logical_gemv_per_decode_step": 102
+  },
+  "passed": true
+}

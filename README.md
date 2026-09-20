@@ -94,15 +94,46 @@
   profile 和正式入口 smoke 均通过。英文完整集同样 4029/4029 exact、Accuracy
   均为 3214/4029，平均吞吐 `118.577→129.398 token/s`、成对中位 `1.0901x`，
   3704/4029 获胜。
+- 在同一 PPU 实例上用四个独立进程按 `eager A→当前栈 A→当前栈 B→eager B` 直接
+  复测总加速：CN20 两次吞吐中位 `49.445→132.4265 token/s`，即 `2.6783x`、提升
+  `167.83%`；四次 Accuracy 均为 85%，20/20 解析答案与正确性一致，TTFT 基本持平。
+  公开结果不保存全文哈希，因此该轮不宣称全文 bit-exact，也不把 CN20 外推到完整集。
+- 最终日 16-token profile 再次记录到 14,003 次 `cudaLaunchKernel`、5,705 次
+  `cudaGetDeviceProperties_v2`、3,259 次 `cudaFree`；15 个 decode step 中每 token
+  仍有 120 次小 BF16 GEMV。由此冻结短 elementwise 小修，转而全量验证每 token 少
+  54 次 GDN GEMV 的 single-GEMV 性能档。
 - 将 grouped-GDN 已连续存放的 qkv/z/b/a 四路权重从每层 4 次 GEMV 合为 1 次后，
-  fixed-128 两轮均为正，CN100 成对吞吐中位 `1.0261x`、Accuracy `93%→93%`、
-  答案 100/100 一致。由于完整文本只有 99/100 一致，该路径通过
-  `SEU_PPU_ACBLAS_GDN_SINGLE_GEMV_ENABLE=1` 显式启用且默认关闭，只作为允许答案级
-  精度预算的性能档；精度优先档仍保留四次 GEMV。
-- 精度优先增量只合并相邻的 b/a 两个 `[16,2048]` 投影为一个 `[32,2048]`
-  GEMV：fixed-128 两轮全文 exact，中位 `1.0011x/1.0051x`；CN100 Accuracy
-  `93%→93%`、100/100 完整文本一致，成对中位 `1.0068x`。该路径默认关闭，通过
-  `SEU_PPU_ACBLAS_GDN_BA_GEMV_ENABLE=1` 显式启用，等待完整公开集门禁。
+  fixed-128 两轮均为正；最终中文 4029 条两路 Accuracy 均为 3374/4029，答案解析
+  结果 4029/4029 一致，平均吞吐 `129.386→132.457 token/s`，成对中位/均值
+  `1.0238x/1.0253x`、2932/4029 获胜。完整文本为 3873/4029 一致，因此该路径通过
+  `SEU_PPU_ACBLAS_GDN_SINGLE_GEMV_ENABLE=1` 显式启用且默认关闭，只归入允许答案级
+  精度预算的性能档；精度优先档仍保留四次 GEMV。该性能档相对原始 eager 的独立进程
+  CN20 ABBA 直接总加速为 `2.7689x`（`+176.89%`），四次 Accuracy 均为 85%。但
+  英文 4029 中候选正确数 `3214→3213`、答案 4028/4029 一致，因此双语门禁失败，
+  最终降级为 `experimental_only`，不得作为比赛推荐性能档。
+- 最终保守增量只合并相邻的 b/a 两个 `[16,2048]` 投影为一个 `[32,2048]`
+  GEMV。中文/英文 4029 条都达到 4029/4029 全文、答案和 token 数一致，正确数分别
+  保持 3374 和 3214，成对中位 `1.00696x/1.00697x`。16-token profile 中
+  `cuLaunchKernel` 减少 270 次，精确对应 18 层和 15 个 decode step。该路径已进入
+  显式 `performance` 档，`precision` 档继续保留原四次 GEMV。
+- 最终性能栈相对原始 eager 又运行了两个独立 ABBA block：每臂四次吞吐中位
+  `49.3415→132.1895 token/s`，即 `2.67907x`、提升 `167.91%`；8 次 Accuracy
+  均为 85%，20/20 解析答案和正确性一致。一次候选低值未剔除，最终采用四次中位。
+- 首 Token 收尾先后验证 KV/linear-state 预分配与视觉 Token 上限。KV 候选未通过
+  双语 TTFT 门槛；视觉 192-token 档保持 400/400 答案一致但英文 TTFT 中位
+  `0.99803x`，176/128 档开始出现答案漂移或吞吐回退。因此正式 profile 保持两类
+  实验默认关闭，不以噪声级变化冒充提升。
+- 新增只包含一次 warm multimodal prefill 的首 Token profiler，并将现有 multi-row
+  RMSNorm、gated-RMSNorm、residual+RMSNorm 核接入 prefill。CN20/EN20 TTFT 配对
+  中位提升 `4.86%/4.48%`，Accuracy 和解析答案不变；CN20 吞吐中位回退 1.68%，
+  在最终允许不超过 5% 吞吐回退的规则下已进入正式 `performance`。
+- 最后一轮 MLP prefill SwiGLU 融合保持双语 Accuracy 和答案不变，但仅融合激活时
+  EN20 TTFT 回退 2.23%；宽 gate/up GEMM 版 CN2 TTFT 又回退 3.08%，因此正式档
+  不包含该路径，只保留负实验结果和原因。
+- 收尾时重新执行独立进程 CN20 ABBA：原始 eager 与最终提交栈的吞吐中位为
+  `49.2195→133.623 token/s`，即 `2.71484x`、提升 171.48%；TTFT 中位为
+  `120.059→114.313 ms`，降低 4.79%。四次 Accuracy 均为 85%，解析答案和正确性
+  20/20 一致。
 - 资源释放前完成独立 SwiGLU HGGC 核负实验：四组线程均 bit-exact，但最好只有
   `0.7901x`，因此未接入正式 wrapper；后续改走 packed GEMM epilogue fusion。
 - 已将 PPU 源码、编译产物、小型结果、pip/设备清单、全部原始 trace 和 MMBench
@@ -130,6 +161,10 @@ PPU 侧已完成 SDK、真实模型闭环、20 条稳态基线、算子级 profi
 [PPU residual-RMSNorm scratch 负实验](docs/experiments/2026-08-28-ppu-residual-rmsnorm-scratch.md)、
 [PPU raw stream 查询优化](docs/experiments/2026-08-28-ppu-raw-stream-query.md)、
 [PPU acBLAS 运行时主要矛盾与 single-GEMV 候选](docs/experiments/2026-08-28-ppu-acblas-runtime-overhead.md)、
+[PPU 首 Token cache 负实验](docs/experiments/2026-09-01-ppu-first-token-cache.md)、
+[PPU 视觉 Token / TTFT 负实验](docs/experiments/2026-09-01-ppu-visual-token.md)、
+[PPU 独立首 Token profile 与 prefill 行融合](docs/experiments/2026-09-01-ppu-first-token-prefill.md)、
+[PPU 最后一轮 prefill SwiGLU 负实验](docs/experiments/2026-09-01-ppu-prefill-swiglu-final.md)、
 [PPU SwiGLU 融合负实验](docs/experiments/2026-08-27-ppu-swiglu-negative.md)、
 [PPU decode 融合算子与问题记录](ppu/custom_ops/README.md)、
 [PPU 兼容性矩阵](docs/ppu-compatibility-matrix.md) 和 [需要向主办方确认的问题](docs/questions-for-organizer.md)。
@@ -159,6 +194,13 @@ bash scripts/bootstrap_ppu_env.sh --check-only
 # 创建仓库外的独立 venv、安装非 Torch 依赖、重编译三个扩展并做短 smoke。
 bash scripts/bootstrap_ppu_env.sh
 source scripts/activate_ppu_env.sh
+
+# 推荐性能档：b/a-GEMV 已通过中英文各 4029/4029 全文一致门禁。
+source scripts/activate_ppu_profile.sh performance
+# 保守复测档：保持 GDN 四次原形状 GEMV。
+# source scripts/activate_ppu_profile.sh precision
+# 仅复现实验：中文中位 +2.38%，但英文完整集少 1 个正确答案。
+source scripts/activate_ppu_profile.sh experimental-single
 ```
 
 部署脚本默认使用 `/usr/local/bin/python3`、`/usr/local/PPU_SDK` 和

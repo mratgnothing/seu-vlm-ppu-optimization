@@ -5,6 +5,40 @@
 
 所有结论应能追溯到原始结果、配置和代码提交。
 
+2026-08-31 的同环境总加速与最终日 profile：
+
+- [`ppu-total-stack-vs-eager-cn20-abba-20260831.json`](ppu-total-stack-vs-eager-cn20-abba-20260831.json)：
+  四个独立进程按 ABBA 顺序直接比较原始 eager 与当前精度优先完整栈；两次吞吐中位
+  `49.445→132.4265 token/s`，总加速 `2.6783x`、提升 `167.83%`，四次 Accuracy
+  均为 85%，20/20 解析答案和正确性一致。公开入口未保存全文哈希，不能据此宣称全文
+  bit-exact；
+- [`ppu-current-stack-profile-20260831.json`](ppu-current-stack-profile-20260831.json)：
+  16-token 当前栈 profile 的紧凑审计，记录 14,003 次 launch、5,705 次设备属性查询、
+  3,259 次释放，以及每 decode token 120 次小 BF16 GEMV 的主要矛盾。原始 trace 在
+  本地 ignored 目录保存，并以 SHA-256 关联。
+- [`acblas-gdn-single-gemv-cn-full4029-summary-20260831.json`](acblas-gdn-single-gemv-cn-full4029-summary-20260831.json)：
+  single-GEMV 性能档中文全量门禁；两路 Accuracy 均为 3374/4029，答案解析结果
+  4029/4029 一致，平均吞吐 `129.386→132.457 token/s`，成对中位 `1.0238x`、
+  2932/4029 获胜；全文 3873/4029 一致，故只进入显式 accuracy-budget 档；
+- [`ppu-single-gemv-vs-eager-cn20-abba-20260831.json`](ppu-single-gemv-vs-eager-cn20-abba-20260831.json)：
+  性能档与原始 eager 的独立进程直接 ABBA；两次吞吐中位 `48.509→134.3175
+  token/s`，即 `2.7689x`、提升 `176.89%`，四次 Accuracy 均为 85%。
+- [`acblas-gdn-single-gemv-en-full4029-summary-20260831.json`](acblas-gdn-single-gemv-en-full4029-summary-20260831.json)：
+  英文全量揭示一条答案/正确性回退：正确数 `3214→3213`，答案 4028/4029 一致，
+  尽管成对中位为 `1.0253x`，仍未通过 accuracy-budget 门禁；
+- [`acblas-gdn-single-gemv-bilingual-decision-20260831.json`](acblas-gdn-single-gemv-bilingual-decision-20260831.json)：
+  汇总中英文门禁并将 single-GEMV 最终判为 `experimental_only`，默认关闭。
+- [`acblas-gdn-ba-gemv-cn-full4029-summary-20260831.json`](acblas-gdn-ba-gemv-cn-full4029-summary-20260831.json) / [`acblas-gdn-ba-gemv-en-full4029-summary-20260831.json`](acblas-gdn-ba-gemv-en-full4029-summary-20260831.json)：
+  保守 b/a-GEMV 的双语完整集门禁；两种语言均 4029/4029 全文、答案和 token 数
+  一致，正确数分别保持 3374 和 3214，成对中位分别为 `1.00696x/1.00697x`；
+- [`ppu-ba-gemv-vs-eager-cn20-abba-20260831.json`](ppu-ba-gemv-vs-eager-cn20-abba-20260831.json)：
+  两个独立 ABBA block、每臂四次的最终总栈直接复测；中位
+  `49.3415→132.1895 token/s`，即 `2.67907x`、提升 `167.91%`，8 次 Accuracy
+  均为 85%；
+- [`ppu-ba-gemv-profile-20260831.json`](ppu-ba-gemv-profile-20260831.json)：
+  16-token profile 与固定 128-token 复测；`cuLaunchKernel` 精确减少 270 次，
+  对应 `18 层×15 decode step`，固定长两对中位 `1.01990x` 且全文一致。
+
 2026-08-28 的 acBLAS runtime 候选结果：
 
 - `acblas-workspace-fixed128-r1-20260828.json`：workspace 负实验；
@@ -25,8 +59,8 @@
   负实验，二者均未改变主要运行时事件。
 
 长 paired A/B 使用 `--pair-log <path> --resume-pair-log` 保存与恢复逐题检查点。恢复器会
-拒绝不连续索引或样本 ID 不匹配的 JSONL。b/a GEMV 当前完成到 CN100；中英文 4029 尚未
-在本轮资源窗口内运行，不能把 CN100 exact 外推为完整集结论。
+拒绝不连续索引或样本 ID 不匹配的 JSONL。b/a-GEMV 已完成中英文各 4029 条，并通过
+双语严格一致性和性能门；CN100 只保留为早期晋级记录，不再承担最终结论。
 
 ## 当前可公开精度结果
 
@@ -297,3 +331,19 @@ bit-exact，但最优 128-thread 配置为 `0.7901x`，未通过单算子性能�
 
 - [`ppu-swiglu-thread-sweep-negative-20260827.json`](ppu-swiglu-thread-sweep-negative-20260827.json)
 - [实验说明](../docs/experiments/2026-08-27-ppu-swiglu-negative.md)
+
+## PPU 首 Token prefill 收尾
+
+独立 `max_new_tokens=1` profile 后，multi-row RMSNorm、gated-RMSNorm 与
+residual+RMSNorm 在 CN20/EN20 上使 TTFT 配对中位提升 `4.86%/4.48%`，双语
+Accuracy 与 40/40 解析答案不变；CN20 吞吐回退 1.68%，满足最终不超过 5% 的规则，
+已进入正式 `performance`。
+
+最后一轮 MLP prefill SwiGLU 两版均保持 Accuracy 和答案，但只融合激活的版本在
+EN20 上 TTFT 为 `0.97769x`，宽 gate/up GEMM 版 CN2 为 `0.96925x`，均被拒绝。
+
+- [`ppu-first-token-prefill-row-fusions-20260901.json`](ppu-first-token-prefill-row-fusions-20260901.json)
+- [`ppu-prefill-swiglu-final-20260901.json`](ppu-prefill-swiglu-final-20260901.json)
+- [`ppu-final-best-vs-eager-cn20-abba-20260901.json`](ppu-final-best-vs-eager-cn20-abba-20260901.json)
+- [接受路径说明](../docs/experiments/2026-09-01-ppu-first-token-prefill.md)
+- [最后一轮负实验](../docs/experiments/2026-09-01-ppu-prefill-swiglu-final.md)

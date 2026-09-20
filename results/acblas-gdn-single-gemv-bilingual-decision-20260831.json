@@ -1,0 +1,39 @@
+{
+  "candidate": "acblas_gdn_single_gemv",
+  "scope": "bilingual_public_gate",
+  "cn": {
+    "summary": "results/acblas-gdn-single-gemv-cn-full4029-summary-20260831.json",
+    "source_sha256": "87ca4fa23282af3bda0642abd6c06de926be1e46c9866faacb7d61ac18cfa118",
+    "sample_count": 4029,
+    "baseline_correct": 3374,
+    "candidate_correct": 3374,
+    "same_answer": 4029,
+    "exact_text": 3873,
+    "median_speedup": 1.0237962326343653,
+    "answer_accuracy_gate_passed": true
+  },
+  "en": {
+    "summary": "results/acblas-gdn-single-gemv-en-full4029-summary-20260831.json",
+    "source_sha256": "2ed22ceffb486efee3b2c3ef585f1987a47e233cd00e7878b2ebe73183dcbff0",
+    "sample_count": 4029,
+    "baseline_correct": 3214,
+    "candidate_correct": 3213,
+    "same_answer": 4028,
+    "exact_text": 4026,
+    "median_speedup": 1.0253197306642798,
+    "answer_accuracy_gate_passed": false,
+    "regression_sample": {
+      "sample_id": "1001553",
+      "reference": "B",
+      "baseline_answer": "B",
+      "candidate_answer": "A"
+    }
+  },
+  "overall": {
+    "performance_passed": true,
+    "bilingual_answer_accuracy_gate_passed": false,
+    "recommended_profile": "experimental_only",
+    "default_enabled": false,
+    "reason": "English full-set evaluation loses one correct answer, so the candidate cannot be promoted from an accuracy-budget experiment to a competition profile."
+  }
+}
