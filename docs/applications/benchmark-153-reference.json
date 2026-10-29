@@ -1,0 +1,47 @@
+{
+  "source": "用户提供153测试用例截图",
+  "source_image": "gui_reference_benchmark_153.png",
+  "scope": {
+    "specified": 54,
+    "generalization": 99,
+    "total": 153
+  },
+  "models": [
+    {
+      "model": "Qwen2.5-VL-7B",
+      "specified_percent": 20.37,
+      "generalization_percent": 31.31
+    },
+    {
+      "model": "UI-TARS-1.5-7B",
+      "specified_percent": 57.41,
+      "generalization_percent": 65.66
+    },
+    {
+      "model": "Qwen3-VL-8B",
+      "specified_percent": 62.96,
+      "generalization_percent": 72.73
+    },
+    {
+      "model": "Qwen3-VL-30B-A3B",
+      "specified_percent": 53.7,
+      "generalization_percent": 70.71
+    },
+    {
+      "model": "Qwen3-VL-235B-A22B",
+      "specified_percent": 74.07,
+      "generalization_percent": 75.76
+    }
+  ],
+  "role": "领域参考评测与技术动机",
+  "ours_same_protocol_result": null,
+  "technical_goals_in_image": {
+    "task_success_percent_gt": 95,
+    "frequent_decision_ms_lt": 800,
+    "frequent_steps_share_percent_gt": 80,
+    "complex_output_tokens_lt": 180,
+    "clarification_percent_gt": 95,
+    "handover_accuracy_percent_gt": 95,
+    "false_alarm_percent_lt": 5
+  }
+}

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">ZhiBan Accessibility Agent</string>
+    <string name="service_name">ZhiBan Accessibility Service</string>
+    <string name="ime_name">ZhiBan Headless IME</string>
+    <string name="service_description">Reads structured UI semantics and performs explicitly authorized local actions.</string>
+</resources>

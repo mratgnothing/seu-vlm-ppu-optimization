@@ -46,7 +46,6 @@ git diff --check
 
 ## 当前交接点
 
-本地真实 Transformers 基线、O1、M1、全量中英文 Accuracy、CUDA profile、PPU
-兼容性调查和源码候选包工具均已完成。下一条关键路径是获得主办方支持
-Qwen3.5-2B 的隔离 PPU 环境，然后完成真实 PPU 功能、性能和优化闭环。
+2026-10-29 已结项归档。先读 `docs/final-summary.md`、`deliverables/README.md` 和 `docs/archive-20261029.md`。主仓库包含正式 PPU 源码与结果，`applications/` 收录独立解释的应用扩展。旧实验状态属于历史，不自动恢复任何训练、手机操作或 PPU 任务。
 
+模型、`.venv` 和 `data/derived` 仍被独立研究项目引用；保留其真实路径和 junction。`local-only/`、设备截图/数据库与工具不上传。原手机仓库的历史 bundle 与工作区补丁只在本地保存。

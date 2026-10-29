@@ -1,0 +1,34 @@
+:root { font-family: system-ui, "Microsoft YaHei", sans-serif; color: #1e2340; background: #f3f5fb; }
+* { box-sizing: border-box; }
+body { margin: 0; min-height: 100vh; display: flex; flex-direction: column; }
+header { display: flex; gap: 12px; align-items: center; padding: 16px 18px; background: #4d3fd9; color: white; }
+header small { display: block; opacity: .8; margin-top: 3px; }
+main { width: min(100%, 560px); margin: 0 auto; padding: 20px; flex: 1; }
+h1 { font-size: 28px; margin: 10px 0 20px; }
+.hero { background: linear-gradient(135deg,#6656ea,#9474ff); border-radius: 24px; padding: 24px; color: white; margin-bottom: 18px; }
+.hero h1 { margin: 6px 0; }
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+button { min-height: 52px; border: 1px solid #d8daea; border-radius: 16px; padding: 12px 14px; background: white; color: #202441; font-size: 17px; cursor: pointer; }
+.grid button { min-height: 108px; font-weight: 700; }
+.grid span { display: block; font-size: 31px; margin-bottom: 8px; }
+.icon { min-width: 48px; background: rgba(255,255,255,.14); border-color: rgba(255,255,255,.3); color: white; }
+.screen { display: none; }
+.screen.active { display: block; }
+.hidden { display: none !important; }
+.contact { width: 100%; text-align: left; margin-bottom: 12px; }
+.contact span { display: block; color: #666b84; margin-top: 4px; }
+.card { margin-top: 18px; background: white; border-radius: 18px; padding: 18px; box-shadow: 0 8px 24px rgba(40,43,82,.08); }
+label { display: block; margin: 14px 0; font-weight: 700; }
+input, textarea { display: block; width: 100%; margin-top: 7px; padding: 14px; font: inherit; border: 1px solid #c8cbe0; border-radius: 12px; }
+textarea { min-height: 110px; }
+.primary { background: #4d3fd9; color: white; border-color: #4d3fd9; }
+.warning { border: 2px solid #f2aa29; }
+.danger { border: 2px solid #d83b54; }
+.danger-button { background: #c72e49; color: white; border-color: #c72e49; }
+.success { background: #dff7e9; color: #12663a; padding: 16px; border-radius: 14px; font-weight: 700; }
+.sms { background: white; border-radius: 16px; padding: 18px; line-height: 1.7; margin-bottom: 16px; }
+.qr { width: 240px; height: 240px; margin: 20px auto; display: grid; place-content: center; text-align: center; font-weight: 900; font-size: 26px; border: 18px dotted #202441; background: white; }
+.row { display: flex; gap: 10px; }
+.row button { flex: 1; }
+footer { padding: 12px 20px 22px; width: min(100%,560px); margin: auto; }
+footer button { width: 100%; }

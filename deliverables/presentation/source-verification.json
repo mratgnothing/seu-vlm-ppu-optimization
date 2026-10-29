@@ -1,0 +1,44 @@
+{
+  "source": "C:\\Users\\ASUS\\Downloads\\Qwen35_决赛PPT_融合终稿_ImageGen_20261029\\output\\完整交付\\一吴是处_决赛汇报_融合完整版27页.pptx",
+  "source_sha256": "a1abd07a1b7312e35a59bc4c035f739ff6a02776c3b9741369225c85ec8d97c0",
+  "slides": 29,
+  "enabled_appendices": [
+    {
+      "slide": 25,
+      "part": "ppt/slides/slide25.xml",
+      "title": "A01 附录A：GUI-VLA Harness完整架构"
+    },
+    {
+      "slide": 26,
+      "part": "ppt/slides/slide26.xml",
+      "title": "A02 附录B：Qwen3.5-2B完整计算架构Qwen3.5-2B完整计算架构按原第20页保留。视觉编码、混合主干、残差、GDN"
+    },
+    {
+      "slide": 27,
+      "part": "ppt/slides/slide27.xml",
+      "title": "A03 附录C：PPU实验与方案筛选本表各阶段相对其前一版本。4029规模的字段为中英文一致样本数；Prefill全文一致数为CN"
+    },
+    {
+      "slide": 28,
+      "part": "ppt/slides/slide28.xml",
+      "title": "A04 附录D：脑电协议与门控运行点个人校准在同批run12试次上比较，给出按人区间。v4方向候选与门控运行点分别评估，门控方向为"
+    }
+  ],
+  "changed_parts": [
+    "ppt/slides/slide25.xml",
+    "ppt/slides/slide26.xml",
+    "ppt/slides/slide27.xml",
+    "ppt/slides/slide28.xml"
+  ],
+  "all_other_parts_byte_identical": true,
+  "output": "C:\\Users\\ASUS\\Downloads\\附录翻页设置_20261029\\output\\一吴是处_决赛汇报_附录可翻页29页.pptx",
+  "output_sha256": "de8840caa0be43a7f2c286a301ee2d3b72004598cf4657bdea8e9c72e7b70042",
+  "native_powerpoint": {
+    "width_pt": 960.0,
+    "height_pt": 540.0,
+    "hidden": [],
+    "slides": 29
+  },
+  "source_unchanged": true,
+  "validation_scope": "Four visibility flags only; every other package entry unchanged. PowerPoint native open and render succeeded. Generic finalizer not used due its unchanged-source media-action limitation."
+}

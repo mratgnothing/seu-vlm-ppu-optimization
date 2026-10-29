@@ -1,0 +1,38 @@
+{
+  "verified_imports": 167,
+  "publish_candidates": 452,
+  "new_files": 110,
+  "secrets": [],
+  "phone_pattern_review": "Only synthetic redaction test fixture in test_kb.py; no actual contact data.",
+  "private_exposure": [],
+  "deck": {
+    "slides": 29,
+    "hidden": [],
+    "media_count": 37,
+    "video_byte_identical": true,
+    "sha256": "de8840caa0be43a7f2c286a301ee2d3b72004598cf4657bdea8e9c72e7b70042"
+  },
+  "final_metric_arithmetic": true,
+  "tests": {
+    "ppu_repository": {
+      "ran": 79,
+      "passed": 79,
+      "scope": "existing model-free suite"
+    },
+    "mobile_vla": {
+      "ran": 29,
+      "passed": 29,
+      "scope": "local unit tests; no device actions"
+    }
+  },
+  "cleanup": {
+    "completed": true,
+    "deleted_targets": 22,
+    "removed_files": 5343.0,
+    "removed_bytes": 2413932661.0,
+    "archived_files": 167,
+    "archived_bytes": 90616873.0,
+    "net_reclaimed_bytes": 2323315788.0,
+    "external_targets_preserved": true
+  }
+}

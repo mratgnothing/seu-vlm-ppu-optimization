@@ -41,7 +41,7 @@ class PPUBootstrapContractTest(unittest.TestCase):
             "smoke_gdn_gate_prep_integration.py",
             "smoke_acblas_linear_module.py",
             "import torch  # Load the official runtime libraries",
-            "set_gdn_batched_ba",
+            "gdn_projections_bf16",
             "smoke_acblas_packed_mlp_module.py",
         ):
             self.assertIn(marker, content)

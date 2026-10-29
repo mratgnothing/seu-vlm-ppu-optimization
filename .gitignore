@@ -73,3 +73,9 @@ __pycache__/
 Thumbs.db
 desktop.ini
 __MACOSX/
+
+# Final local archive and private device evidence
+/local-only/
+# Final authored PDFs explicitly approved for publication
+!deliverables/
+!deliverables/**/*.pdf

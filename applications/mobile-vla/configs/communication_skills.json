@@ -1,0 +1,69 @@
+{
+  "version": 1,
+  "contact_aliases": ["authorized_test_contact"],
+  "skills": [
+    {
+      "name": "call_bound_contact",
+      "description": "Call a contact that has already been bound and authorized outside the model. The model never receives or invents a phone number.",
+      "risk": "medium",
+      "requires_confirmation": true,
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "contact_alias": {
+            "type": "string",
+            "enum": ["authorized_test_contact"]
+          },
+          "max_duration_seconds": {
+            "type": "integer",
+            "enum": [5]
+          }
+        },
+        "required": ["contact_alias", "max_duration_seconds"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "send_wechat_message",
+      "description": "Send one pre-approved test message to a pre-bound WeChat contact. The executor resolves the account binding and rechecks the active conversation.",
+      "risk": "medium",
+      "requires_confirmation": true,
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "contact_alias": {
+            "type": "string",
+            "enum": ["authorized_test_contact"]
+          },
+          "message_id": {
+            "type": "string",
+            "enum": ["skill_test_notice_v1"]
+          }
+        },
+        "required": ["contact_alias", "message_id"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "start_wechat_video_call",
+      "description": "Start a short WeChat video-call attempt to a pre-bound contact and hang up after the authorized ring interval if it is not answered.",
+      "risk": "medium",
+      "requires_confirmation": true,
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "contact_alias": {
+            "type": "string",
+            "enum": ["authorized_test_contact"]
+          },
+          "max_ring_seconds": {
+            "type": "integer",
+            "enum": [5]
+          }
+        },
+        "required": ["contact_alias", "max_ring_seconds"],
+        "additionalProperties": false
+      }
+    }
+  ]
+}

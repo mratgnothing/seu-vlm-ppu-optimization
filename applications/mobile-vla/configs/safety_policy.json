@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "auto_execute": {
+    "allowed_risk": ["low"],
+    "minimum_confidence": 0.92,
+    "require_post_action_observation": true
+  },
+  "confirmation_required": [
+    "send_message",
+    "submit_form",
+    "create_appointment",
+    "share_location",
+    "call_contact"
+  ],
+  "handoff_required": [
+    "payment",
+    "money_transfer",
+    "enter_verification_code",
+    "share_identity_data",
+    "change_medication",
+    "delete_user_data",
+    "install_unknown_app",
+    "change_security_setting"
+  ],
+  "forbidden_storage_fields": [
+    "password",
+    "payment_pin",
+    "verification_code",
+    "id_number",
+    "bank_card_number"
+  ]
+}

@@ -1,0 +1,666 @@
+{
+  "archive_date": "2026-10-29",
+  "scope": "byte-preserved imported deliverables; authored navigation is versioned by Git",
+  "files": [
+    {
+      "destination": "deliverables/presentation/一吴是处决赛汇报.pptx",
+      "bytes": 58643570,
+      "sha256": "de8840caa0be43a7f2c286a301ee2d3b72004598cf4657bdea8e9c72e7b70042",
+      "reason": "final deliverable"
+    },
+    {
+      "destination": "deliverables/gui-vla/GUI-VLA项目汇报-注释版.pptx",
+      "bytes": 2256624,
+      "sha256": "b168162054d7ffb895269d38821f2be7aa313561ba69f6e5dcb3ecf9d95cf486",
+      "reason": "teammate source and distinct evidence"
+    },
+    {
+      "destination": "deliverables/gui-vla/时钟任务演示.mp4",
+      "bytes": 1645795,
+      "sha256": "d816cffc386a50f61efebc85294146919a6bd67cac98994af64bda51e081b5ee",
+      "reason": "final deliverable"
+    },
+    {
+      "destination": "docs/applications/gui-vla-20261028.md",
+      "bytes": 35759,
+      "sha256": "4569485e4b64f39d30daaa18d887e709c5a87867375969650fc9b38fb6500ebe",
+      "reason": "final deliverable"
+    },
+    {
+      "destination": "docs/applications/gui-vla-evidence-scope.md",
+      "bytes": 4390,
+      "sha256": "d4b1f3208012eed3c47f8ce7b65e37f21c3de62e4b3a8f218265e4cdff4036dc",
+      "reason": "final deliverable"
+    },
+    {
+      "destination": "docs/applications/benchmark-153-reference.json",
+      "bytes": 1221,
+      "sha256": "5177e38a557a022bbf38eb3c7f6ba257b7b7b68fe4b7f42e6763c6b10c867fcb",
+      "reason": "final deliverable"
+    },
+    {
+      "destination": "docs/applications/benchmark-153-reference.png",
+      "bytes": 1190897,
+      "sha256": "a3ba976f744b572aa6a6c69b62477a57881c7193c5869838c91c3ef5f721d1e4",
+      "reason": "final deliverable"
+    },
+    {
+      "destination": "docs/presentation/final-content-plan.md",
+      "bytes": 18080,
+      "sha256": "198de1f5096516fcc0fded67b23a42bff7b2c9444870fd3127796e102d736510",
+      "reason": "final deliverable"
+    },
+    {
+      "destination": "deliverables/presentation/source-verification.json",
+      "bytes": 1962,
+      "sha256": "6af3facce1603dda34d3d0ee1e079dce2a71874efc34112fc6c23bef885a06c1",
+      "reason": "final deliverable"
+    },
+    {
+      "destination": "deliverables/bci/脑机接口应用方案与实验探索汇报总结.docx",
+      "bytes": 47392,
+      "sha256": "0d89d1b68cd64f2bc286e8a876a0bb4eb143e85e3bbbca3ac00a212e63cf886c",
+      "reason": "final deliverable"
+    },
+    {
+      "destination": "docs/presentation/01_完整汇报思路与内容底稿.md",
+      "bytes": 29467,
+      "sha256": "aed6cd0b6b6b8d03d0b6941c403a4f2652364413536e71b93cb91741ec2a8809",
+      "reason": "final deliverable"
+    },
+    {
+      "destination": "docs/presentation/02_18页正式PPT结构与口播.md",
+      "bytes": 15633,
+      "sha256": "47787873cd9c73d08db98c2e69b892fbbf9d742a52f095cccdae810f34834fc9",
+      "reason": "final deliverable"
+    },
+    {
+      "destination": "docs/presentation/03_证据索引与答辩口径.md",
+      "bytes": 11542,
+      "sha256": "0bfe8ec4af53581f1e65490333e7c8bc452467988cf7511359eabf2c9d9e063c",
+      "reason": "final deliverable"
+    },
+    {
+      "destination": "applications/bci/README.md",
+      "bytes": 2872,
+      "sha256": "7db7d9b6447b9e002387b86ae909006ac244deb46de57ce28d8f28af1592c0ce",
+      "reason": "final offline BCI experiment reproduction"
+    },
+    {
+      "destination": "applications/bci/config.json",
+      "bytes": 2941,
+      "sha256": "a6947c6fd968eab31b4fc50d1c3fed148b0bbc4558531c53ecb9f27e7ed72c8e",
+      "reason": "final offline BCI experiment reproduction"
+    },
+    {
+      "destination": "applications/bci/train_v4.py",
+      "bytes": 25062,
+      "sha256": "ec62fb510993f1964899c697711c2c944a4d9ca7cd6403f187498b8df04845fd",
+      "reason": "final offline BCI experiment reproduction"
+    },
+    {
+      "destination": "applications/bci/run_training.ps1",
+      "bytes": 510,
+      "sha256": "69df3f01751134b4140f9d96384436b07ed9361dc3a9f501d50c76aeb67e6a88",
+      "reason": "final offline BCI experiment reproduction"
+    },
+    {
+      "destination": "applications/bci/generate_report.py",
+      "bytes": 15471,
+      "sha256": "b1cbd4440c99bfdc706060cda58e5c2de73996f36930027f87ec544cd13499f8",
+      "reason": "final offline BCI experiment reproduction"
+    },
+    {
+      "destination": "applications/bci/results/calculation_verification.json",
+      "bytes": 1506,
+      "sha256": "4a96b13e744625b3a72fe48f034f9202ef9b5559d320c566f79acd8ecda5aeff",
+      "reason": "final BCI conclusions and verification"
+    },
+    {
+      "destination": "applications/bci/results/report_verification.md",
+      "bytes": 1108,
+      "sha256": "498e41024fd5046b9705971e74a69182970664633aa8e79898b7495552772ec6",
+      "reason": "final BCI conclusions and verification"
+    },
+    {
+      "destination": "applications/bci/results/改进实验报告.md",
+      "bytes": 6982,
+      "sha256": "85d4a04a8b693fb791245d3294429be40c92756bd93c421bc3a55baca1e465ae",
+      "reason": "final BCI conclusions and verification"
+    },
+    {
+      "destination": "deliverables/bci/改进实验报告.html",
+      "bytes": 2893002,
+      "sha256": "2756e3a1c4d513976fea3d4a565cc6bb036cfe7e855ac64ac5b0b52acfb7d009",
+      "reason": "final deliverable",
+      "original_sha256": "60236cdb84d10141af2fa23db80f38105901ff7c84359ee3b0fed0f6e84c21f8",
+      "original_bytes": 2893007,
+      "normalization": "trailing whitespace and extra EOF blank lines only; Markdown hard breaks preserved"
+    },
+    {
+      "destination": "applications/mobile-vla/.gitignore",
+      "bytes": 390,
+      "sha256": "358db26b5d767f82222218f9f24a49e11c1f42228a751ef57229b76318ef2e9b",
+      "reason": "mobile source"
+    },
+    {
+      "destination": "applications/mobile-vla/AGENTS.md",
+      "bytes": 1038,
+      "sha256": "7aca0517295577b572d6cc677146e751ec406a95787e8b54069c24b9efbfc086",
+      "reason": "mobile source"
+    },
+    {
+      "destination": "applications/mobile-vla/README.md",
+      "bytes": 7791,
+      "sha256": "8d0b85250bfa190e6915b6e1cbbc0d896db16d4c3946772afeba0d458a7e2d48",
+      "reason": "mobile source"
+    },
+    {
+      "destination": "applications/mobile-vla/android/accessibility-agent/build.gradle",
+      "bytes": 73,
+      "sha256": "e02a0fdb3e424159db5cf57ee953ed3e5d57e3671eb3a9ff457259f4fc9241c4",
+      "reason": "mobile source"
+    },
+    {
+      "destination": "applications/mobile-vla/android/accessibility-agent/gradle.properties",
+      "bytes": 110,
+      "sha256": "cc38bc495ca4e4d7fa2fe7c9c1112f36af7a63fbf4fc3e7a088e215942403385",
+      "reason": "mobile source"
+    },
+    {
+      "destination": "applications/mobile-vla/android/accessibility-agent/README.md",
+      "bytes": 7120,
+      "sha256": "be19f12e88bb5fc452a065c5697889cc1e2f0d4ad2eb159ac6d6530bbc15d09e",
+      "reason": "mobile source"
+    },
+    {
+      "destination": "applications/mobile-vla/android/accessibility-agent/settings.gradle",
+      "bytes": 342,
+      "sha256": "5591d547edbb102c5deea592879ec1dd9e9050d9ead64cbea17b54623521f6cd",
+      "reason": "mobile source"
+    },
+    {
+      "destination": "applications/mobile-vla/android/accessibility-agent/app/build.gradle",
+      "bytes": 579,
+      "sha256": "6cadc1b70e5f7829df34b575b3fe9259908506eee64a291e54d4b55e9c8f642b",
+      "reason": "mobile source"
+    },
+    {
+      "destination": "applications/mobile-vla/android/accessibility-agent/app/src/main/AndroidManifest.xml",
+      "bytes": 3652,
+      "sha256": "d23ebfbc7841f82b20110f05d5e0a00e0caba4a74a0d4e18db39ab66019dc029",
+      "reason": "mobile source"
+    },
+    {
+      "destination": "applications/mobile-vla/android/accessibility-agent/app/src/main/java/ai/zhiman/accessibility/AgentAccessibilityService.java",
+      "bytes": 46252,
+      "sha256": "beab9764da1cf3d3a2b8e1cda14831bbdc7be7393eae08f9df516d10e9393b9f",
+      "reason": "mobile source"
+    },
+    {
+      "destination": "applications/mobile-vla/android/accessibility-agent/app/src/main/java/ai/zhiman/accessibility/AgentInputMethodService.java",
+      "bytes": 1684,
+      "sha256": "dbf82cfc7cb658884666da38d9208f8cc404f479bd64da26a52b395eb776a1e0",
+      "reason": "mobile source"
+    },
+    {
+      "destination": "applications/mobile-vla/android/accessibility-agent/app/src/main/java/ai/zhiman/accessibility/CommunicationSkillExecutor.java",
+      "bytes": 11446,
+      "sha256": "85da37b81ef53156922f6d459d76df7c54e7a57f30d1e803b0f8287d19a94f70",
+      "reason": "mobile source"
+    },
+    {
+      "destination": "applications/mobile-vla/android/accessibility-agent/app/src/main/java/ai/zhiman/accessibility/MainActivity.java",
+      "bytes": 20063,
+      "sha256": "f8222ee16b42d70e4cc6bf33c9105ff67ed7b2303566f14462cc138e624b10a3",
+      "reason": "mobile source"
+    },
+    {
+      "destination": "applications/mobile-vla/android/accessibility-agent/app/src/main/java/ai/zhiman/accessibility/PlannerClient.java",
+      "bytes": 12351,
+      "sha256": "83c17344e1f133b4ee67f427ca31425b342cf9a3d50d480b36534778cf318c57",
+      "reason": "mobile source"
+    },
+    {
+      "destination": "applications/mobile-vla/android/accessibility-agent/app/src/main/java/ai/zhiman/accessibility/ProbeReceiver.java",
+      "bytes": 3173,
+      "sha256": "2e687940b8e689cd850e8148035ca8d53053c4206e172bb4b8d978054e96bf26",
+      "reason": "mobile source"
+    },
+    {
+      "destination": "applications/mobile-vla/android/accessibility-agent/app/src/main/java/ai/zhiman/accessibility/ShellBridgeReceiver.java",
+      "bytes": 7389,
+      "sha256": "41aea9f133d0f298f2444471b7af7fededcc71ae1f75d83bf01bb19b44482ebb",
+      "reason": "mobile source"
+    },
+    {
+      "destination": "applications/mobile-vla/android/accessibility-agent/app/src/main/java/ai/zhiman/accessibility/VisionVerifier.java",
+      "bytes": 6089,
+      "sha256": "055820319eefbb4892f19e3aa49e532acab71e7598f5bc4dffd9507c9d46ea75",
+      "reason": "mobile source"
+    },
+    {
+      "destination": "applications/mobile-vla/android/accessibility-agent/app/src/main/java/ai/zhiman/accessibility/VisualActionPlanner.java",
+      "bytes": 6209,
+      "sha256": "c18c0f1faa99093c08f62436e9f1d3e8b0428579202fa0db4e0b84fa92d01128",
+      "reason": "mobile source"
+    },
+    {
+      "destination": "applications/mobile-vla/android/accessibility-agent/app/src/main/java/ai/zhiman/accessibility/VisualFingerprint.java",
+      "bytes": 2098,
+      "sha256": "02bf164bda35311e56daa94213fe23435e0cabd17f49983da7f96593a99c5f84",
+      "reason": "mobile source"
+    },
+    {
+      "destination": "applications/mobile-vla/android/accessibility-agent/app/src/main/java/ai/zhiman/accessibility/VisualTaskActivity.java",
+      "bytes": 7295,
+      "sha256": "4dbb184b9f089340c2ae5e003e36a9ec865872c2f238099aa157bcad9a0f22e7",
+      "reason": "mobile source"
+    },
+    {
+      "destination": "applications/mobile-vla/android/accessibility-agent/app/src/main/res/values/ids.xml",
+      "bytes": 113,
+      "sha256": "fee52c52825040e7aa81f31cd5d08ec31c23b2fe1755176e56031e1e6580bca4",
+      "reason": "mobile source"
+    },
+    {
+      "destination": "applications/mobile-vla/android/accessibility-agent/app/src/main/res/values/strings.xml",
+      "bytes": 383,
+      "sha256": "d8a1cf99a4904a6ad3f158e90a34f576046519d8e89998ac9b4517aa45c42b3d",
+      "reason": "mobile source"
+    },
+    {
+      "destination": "applications/mobile-vla/android/accessibility-agent/app/src/main/res/xml/accessibility_service_config.xml",
+      "bytes": 551,
+      "sha256": "d2164fb14dbc0ea64befaad25b343bc97010b4ea8ff8bc82d2b5ae2133eac1aa",
+      "reason": "mobile source"
+    },
+    {
+      "destination": "applications/mobile-vla/android/accessibility-agent/app/src/main/res/xml/method.xml",
+      "bytes": 183,
+      "sha256": "08f4138e5a2c4d3978073e0c75746b5a3819b1949eddd863d0a6c0493d774056",
+      "reason": "mobile source"
+    },
+    {
+      "destination": "applications/mobile-vla/benchmarks/gui_cases.json",
+      "bytes": 1241,
+      "sha256": "8b1d701ec1a28613ed2c3bd53456384bb61f95a8a3addc45795780654a1462c1",
+      "reason": "mobile source",
+      "original_sha256": "7a239802efe3e7c318f4838b3d0e7f2d82fd19b94d3faa074d3f2973483161a0",
+      "original_bytes": 1242,
+      "normalization": "trailing whitespace and extra EOF blank lines only; Markdown hard breaks preserved"
+    },
+    {
+      "destination": "applications/mobile-vla/benchmarks/senior_tasks.jsonl",
+      "bytes": 3305,
+      "sha256": "e29d90ad74f16e4a1e194a52a09d4164c645c2df754b0a51657de83e4162da2c",
+      "reason": "mobile source",
+      "original_sha256": "77d5670f89e16c4db34e328f905793b297dd805c872f45f4353c8aecb50f62bc",
+      "original_bytes": 3306,
+      "normalization": "trailing whitespace and extra EOF blank lines only; Markdown hard breaks preserved"
+    },
+    {
+      "destination": "applications/mobile-vla/configs/communication_skills.json",
+      "bytes": 2140,
+      "sha256": "8138e92a924a320416e7a25e67cb40ac87c09d1d472108885039973b4d80e120",
+      "reason": "mobile source"
+    },
+    {
+      "destination": "applications/mobile-vla/configs/safety_policy.json",
+      "bytes": 656,
+      "sha256": "418443443e7e16355d0492823a1a609ecc6fc12dfdfba57cab7e603f71ea4386",
+      "reason": "mobile source",
+      "original_sha256": "185ad775d766473cfd1d9cc1b9a32e2fae2850d3cff7949ea758f2c0954337b7",
+      "original_bytes": 657,
+      "normalization": "trailing whitespace and extra EOF blank lines only; Markdown hard breaks preserved"
+    },
+    {
+      "destination": "applications/mobile-vla/device/standalone_safe_test.sh",
+      "bytes": 3365,
+      "sha256": "55f119f42f6ac226617650d00ddaa3c221c3f08bc5dcee0050073430373280d9",
+      "reason": "mobile source"
+    },
+    {
+      "destination": "applications/mobile-vla/docs/ANDROID_BUILD_TOOLS.md",
+      "bytes": 1959,
+      "sha256": "f622939e106d603918c41a62f6696f52b9268e87932c63439e80795b92b703d1",
+      "reason": "mobile source"
+    },
+    {
+      "destination": "applications/mobile-vla/docs/ARCHITECTURE.md",
+      "bytes": 4038,
+      "sha256": "55c47684f271d730deb63da97c50e81c6709153604472cf6407f681112e532b3",
+      "reason": "mobile source"
+    },
+    {
+      "destination": "applications/mobile-vla/docs/CURRENT_STATUS.md",
+      "bytes": 11613,
+      "sha256": "cec84b5f826316585e62a254f52fe665908a4c41e5ac40a334bbdf579ec3cce1",
+      "reason": "mobile source"
+    },
+    {
+      "destination": "applications/mobile-vla/docs/experiments/2026-09-21-host-policy-probe.md",
+      "bytes": 4825,
+      "sha256": "434030a5e18bae50207763b289fc8c8cb3816f6926b7aa93a18a34719a65e3ff",
+      "reason": "mobile source"
+    },
+    {
+      "destination": "applications/mobile-vla/evidence/accessibility-agent-standalone-proof-2026-09-21.md",
+      "bytes": 4349,
+      "sha256": "ce2afb813d6f843a47443a0fddcdc433c7c8ef31c1cba9e76e54bbfef80871bd",
+      "reason": "mobile source",
+      "original_sha256": "44ed14beaa471057e94f7d3eb7a76e2a33e01819679fa9e08df57955dcd76966",
+      "original_bytes": 4352,
+      "normalization": "trailing whitespace and extra EOF blank lines only; Markdown hard breaks preserved"
+    },
+    {
+      "destination": "applications/mobile-vla/evidence/android-agent-ime-and-communication-planner-proof-2026-09-21.md",
+      "bytes": 3420,
+      "sha256": "5afa918339b3526f8343287b062db7a3755b7be01f0782c1224dedbc8fb262de",
+      "reason": "mobile source",
+      "original_sha256": "701fe46e5355ff73c2a42b1cd5422c07bc0d86a92150164b97db09ff5a4a485d",
+      "original_bytes": 3422,
+      "normalization": "trailing whitespace and extra EOF blank lines only; Markdown hard breaks preserved"
+    },
+    {
+      "destination": "applications/mobile-vla/evidence/authorized-communication-smoke-test-2026-09-21.md",
+      "bytes": 3270,
+      "sha256": "e5f13e85db56abfb2dd9c0b96cedcea568824529953fc9d94ce67d6185b148a5",
+      "reason": "mobile source",
+      "original_sha256": "3668258bdada31b2b7ecf19fa49233d9658d439e682b60b7b8576a2e18153f9f",
+      "original_bytes": 3273,
+      "normalization": "trailing whitespace and extra EOF blank lines only; Markdown hard breaks preserved"
+    },
+    {
+      "destination": "applications/mobile-vla/evidence/device-test-2026-09-21.md",
+      "bytes": 5505,
+      "sha256": "4dcf6f31da772636472216cf40ca01e9bde9477cb700b9a1b5b57e3a2ee57ddd",
+      "reason": "mobile source"
+    },
+    {
+      "destination": "applications/mobile-vla/evidence/gui-baseline.md",
+      "bytes": 708,
+      "sha256": "f5f5c4b328287be557888b1b5f019252a3b16faef41f5066b8984575fd7c2cd9",
+      "reason": "mobile source"
+    },
+    {
+      "destination": "applications/mobile-vla/evidence/phone-local-communication-attempt-2026-09-21.md",
+      "bytes": 2434,
+      "sha256": "91b2cf36a0f7601b46c41336105db982cebbea4fb544a3a7a9ad1540085eb60b",
+      "reason": "mobile source"
+    },
+    {
+      "destination": "applications/mobile-vla/evidence/safe-continuous-visual-loop-2026-09-22.md",
+      "bytes": 3368,
+      "sha256": "7ce3b9314efe237e74362c09f6725a6faebab499fd88a770e8c65fb0dff14ccd",
+      "reason": "mobile source"
+    },
+    {
+      "destination": "applications/mobile-vla/evidence/small-model-skill-execution-2026-09-21.md",
+      "bytes": 3974,
+      "sha256": "582d909a05af9064cfe9ac63460cdc22098201bb78391bf17756619b225ee604",
+      "reason": "mobile source",
+      "original_sha256": "fc38d1e51975c229aa231daa4890a4cb3db6c0dcc2e863898aeca899b1e99c0a",
+      "original_bytes": 3977,
+      "normalization": "trailing whitespace and extra EOF blank lines only; Markdown hard breaks preserved"
+    },
+    {
+      "destination": "applications/mobile-vla/evidence/standalone-computer-independent-test-2026-09-21.md",
+      "bytes": 5077,
+      "sha256": "b366dbd31861fd0efbd0205b2a0da256eb24efb0f24b426c63f9c98f4a528eb5",
+      "reason": "mobile source"
+    },
+    {
+      "destination": "applications/mobile-vla/evidence/standalone-computer-independent-ui-test-2026-09-21.md",
+      "bytes": 4953,
+      "sha256": "5ac184b61e208998d9ba387abf6a11c0af20bac03dcd3143b05b31d956fc4db1",
+      "reason": "mobile source",
+      "original_sha256": "1f6625e902c56c75847bee5b73fb6f45d0d24d131e288ac259702fffa03ff627",
+      "original_bytes": 4958,
+      "normalization": "trailing whitespace and extra EOF blank lines only; Markdown hard breaks preserved"
+    },
+    {
+      "destination": "applications/mobile-vla/evidence/wechat-accessibility-probe-2026-09-21.md",
+      "bytes": 2028,
+      "sha256": "e377dd3e14ce7911ae9abf2b88e696699a0e1aabb5d1188699766fb2e5bf45b3",
+      "reason": "mobile source",
+      "original_sha256": "e0fba78a30370e938039fd3e16f07ee1f88024b1304f0a02b6640f4063e54bc9",
+      "original_bytes": 2030,
+      "normalization": "trailing whitespace and extra EOF blank lines only; Markdown hard breaks preserved"
+    },
+    {
+      "destination": "applications/mobile-vla/fixtures/contact_ui.xml",
+      "bytes": 613,
+      "sha256": "2b5815ab1c9062427f5285fd00f4b613e7a3e1808f4072364175679de9e1e011",
+      "reason": "mobile source"
+    },
+    {
+      "destination": "applications/mobile-vla/prompts/mobile_policy_zh.txt",
+      "bytes": 1037,
+      "sha256": "a7ff487ddc6922837896bd3737589e342caf686015e1a61091235bd82d59c84e",
+      "reason": "mobile source",
+      "original_sha256": "5babed88e3a7b62c9b40f6d109387a5a68c9c0387d90dba7c8b2afbd690d1d47",
+      "original_bytes": 1038,
+      "normalization": "trailing whitespace and extra EOF blank lines only; Markdown hard breaks preserved"
+    },
+    {
+      "destination": "applications/mobile-vla/schemas/action.schema.json",
+      "bytes": 1224,
+      "sha256": "3816e08de67c1a3b4c0306f1a0fa8f46466f535984a1bdf39d11d2b9143b15cd",
+      "reason": "mobile source"
+    },
+    {
+      "destination": "applications/mobile-vla/scripts/android_preflight.ps1",
+      "bytes": 2751,
+      "sha256": "8173b7091ebccd0a90eaa802ce80ff2e05f71fbbf5bd4c2ac3632f4fb9ece3f1",
+      "reason": "mobile source",
+      "original_sha256": "b7afa4c0335754b26763b899e4e8b9483c3b0f222105e7b9422312fecaeb88de",
+      "original_bytes": 2752,
+      "normalization": "trailing whitespace and extra EOF blank lines only; Markdown hard breaks preserved"
+    },
+    {
+      "destination": "applications/mobile-vla/scripts/bootstrap_android_accessibility_agent.ps1",
+      "bytes": 6116,
+      "sha256": "6fe93a07631500f730093742e76cad8300c52ead37faceca7310687856da4687",
+      "reason": "mobile source"
+    },
+    {
+      "destination": "applications/mobile-vla/scripts/capture_screen.ps1",
+      "bytes": 1654,
+      "sha256": "0270172863409d3daf8e722079feaea2a6a563ff18d2bcdba1864d3f6081f1ad",
+      "reason": "mobile source"
+    },
+    {
+      "destination": "applications/mobile-vla/scripts/collect_runtime_snapshot.ps1",
+      "bytes": 1258,
+      "sha256": "0b83d9b8af1939929e7d9df0ec1efd4b8613a93393cf78f8d0b6e121e9139d87",
+      "reason": "mobile source",
+      "original_sha256": "7597fa1909f5c5874bc8f3baf4f8111f9b973d2eefff7c0004dc9307679c4f5a",
+      "original_bytes": 1259,
+      "normalization": "trailing whitespace and extra EOF blank lines only; Markdown hard breaks preserved"
+    },
+    {
+      "destination": "applications/mobile-vla/scripts/install_mnn_chat.ps1",
+      "bytes": 559,
+      "sha256": "3ed98239ea9bfc774fe8298fbdf11a693829c4c4d4257aea4a757baafb952392",
+      "reason": "mobile source",
+      "original_sha256": "eff214afb0678fffd260764173fd3bf73142b1d4655eb3f85c89a7f19f69a5cb",
+      "original_bytes": 560,
+      "normalization": "trailing whitespace and extra EOF blank lines only; Markdown hard breaks preserved"
+    },
+    {
+      "destination": "applications/mobile-vla/scripts/open_test_app.ps1",
+      "bytes": 606,
+      "sha256": "db4c05c815ad12a73baddef84626524bdeeebb301ce51f9c87b15ba5506f1ae9",
+      "reason": "mobile source"
+    },
+    {
+      "destination": "applications/mobile-vla/scripts/phone_local_communication_run.sh",
+      "bytes": 8035,
+      "sha256": "36f391732a54d0e6effb65a85d3b9fb8a10b638b5b0740ec32d16a5fbeced83a",
+      "reason": "mobile source"
+    },
+    {
+      "destination": "applications/mobile-vla/scripts/phone_local_wechat_actions.sh",
+      "bytes": 1686,
+      "sha256": "cc10965db310bc0c057e8a07c45cbf807a4363ae511e3b138e23b4f813573982",
+      "reason": "mobile source"
+    },
+    {
+      "destination": "applications/mobile-vla/scripts/push_model.ps1",
+      "bytes": 1078,
+      "sha256": "cc9598f71ebabd5639cbdf00a2767fd3a0c31325faf57a30a60bf9a723680beb",
+      "reason": "mobile source",
+      "original_sha256": "2adeac339b65d3df1cade45373da6bcad5373b61ef59b303ebdc513d7d2e4df0",
+      "original_bytes": 1079,
+      "normalization": "trailing whitespace and extra EOF blank lines only; Markdown hard breaks preserved"
+    },
+    {
+      "destination": "applications/mobile-vla/scripts/run_continuous_demo.ps1",
+      "bytes": 8623,
+      "sha256": "7d1aee591e2ab6e3fb9079ed573c8b9478b12565b40b90cdcc675007d066a7c9",
+      "reason": "mobile source"
+    },
+    {
+      "destination": "applications/mobile-vla/scripts/standalone_device_test.sh",
+      "bytes": 3453,
+      "sha256": "f4c26358be338222eacfb7c90cec1a37f6bac4431bcb2a33d25c83a43be84860",
+      "reason": "mobile source"
+    },
+    {
+      "destination": "applications/mobile-vla/scripts/start_test_app.ps1",
+      "bytes": 172,
+      "sha256": "7947d0d4e551ed70b861149c7d3318b38b994b89c2d1e779bdf1e96a0a1f5a10",
+      "reason": "mobile source"
+    },
+    {
+      "destination": "applications/mobile-vla/scripts/verify_local.ps1",
+      "bytes": 2717,
+      "sha256": "99ad0b91bfafbc6f6d6375e35478680a6cf50fe5735f32b405847915a19fee4d",
+      "reason": "mobile source"
+    },
+    {
+      "destination": "applications/mobile-vla/src/action_gate.py",
+      "bytes": 4169,
+      "sha256": "c33c2c3f82f6b51cb47e610bde14124da95fac31b4b8c371b5dcab67db3f5901",
+      "reason": "mobile source"
+    },
+    {
+      "destination": "applications/mobile-vla/src/adb_executor.py",
+      "bytes": 8121,
+      "sha256": "9da0689a00c84944907918d5fdbda37ecb4ffcdd7f82f75eba84beb596185003",
+      "reason": "mobile source"
+    },
+    {
+      "destination": "applications/mobile-vla/src/communication_skill_agent.py",
+      "bytes": 8585,
+      "sha256": "7c5f259eeaef5b1956984d1af95cfdd15aebad70c3218dbe561548c7faa3f524",
+      "reason": "mobile source"
+    },
+    {
+      "destination": "applications/mobile-vla/src/evaluate_policy_suite.py",
+      "bytes": 6417,
+      "sha256": "48235deef5905027ef95d4c889c1938b3333f39b5b7f3822ca80a00c4c5c55e4",
+      "reason": "mobile source"
+    },
+    {
+      "destination": "applications/mobile-vla/src/host_policy_probe.py",
+      "bytes": 7521,
+      "sha256": "9a3fe90ae2049cb9882b2cecb3d4a13f932e62d756c146c4fe96b4262274f360",
+      "reason": "mobile source"
+    },
+    {
+      "destination": "applications/mobile-vla/src/ui_tree.py",
+      "bytes": 2776,
+      "sha256": "a8fb0efb9bde4a84cc2e6fe0e4a2aede232d13d1fb12542776b54e458238110c",
+      "reason": "mobile source",
+      "original_sha256": "73f221b553e2d8d6843781ec1be2ea37bdf6272b4fc00a618460ce759f13899e",
+      "original_bytes": 2777,
+      "normalization": "trailing whitespace and extra EOF blank lines only; Markdown hard breaks preserved"
+    },
+    {
+      "destination": "applications/mobile-vla/src/zhiman_kb.py",
+      "bytes": 18877,
+      "sha256": "2b635e6924ac16a89d8923d9614824b3ebb8512423ea269fc3b6435287f0bfc1",
+      "reason": "mobile source"
+    },
+    {
+      "destination": "applications/mobile-vla/tests/test_action_gate.py",
+      "bytes": 2161,
+      "sha256": "1890aaa45c3aba5e60bda341293351db3340e764f7c27aa141a51a1f62300633",
+      "reason": "mobile source"
+    },
+    {
+      "destination": "applications/mobile-vla/tests/test_adb_executor.py",
+      "bytes": 973,
+      "sha256": "719ca866014c8d4ee7562ba0bb248f7278ec1b314dea5372c42eae80da4a8832",
+      "reason": "mobile source",
+      "original_sha256": "d4b28e91fe663aa4dfd866439acf77ffcd18f4f3bbce0081db73d93fb01648c0",
+      "original_bytes": 974,
+      "normalization": "trailing whitespace and extra EOF blank lines only; Markdown hard breaks preserved"
+    },
+    {
+      "destination": "applications/mobile-vla/tests/test_communication_skill_agent.py",
+      "bytes": 5018,
+      "sha256": "358fbc68dd00e42f21eb820c03dbf52038b3df269d7ee950637e4bab3e0f0012",
+      "reason": "mobile source"
+    },
+    {
+      "destination": "applications/mobile-vla/tests/test_evaluate_policy_suite.py",
+      "bytes": 1429,
+      "sha256": "bf6b080195a8a65e86281dc91ec56d810c6c14452cb938b7d16d5c684acd226f",
+      "reason": "mobile source"
+    },
+    {
+      "destination": "applications/mobile-vla/tests/test_host_policy_probe.py",
+      "bytes": 863,
+      "sha256": "b9fd37e4235c54b14f73ddf15ebb28a1d31794d52ebec7e5ec314343f7f097cd",
+      "reason": "mobile source",
+      "original_sha256": "8ea8294cee84436b6b1103e13c021b616dd5805ab07921c7dd95c0e47aebc717",
+      "original_bytes": 864,
+      "normalization": "trailing whitespace and extra EOF blank lines only; Markdown hard breaks preserved"
+    },
+    {
+      "destination": "applications/mobile-vla/tests/test_kb.py",
+      "bytes": 6511,
+      "sha256": "af27b0b19da815677f027768e8452d889b5b1262295ed8c81389a8cdf80da496",
+      "reason": "mobile source"
+    },
+    {
+      "destination": "applications/mobile-vla/tests/test_ui_tree.py",
+      "bytes": 1461,
+      "sha256": "d7546c1311a8a41ee66afdc45ab468889701f6eccf71e3f7de3198c9d71209e0",
+      "reason": "mobile source",
+      "original_sha256": "168a804fb55dd389653a2c37bdddda50c64ec6b12e17287f356ee17bba4f4326",
+      "original_bytes": 1462,
+      "normalization": "trailing whitespace and extra EOF blank lines only; Markdown hard breaks preserved"
+    },
+    {
+      "destination": "applications/mobile-vla/test_app/app.js",
+      "bytes": 3467,
+      "sha256": "4a46d72ca67558db2d98003cfab604db287475e7a76439f928e2fc07d696d633",
+      "reason": "mobile source"
+    },
+    {
+      "destination": "applications/mobile-vla/test_app/index.html",
+      "bytes": 4987,
+      "sha256": "0951097353583c9bc18072f7dfcd393fc2686d6dc76eaa677f62009debeae5a7",
+      "reason": "mobile source"
+    },
+    {
+      "destination": "applications/mobile-vla/test_app/server.py",
+      "bytes": 1128,
+      "sha256": "b13d4c5d2869da06ef2a82ac074f07bfd3e02575c9ba93a6ad3c03c75082cdc4",
+      "reason": "mobile source"
+    },
+    {
+      "destination": "applications/mobile-vla/test_app/styles.css",
+      "bytes": 2525,
+      "sha256": "0b175de82eb62af0073995f631aa9d171b9cf663fb9ad273c24ceacdd155bd18",
+      "reason": "mobile source",
+      "original_sha256": "af623666446bfdb1c0a9201df3a12bf234436121039818dcfd7c0b9da3ef25ef",
+      "original_bytes": 2526,
+      "normalization": "trailing whitespace and extra EOF blank lines only; Markdown hard breaks preserved"
+    }
+  ]
+}

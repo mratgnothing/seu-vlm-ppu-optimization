@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<hierarchy rotation="0">
+  <node text="" resource-id="root" class="android.widget.FrameLayout" clickable="false" enabled="true" bounds="[0,0][412,915]">
+    <node text="陈小雨" content-desc="女儿 荷花头像" resource-id="contact_daughter" class="android.widget.Button" clickable="true" enabled="true" bounds="[20,170][392,245]" />
+    <node text="陈小雨" content-desc="社区志愿者 蓝色头像" resource-id="contact_volunteer" class="android.widget.Button" clickable="true" enabled="true" bounds="[20,258][392,333]" />
+  </node>
+</hierarchy>

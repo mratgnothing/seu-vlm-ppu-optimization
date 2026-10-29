@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.zhiman.example/schemas/action.schema.json",
+  "title": "Zhiman Mobile Action",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["action", "risk", "confidence", "requires_confirmation", "reason"],
+  "properties": {
+    "action": {
+      "enum": [
+        "tap",
+        "long_press",
+        "swipe",
+        "type",
+        "back",
+        "home",
+        "open_app",
+        "wait",
+        "clarify",
+        "handoff",
+        "terminate"
+      ]
+    },
+    "operation": {
+      "type": ["string", "null"],
+      "description": "Semantic operation used by the safety gate, such as send_message or payment."
+    },
+    "target": {"type": ["string", "null"]},
+    "coordinates": {
+      "type": ["array", "null"],
+      "items": {"type": "integer"},
+      "minItems": 2,
+      "maxItems": 4
+    },
+    "text": {"type": ["string", "null"]},
+    "risk": {"enum": ["low", "medium", "high"]},
+    "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+    "requires_confirmation": {"type": "boolean"},
+    "reason": {"type": "string", "minLength": 1},
+    "expected_next_state": {"type": ["string", "null"]}
+  }
+}

@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <queries>
+        <package android:name="com.alibaba.mnnllm.android" />
+        <package android:name="com.tencent.mm" />
+    </queries>
+
+    <application
+        android:allowBackup="false"
+        android:label="@string/app_name"
+        android:usesCleartextTraffic="true">
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:launchMode="singleTop">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name=".VisualTaskActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:theme="@android:style/Theme.Material.Light.NoActionBar" />
+
+        <receiver
+            android:name=".ProbeReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="ai.zhiman.accessibility.SEMANTIC_PROBE" />
+                <action android:name="ai.zhiman.accessibility.ARM_OFFLINE_PROOF" />
+                <action android:name="ai.zhiman.accessibility.ARM_OFFLINE_IME_PROOF" />
+                <action android:name="ai.zhiman.accessibility.ARM_COMMUNICATION_PLANNER_PROOF" />
+            </intent-filter>
+        </receiver>
+
+        <receiver
+            android:name=".ShellBridgeReceiver"
+            android:exported="true"
+            android:permission="android.permission.DUMP">
+            <intent-filter>
+                <action android:name="ai.zhiman.accessibility.shell.COMMIT_BOUND_WECHAT_NAME" />
+                <action android:name="ai.zhiman.accessibility.shell.COMMIT_APPROVED_MESSAGE" />
+                <action android:name="ai.zhiman.accessibility.shell.COMMIT_DEMO_CALL_PROMPT" />
+                <action android:name="ai.zhiman.accessibility.shell.COMMIT_DEMO_COMBO_PROMPT" />
+                <action android:name="ai.zhiman.accessibility.shell.COMMIT_DEMO_DINNER_MESSAGE" />
+                <action android:name="ai.zhiman.accessibility.shell.OPEN_BOUND_DIALER" />
+                <action android:name="ai.zhiman.accessibility.shell.CAPTURE_CHAT_BINDING" />
+                <action android:name="ai.zhiman.accessibility.shell.VERIFY_CHAT_BINDING" />
+            </intent-filter>
+        </receiver>
+
+        <service
+            android:name=".AgentInputMethodService"
+            android:exported="true"
+            android:label="@string/ime_name"
+            android:permission="android.permission.BIND_INPUT_METHOD">
+            <intent-filter>
+                <action android:name="android.view.InputMethod" />
+            </intent-filter>
+            <meta-data
+                android:name="android.view.im"
+                android:resource="@xml/method" />
+        </service>
+
+        <service
+            android:name=".AgentAccessibilityService"
+            android:exported="false"
+            android:label="@string/service_name"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/accessibility_service_config" />
+        </service>
+    </application>
+</manifest>

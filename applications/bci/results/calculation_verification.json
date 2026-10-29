@@ -1,0 +1,68 @@
+{
+  "status": "PASS",
+  "checks": [
+    {
+      "method": "v3_personal",
+      "n": 206,
+      "manual_ba": 0.633993399339934,
+      "confusion_matches": true
+    },
+    {
+      "method": "global",
+      "n": 206,
+      "manual_ba": 0.5757190004714757,
+      "confusion_matches": true
+    },
+    {
+      "method": "linear",
+      "n": 206,
+      "manual_ba": 0.5801037246581802,
+      "confusion_matches": true
+    },
+    {
+      "method": "neural",
+      "n": 206,
+      "manual_ba": 0.6098066949552099,
+      "confusion_matches": true
+    },
+    {
+      "method": "head_3seed",
+      "n": 206,
+      "manual_ba": 0.633993399339934,
+      "confusion_matches": true
+    },
+    {
+      "method": "recommended",
+      "n": 206,
+      "manual_ba": 0.6098066949552099,
+      "confusion_matches": true
+    },
+    {
+      "validation_cap": 0.05,
+      "rest_n": 204,
+      "mi_n": 206,
+      "false_triggers": 6,
+      "outputs": 17,
+      "correct": 14,
+      "manual_all_candidate_accuracy": 0.6086956521739131
+    },
+    {
+      "validation_cap": 0.1,
+      "rest_n": 204,
+      "mi_n": 206,
+      "false_triggers": 18,
+      "outputs": 24,
+      "correct": 17,
+      "manual_all_candidate_accuracy": 0.40476190476190477
+    },
+    {
+      "validation_cap": 0.2,
+      "rest_n": 204,
+      "mi_n": 206,
+      "false_triggers": 36,
+      "outputs": 66,
+      "correct": 43,
+      "manual_all_candidate_accuracy": 0.4215686274509804
+    }
+  ]
+}

@@ -1,8 +1,9 @@
 # User-space packages verified on the 2026-08-29 official PPU image.
 #
-# Deliberately do NOT add torch/torchvision here. The image supplies a
-# PPU-patched torch build (observed: 2.11.0+v0.1.0.ppu2.1.1); installing the
-# CUDA or PyPI wheel would silently replace the accelerator runtime.
+# Deliberately do NOT add torch here. The image supplies a PPU-patched torch
+# build (observed: 2.11.0+v0.1.0.ppu2.1.1); installing a CUDA/PyPI torch wheel
+# would replace the accelerator runtime. bootstrap_ppu_env.sh separately
+# installs torchvision==0.26.0+cpu with --no-deps for image preprocessing.
 accelerate==1.14.0
 ninja==1.13.0
 numpy==1.26.4
