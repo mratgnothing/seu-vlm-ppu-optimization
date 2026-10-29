@@ -34,5 +34,13 @@
     "archived_bytes": 90616873.0,
     "net_reclaimed_bytes": 2323315788.0,
     "external_targets_preserved": true
-  }
+  },
+  "manifest_git_blobs_verified": 100,
+  "git_newline_normalized_text_files": [
+    "docs/applications/benchmark-153-reference.json",
+    "deliverables/presentation/source-verification.json",
+    "applications/bci/results/calculation_verification.json",
+    "applications/bci/results/改进实验报告.md",
+    "applications/mobile-vla/evidence/gui-baseline.md"
+  ]
 }
