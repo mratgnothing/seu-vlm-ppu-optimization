@@ -1,0 +1,22 @@
+{
+ "dataset_root":"E:/BCI/datasets/physionet-eegmmidb-1.0.0",
+ "pilot_task":"E:/BCI/datasets/physionet-eegmmidb-1.0.0/training/mi_pilot_20260930_v1",
+ "v2_task":"E:/BCI/datasets/physionet-eegmmidb-1.0.0/training/mi_expanded_20260930_v2",
+ "v2_run":"20260930T112310_089979Z",
+ "seed":20261001,
+ "channels":["FC3","FCz","FC4","C3","Cz","C4","CP3","CPz","CP4"],
+ "sfreq":160,
+ "epoch_seconds":[1,4],
+ "bandpass_hz":[8,30],
+ "reject_uv":250,
+ "calibration_subjects":[95,108],
+ "csp_components":[2,4,6,8],
+ "adaptation":{"strategy":"classifier_only_with_frozen_backbone_and_batchnorm","lr":0.001,"epochs":120,"patience":25,"minimum_epochs":30},
+ "rest_eegnet":{"lr":0.001,"dropout":0.5,"epochs":200,"patience":40,"minimum_epochs":60,"batch_size":64},
+ "rest_min_trials_per_record":8,
+ "rest_thresholds":[0,0.4,0.5,0.6,0.7,0.8,0.85,0.9,0.95,0.99,1.0],
+ "validation_rest_false_trigger_cap":0.05,
+ "evaluation_status":"Exploratory follow-up: S095-S108 test results previously inspected in v2. No claim of fresh independent test validation. Policies frozen before v3 evaluation; no test-based tuning.",
+ "gate_note":"A command is proposed only if argmax is left/right and max(p_left,p_right)>=validation-selected threshold. Rest/nonaccepted => reject. Probabilities uncalibrated, no phone execution.",
+ "rest_scope":"Cued T0 intervals in MI runs04/08/12; not continuous daily-life idle, no false-triggers-per-hour claim."
+}

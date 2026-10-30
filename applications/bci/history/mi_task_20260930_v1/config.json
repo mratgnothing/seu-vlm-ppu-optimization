@@ -1,0 +1,17 @@
+{
+  "name": "physionet_left_right_mi_pilot_v1",
+  "dataset_root": "E:\\BCI\\datasets\\physionet-eegmmidb-1.0.0",
+  "subjects": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+  "split_runs": {"train": 4, "validation": 8, "test": 12},
+  "channels": ["FC3", "FCz", "FC4", "C3", "Cz", "C4", "CP3", "CPz", "CP4"],
+  "target_sfreq": 160,
+  "bandpass_hz": [8, 30],
+  "epoch_seconds": [1, 4],
+  "peak_to_peak_reject_uv": 250,
+  "seed": 20260930,
+  "csp_components": [2, 4, 6, 8],
+  "permutation_repeats": 100,
+  "eegnet": {"F1": 8, "D": 2, "F2": 16, "dropout": 0.5, "kernel_length": 64, "batch_size": 32, "learning_rate": 0.001, "weight_decay": 0.0, "max_epochs": 120, "patience": 25, "minimum_epochs": 25},
+  "confidence_thresholds": [0.5, 0.6, 0.7, 0.8, 0.9, 0.95],
+  "sources": ["https://physionet.org/content/eegmmidb/1.0.0/", "https://arxiv.org/abs/1611.08024", "https://mne.tools/stable/auto_examples/decoding/decoding_csp_eeg.html"]
+}

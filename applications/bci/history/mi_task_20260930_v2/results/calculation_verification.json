@@ -1,0 +1,34 @@
+{
+  "status": "PASS",
+  "checks": [
+    {
+      "protocol": "same_person",
+      "model": "CSP-LDA",
+      "csv_rows": 1050,
+      "recomputed_ba": 0.6370468868482445,
+      "confusion_matches": true
+    },
+    {
+      "protocol": "same_person",
+      "model": "EEGNet",
+      "csv_rows": 1050,
+      "recomputed_ba": 0.6245968195456806,
+      "confusion_matches": true
+    },
+    {
+      "protocol": "new_person",
+      "model": "CSP-LDA",
+      "csv_rows": 616,
+      "recomputed_ba": 0.5699451823740249,
+      "confusion_matches": true
+    },
+    {
+      "protocol": "new_person",
+      "model": "EEGNet",
+      "csv_rows": 616,
+      "recomputed_ba": 0.606662449926207,
+      "confusion_matches": true
+    }
+  ],
+  "total_test_trial_rows": 1666
+}

@@ -1,0 +1,23 @@
+{
+  "name": "physionet_left_right_mi_expanded_v2",
+  "dataset_root": "E:/BCI/datasets/physionet-eegmmidb-1.0.0",
+  "pilot_task": "E:/BCI/datasets/physionet-eegmmidb-1.0.0/training/mi_pilot_20260930_v1",
+  "subjects": {"development": [11,80], "validation": [81,94], "test": [95,109]},
+  "runs": [4,8,12],
+  "channels": ["FC3","FCz","FC4","C3","Cz","C4","CP3","CPz","CP4"],
+  "target_sfreq": 160,
+  "bandpass_hz": [8,30],
+  "epoch_seconds": [1,4],
+  "peak_to_peak_reject_uv": 250,
+  "minimum_trials_per_record": 8,
+  "seed": 20260930,
+  "csp_components": [2,4,6,8],
+  "eegnet": {"F1":8,"D":2,"F2":16,"dropout":0.5,"kernel_length":64,"batch_size":64,"learning_rate":0.001,"weight_decay":0,"max_epochs":200,"patience":40,"minimum_epochs":60},
+  "eegnet_candidates": [
+    {"id":"drop50_lr1000","dropout":0.5,"learning_rate":0.001},
+    {"id":"drop25_lr1000","dropout":0.25,"learning_rate":0.001},
+    {"id":"drop50_lr0300","dropout":0.5,"learning_rate":0.0003}
+  ],
+  "protocol_note": "Fixed before v2 test evaluation: same-person S011-S080 R04 train/R08 validation/R12 test; new-person train S011-S080 all MI runs, validation S081-S094 all MI runs, test S095-S109 all MI runs. Entire subject excluded if any of three records has fewer than 8 accepted trials or lacks a class. QC independent of model performance. S001-S010 pilot not reused. No test tuning.",
+  "safety_note": "Offline cued left/right imagery only; no rest classifier, no online validation, no medical claim, no phone execution. Probabilities uncalibrated."
+}

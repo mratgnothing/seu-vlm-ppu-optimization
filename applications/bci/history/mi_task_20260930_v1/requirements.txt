@@ -1,0 +1,7 @@
+mne>=1.9,<2
+numpy>=2,<3
+scipy>=1.14,<2
+scikit-learn>=1.6,<2
+matplotlib>=3.9,<4
+joblib>=1.4,<2
+psutil>=6,<8

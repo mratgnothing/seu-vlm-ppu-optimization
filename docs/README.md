@@ -16,3 +16,5 @@
 | 整理与保留边界 | [archive-20261029.md](archive-20261029.md) |
 
 各 `experiments/` 文档保留实验发生时的状态。全量公开集单轮用于精度与完整性；CN20 重复实验用于对应性能比较，不能混用。后续复现使用主办方明确支持的 PPU 环境，不自动启动历史队列。
+
+2026-10-30 补充归档下载目录中的 [BCI 历史代码与页面材料](../applications/bci/history/README.md)，见 [整理记录](bci-output-import-20261030.md)。

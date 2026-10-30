@@ -1,0 +1,13 @@
+.eeg-dashboard {color:var(--text);}
+.eeg-dashboard .eeg-note {font-size:13px;line-height:1.8;color:var(--secondary);margin:12px 0 0;}
+.eeg-dashboard .eeg-two {display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px;}
+.eeg-dashboard .eeg-facts {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;}
+.eeg-dashboard .eeg-facts div {display:flex;flex-direction:column;gap:7px;}
+.eeg-dashboard .eeg-facts span,.eeg-dashboard .eeg-small {font-size:13px;color:var(--secondary);}
+.eeg-dashboard .eeg-facts strong {font-size:23px;font-weight:600;line-height:1.35;}
+.eeg-dashboard .eeg-facts small {color:var(--secondary);}
+.eeg-dashboard .eeg-result {display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+.eeg-dashboard .eeg-result h3 {font-size:22px;line-height:1.5;margin:10px 0 8px;}
+.eeg-dashboard .eeg-result span {line-height:1.6;}
+.eeg-dashboard .eeg-replay-controls {display:flex;flex-wrap:wrap;gap:10px;margin:20px 0;}
+@media(max-width:740px) {.eeg-dashboard .eeg-two,.eeg-dashboard .eeg-result,.eeg-dashboard .eeg-facts {grid-template-columns:1fr;} .eeg-dashboard .eeg-facts strong {font-size:20px;} .eeg-dashboard .eeg-result h3 {font-size:20px;}}

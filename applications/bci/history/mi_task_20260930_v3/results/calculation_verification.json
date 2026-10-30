@@ -1,0 +1,37 @@
+{
+  "status": "PASS",
+  "checks": [
+    {
+      "method": "CSP-global",
+      "matrix_matches": true,
+      "manual_ba": 0.5726544082979727
+    },
+    {
+      "method": "CSP-personal",
+      "matrix_matches": true,
+      "manual_ba": 0.5625648279113626
+    },
+    {
+      "method": "EEGNet-global",
+      "matrix_matches": true,
+      "manual_ba": 0.5757190004714757
+    },
+    {
+      "method": "EEGNet-personal",
+      "matrix_matches": true,
+      "manual_ba": 0.633993399339934
+    },
+    {
+      "model": "Bandpower-LDA",
+      "raw_matrix_matches": true,
+      "gate_matrix_matches": true,
+      "manual_three_class_ba": 0.3553673895512484
+    },
+    {
+      "model": "EEGNet-3class",
+      "raw_matrix_matches": true,
+      "gate_matrix_matches": true,
+      "manual_three_class_ba": 0.4023057495704756
+    }
+  ]
+}

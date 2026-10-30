@@ -1,0 +1,359 @@
+{
+  "date": "2026-10-30",
+  "files": [
+    {
+      "path": "applications/bci/history/mi_task_20260930_v1/config.json",
+      "source": "bci/mi_task_20260930_v1/config.json",
+      "bytes": 920,
+      "sha256": "9ac5f6d579032b437a50f6d5d3017c6c983e99d5c2ab4aaa8c5b9128054cb016"
+    },
+    {
+      "path": "applications/bci/history/mi_task_20260930_v1/eegnet.py",
+      "source": "bci/mi_task_20260930_v1/eegnet.py",
+      "bytes": 1767,
+      "sha256": "9242d1e0508e5254357a547b41810a334b1709fe4a1d8416f711f4f94591ffa5"
+    },
+    {
+      "path": "applications/bci/history/mi_task_20260930_v1/finalize_task.py",
+      "source": "bci/mi_task_20260930_v1/finalize_task.py",
+      "bytes": 3483,
+      "sha256": "d7c53054b36a5775501026ca32eb85d67922fa5f087a4d6693a60159f640918d"
+    },
+    {
+      "path": "applications/bci/history/mi_task_20260930_v1/predict_trial.py",
+      "source": "bci/mi_task_20260930_v1/predict_trial.py",
+      "bytes": 1575,
+      "sha256": "df205e05fe6f38a433f9273dd8debb290f2e03bec4af2fada4a4e6205ce6fca3"
+    },
+    {
+      "path": "applications/bci/history/mi_task_20260930_v1/README.md",
+      "source": "bci/mi_task_20260930_v1/README.md",
+      "bytes": 3844,
+      "sha256": "993b4e6e6464de312ca14505824300fb1af3b8addf594b920d3834c69229f540"
+    },
+    {
+      "path": "applications/bci/history/mi_task_20260930_v1/requirements.txt",
+      "source": "bci/mi_task_20260930_v1/requirements.txt",
+      "bytes": 107,
+      "sha256": "45a4b0bec7498343a5d4e7203481ce7bb88a73763517c7d04a000606b8e99814"
+    },
+    {
+      "path": "applications/bci/history/mi_task_20260930_v1/run_training.ps1",
+      "source": "bci/mi_task_20260930_v1/run_training.ps1",
+      "bytes": 480,
+      "sha256": "43f626f68820d86bc25a36291b9d713eeb1f8dd6dc07db624887af0aded5f4e6"
+    },
+    {
+      "path": "applications/bci/history/mi_task_20260930_v1/setup_environment.ps1",
+      "source": "bci/mi_task_20260930_v1/setup_environment.ps1",
+      "bytes": 1061,
+      "sha256": "f905d0208518684fcf113aa25cc6b28c50a3a93fa5b9f6ae9aa0017fff228a20"
+    },
+    {
+      "path": "applications/bci/history/mi_task_20260930_v1/train.py",
+      "source": "bci/mi_task_20260930_v1/train.py",
+      "bytes": 25158,
+      "sha256": "23536e85748e765edd393b37407fa12c4c8a7775d526036d8abcd8d63f9180c1"
+    },
+    {
+      "path": "applications/bci/history/mi_task_20260930_v1/verify_run.py",
+      "source": "bci/mi_task_20260930_v1/verify_run.py",
+      "bytes": 2639,
+      "sha256": "ab94b94fe1e2a818eebfb5c97d4824f467d59eabe2b5accccf30a32986acee34"
+    },
+    {
+      "path": "applications/bci/history/mi_task_20260930_v2/config.json",
+      "source": "bci/mi_task_20260930_v2/config.json",
+      "bytes": 1523,
+      "sha256": "b3609e9589b086e83ad31ce516c34146fb5e46b6ed485eae47c3293549f6a65f"
+    },
+    {
+      "path": "applications/bci/history/mi_task_20260930_v2/prepare_visualization.py",
+      "source": "bci/mi_task_20260930_v2/prepare_visualization.py",
+      "bytes": 9497,
+      "sha256": "681e8c419d8e1f9dd7662cb137b77e7330563567aa1bef38efdcf250d8e3875a"
+    },
+    {
+      "path": "applications/bci/history/mi_task_20260930_v2/README.md",
+      "source": "bci/mi_task_20260930_v2/README.md",
+      "bytes": 2189,
+      "sha256": "04994d2584139420ac07ef29912f5cd5865311090b58c882f25f4430e283e2c0"
+    },
+    {
+      "path": "applications/bci/history/mi_task_20260930_v2/results/calculation_verification.json",
+      "source": "bci/mi_task_20260930_v2/results/calculation_verification.json",
+      "bytes": 751,
+      "sha256": "4e2ab429bff22dfccf72ffaa1d77c007b278af4cb50296955db3eb4e2eb12f92"
+    },
+    {
+      "path": "applications/bci/history/mi_task_20260930_v2/results/可视化验证.md",
+      "source": "bci/mi_task_20260930_v2/results/可视化验证.md",
+      "bytes": 831,
+      "sha256": "cbf959c39cd155d3ff79c7588e335817397ecd0cc050ab81cd321788a2488fcd"
+    },
+    {
+      "path": "applications/bci/history/mi_task_20260930_v2/results/实验结果.md",
+      "source": "bci/mi_task_20260930_v2/results/实验结果.md",
+      "bytes": 2462,
+      "sha256": "58cd1899d5ece1f2182ea0092c7a262819ac95a53da12801eb3e0b0585a217a1"
+    },
+    {
+      "path": "applications/bci/history/mi_task_20260930_v2/run_training.ps1",
+      "source": "bci/mi_task_20260930_v2/run_training.ps1",
+      "bytes": 411,
+      "sha256": "7ffaa24e8d8b41367f56a1a5541a9275d9f2333cd1fd70463cc778bb25c2646a"
+    },
+    {
+      "path": "applications/bci/history/mi_task_20260930_v2/train_expanded.py",
+      "source": "bci/mi_task_20260930_v2/train_expanded.py",
+      "bytes": 12130,
+      "sha256": "ff21255f3d2d2a5a3434b33244a7a43ef7e9cf4372716f6aff3255cb47197125"
+    },
+    {
+      "path": "applications/bci/history/mi_task_20260930_v2/view_results.ps1",
+      "source": "bci/mi_task_20260930_v2/view_results.ps1",
+      "bytes": 723,
+      "sha256": "40606cf766aa5fd4cd0e7194c49e1ff091f70a6a65d74f47ec26e7483e9593d8"
+    },
+    {
+      "path": "applications/bci/history/mi_task_20260930_v3/config.json",
+      "source": "bci/mi_task_20260930_v3/config.json",
+      "bytes": 1415,
+      "sha256": "7f7e98118bc564dae4ade7c6469255e24dcdb0e90b056ea595a241713f44eacd"
+    },
+    {
+      "path": "applications/bci/history/mi_task_20260930_v3/prepare_results.py",
+      "source": "bci/mi_task_20260930_v3/prepare_results.py",
+      "bytes": 10787,
+      "sha256": "3bf44f1dce78336fde46e710ef6782efd8c300e8e456bd06474ddd15fa6effe9"
+    },
+    {
+      "path": "applications/bci/history/mi_task_20260930_v3/README.md",
+      "source": "bci/mi_task_20260930_v3/README.md",
+      "bytes": 3436,
+      "sha256": "16f7efc8aedee3854308a8b08b78ff65f417fdbb3420c4e2107e53ad5868c5ed"
+    },
+    {
+      "path": "applications/bci/history/mi_task_20260930_v3/results/calculation_verification.json",
+      "source": "bci/mi_task_20260930_v3/results/calculation_verification.json",
+      "bytes": 822,
+      "sha256": "0a437d9de43e581405617060218034469759ebe11ed94e41990f8064f4be1c77"
+    },
+    {
+      "path": "applications/bci/history/mi_task_20260930_v3/results/visualization_verification.md",
+      "source": "bci/mi_task_20260930_v3/results/visualization_verification.md",
+      "bytes": 1002,
+      "sha256": "f972f520f7a1b39783303c9d90a3aef912d38ec0e2b8639dc027f5759d58ae02"
+    },
+    {
+      "path": "applications/bci/history/mi_task_20260930_v3/results/实验结果.md",
+      "source": "bci/mi_task_20260930_v3/results/实验结果.md",
+      "bytes": 2188,
+      "sha256": "f860b1fc5f237b6ecdd9f5cb5dd644e6f3b8a52091e46a2e64e28c083d0bb873"
+    },
+    {
+      "path": "applications/bci/history/mi_task_20260930_v3/run_training.ps1",
+      "source": "bci/mi_task_20260930_v3/run_training.ps1",
+      "bytes": 561,
+      "sha256": "2a53f90bc3dcbea035f018c70e03af4b987ce8a1f9ff0907e8f908b718f22338"
+    },
+    {
+      "path": "applications/bci/history/mi_task_20260930_v3/train_v3.py",
+      "source": "bci/mi_task_20260930_v3/train_v3.py",
+      "bytes": 22176,
+      "sha256": "88fa819531a5d25d4b5605d5f857db2b19283ccddf0c1b0043c63a333d110bda"
+    },
+    {
+      "path": "applications/bci/history/mi_task_20260930_v3/view_results.ps1",
+      "source": "bci/mi_task_20260930_v3/view_results.ps1",
+      "bytes": 1064,
+      "sha256": "fb29c809daf3fed3f41152b8a501247298b13484c77f1f732790d1bf968ea0e4"
+    },
+    {
+      "path": "applications/bci/history/dataset/download_physionet_eegmmidb.py",
+      "source": "bci/download_physionet_eegmmidb.py",
+      "bytes": 8785,
+      "sha256": "a9ea8484aa6884d1adeb80d8862dab2eefc39f147d6d6eda77ecec28d5a90e14"
+    },
+    {
+      "path": "applications/bci/history/dataset/EEGMMIDB_训练说明.md",
+      "source": "bci/EEGMMIDB_训练说明.md",
+      "bytes": 5378,
+      "sha256": "70eb6ee264df9e07d310ce196e8228adab6a31b3028d2c3f46bbeb136d9dbeab"
+    },
+    {
+      "path": "applications/bci/history/visualization-content/mi_dashboard_20260930_v2/assets/README.md",
+      "source": "bci/mi_dashboard_20260930_v2/src/content/assets/README.md",
+      "bytes": 179,
+      "sha256": "1a17117302d00a4301c95b0562c12a244e38efe35aa508831ea404e7051556d7"
+    },
+    {
+      "path": "applications/bci/history/visualization-content/mi_dashboard_20260930_v2/dashboard/AdvancedExperiments.jsx",
+      "source": "bci/mi_dashboard_20260930_v2/src/content/dashboard/AdvancedExperiments.jsx",
+      "bytes": 12568,
+      "sha256": "1f5b09f53b63356285f2c907f5764c27a1ef1979b529ad70f0cd10fcd40b46ed"
+    },
+    {
+      "path": "applications/bci/history/visualization-content/mi_dashboard_20260930_v2/dashboard/dashboard-data.js",
+      "source": "bci/mi_dashboard_20260930_v2/src/content/dashboard/dashboard-data.js",
+      "bytes": 1269,
+      "sha256": "b33132f59883284ffedfbb13c6f1fd8bd4d7906c708896dd659ae435c1b75003"
+    },
+    {
+      "path": "applications/bci/history/visualization-content/mi_dashboard_20260930_v2/dashboard/dashboard.css",
+      "source": "bci/mi_dashboard_20260930_v2/src/content/dashboard/dashboard.css",
+      "bytes": 11995,
+      "sha256": "591d1eecf0ef77ca0322833cad73d203acf22e194cfecb48e6c20aa8c6aaa2d5"
+    },
+    {
+      "path": "applications/bci/history/visualization-content/mi_dashboard_20260930_v2/dashboard/DashboardContent.jsx",
+      "source": "bci/mi_dashboard_20260930_v2/src/content/dashboard/DashboardContent.jsx",
+      "bytes": 12289,
+      "sha256": "49515de6dcd95167be6ef5719f43b59a8740f05e33b17c032d982fbef6c983d8"
+    },
+    {
+      "path": "applications/bci/history/visualization-content/mi_dashboard_20260930_v2/dashboard/eeg-dashboard.css",
+      "source": "bci/mi_dashboard_20260930_v2/src/content/dashboard/eeg-dashboard.css",
+      "bytes": 1182,
+      "sha256": "81cc79138e72efd27e5a5e76db9354032507b19f94eaf19ea096bce2b716660d"
+    },
+    {
+      "path": "applications/bci/history/visualization-content/mi_dashboard_20260930_v2/dashboard/regional-world-map.js",
+      "source": "bci/mi_dashboard_20260930_v2/src/content/dashboard/regional-world-map.js",
+      "bytes": 16797,
+      "sha256": "d5fd8be03342924d4b19c71b173815c084e032686a8f3b0df706bea3a08a5f54"
+    },
+    {
+      "path": "applications/bci/history/visualization-content/mi_dashboard_20260930_v2/report/report.css",
+      "source": "bci/mi_dashboard_20260930_v2/src/content/report/report.css",
+      "bytes": 61,
+      "sha256": "b0aed6d085aa46b2b4bace26ebcf4120d0c267a74fa5dcc87bdba2a2dff4f88e"
+    },
+    {
+      "path": "applications/bci/history/visualization-content/mi_dashboard_20260930_v2/report/ReportContent.jsx",
+      "source": "bci/mi_dashboard_20260930_v2/src/content/report/ReportContent.jsx",
+      "bytes": 209,
+      "sha256": "0af29196a6714b72f895de4acbb70205fddda8ed7fde05245ff7103e86f0fe40"
+    },
+    {
+      "path": "applications/bci/history/visualization-content/mi_dashboard_20260930_v2/shared/README.md",
+      "source": "bci/mi_dashboard_20260930_v2/src/content/shared/README.md",
+      "bytes": 192,
+      "sha256": "36ae02985b054edb3e526dd75d89d019c4ac6ec14d70f58b40c83d439c6dbf8f"
+    },
+    {
+      "path": "applications/bci/history/visualization-content/mi_dashboard_20260930_v2/shared/report-disclosure.css",
+      "source": "bci/mi_dashboard_20260930_v2/src/content/shared/report-disclosure.css",
+      "bytes": 653,
+      "sha256": "64e07e80151cd95e175185510f1c5e20331223bd786f1f12a56c51cc8c6841bd"
+    },
+    {
+      "path": "applications/bci/history/visualization-content/mi_dashboard_20260930_v2/shared/report-task-link.css",
+      "source": "bci/mi_dashboard_20260930_v2/src/content/shared/report-task-link.css",
+      "bytes": 1060,
+      "sha256": "708b794f8f635ea9328b93d5ed5cdc8a6cca7b04215390ac6eb5616532f7a747"
+    },
+    {
+      "path": "applications/bci/history/visualization-content/mi_dashboard_20260930_v2/shared/ReportDisclosure.jsx",
+      "source": "bci/mi_dashboard_20260930_v2/src/content/shared/ReportDisclosure.jsx",
+      "bytes": 861,
+      "sha256": "f559abc00fbd4e01f8276d9df8ed2c7db3ea001a0068119c0d82b4243991b746"
+    },
+    {
+      "path": "applications/bci/history/visualization-content/mi_dashboard_20260930_v2/shared/ReportTaskLink.jsx",
+      "source": "bci/mi_dashboard_20260930_v2/src/content/shared/ReportTaskLink.jsx",
+      "bytes": 833,
+      "sha256": "7fc3cabbab44aee60a98b22038842704f7b097d9cb417f38be58133ea4305f88"
+    },
+    {
+      "path": "applications/bci/history/visualization-content/mi_dashboard_20260930_v2/shared/SortableDashboardLayout.jsx",
+      "source": "bci/mi_dashboard_20260930_v2/src/content/shared/SortableDashboardLayout.jsx",
+      "bytes": 7788,
+      "sha256": "e072e1e11812bfc3cac5ebd040f2c0cebbe22f04a9034ce84e3d49e7271f3a99"
+    },
+    {
+      "path": "applications/bci/history/visualization-content/mi_improvement_report_20261001_v4/assets/README.md",
+      "source": "bci/mi_improvement_report_20261001_v4/src/content/assets/README.md",
+      "bytes": 179,
+      "sha256": "1a17117302d00a4301c95b0562c12a244e38efe35aa508831ea404e7051556d7"
+    },
+    {
+      "path": "applications/bci/history/visualization-content/mi_improvement_report_20261001_v4/dashboard/dashboard.css",
+      "source": "bci/mi_improvement_report_20261001_v4/src/content/dashboard/dashboard.css",
+      "bytes": 52,
+      "sha256": "f9d9b7ca1cf0f79f421e08f7fb33abec6755a44afc400a72ba8ab6bcfa1aea7a"
+    },
+    {
+      "path": "applications/bci/history/visualization-content/mi_improvement_report_20261001_v4/dashboard/DashboardContent.jsx",
+      "source": "bci/mi_improvement_report_20261001_v4/src/content/dashboard/DashboardContent.jsx",
+      "bytes": 131,
+      "sha256": "da9e572b197d8bc2fd7bc7833cf695e2c54e649f124fbd36e2953bb6c8ed491e"
+    },
+    {
+      "path": "applications/bci/history/visualization-content/mi_improvement_report_20261001_v4/report/adoption-brief.js",
+      "source": "bci/mi_improvement_report_20261001_v4/src/content/report/adoption-brief.js",
+      "bytes": 5852,
+      "sha256": "1e4477af18d424e1588042406b59ec699baf972dbd88664c84c4ca77ddb4af2a"
+    },
+    {
+      "path": "applications/bci/history/visualization-content/mi_improvement_report_20261001_v4/report/ImprovementReport.jsx",
+      "source": "bci/mi_improvement_report_20261001_v4/src/content/report/ImprovementReport.jsx",
+      "bytes": 5124,
+      "sha256": "3240ce1f05599b0b6a91fc0e91987f84a8ac63dadd75b7f3525c632d0ea15aeb"
+    },
+    {
+      "path": "applications/bci/history/visualization-content/mi_improvement_report_20261001_v4/report/report.css",
+      "source": "bci/mi_improvement_report_20261001_v4/src/content/report/report.css",
+      "bytes": 8981,
+      "sha256": "9fe15b20f9ed5f40992b03812a2216a80669d1b874a9e6e3bd8156f2db5e6e0f"
+    },
+    {
+      "path": "applications/bci/history/visualization-content/mi_improvement_report_20261001_v4/report/ReportContent.jsx",
+      "source": "bci/mi_improvement_report_20261001_v4/src/content/report/ReportContent.jsx",
+      "bytes": 6704,
+      "sha256": "944f03e83d21e982b42ae1f32377533fcbe790d45ab58db17404fa689c33369e"
+    },
+    {
+      "path": "applications/bci/history/visualization-content/mi_improvement_report_20261001_v4/shared/README.md",
+      "source": "bci/mi_improvement_report_20261001_v4/src/content/shared/README.md",
+      "bytes": 192,
+      "sha256": "36ae02985b054edb3e526dd75d89d019c4ac6ec14d70f58b40c83d439c6dbf8f"
+    },
+    {
+      "path": "applications/bci/history/visualization-content/mi_improvement_report_20261001_v4/shared/report-disclosure.css",
+      "source": "bci/mi_improvement_report_20261001_v4/src/content/shared/report-disclosure.css",
+      "bytes": 653,
+      "sha256": "64e07e80151cd95e175185510f1c5e20331223bd786f1f12a56c51cc8c6841bd"
+    },
+    {
+      "path": "applications/bci/history/visualization-content/mi_improvement_report_20261001_v4/shared/report-task-link.css",
+      "source": "bci/mi_improvement_report_20261001_v4/src/content/shared/report-task-link.css",
+      "bytes": 1060,
+      "sha256": "708b794f8f635ea9328b93d5ed5cdc8a6cca7b04215390ac6eb5616532f7a747"
+    },
+    {
+      "path": "applications/bci/history/visualization-content/mi_improvement_report_20261001_v4/shared/ReportDisclosure.jsx",
+      "source": "bci/mi_improvement_report_20261001_v4/src/content/shared/ReportDisclosure.jsx",
+      "bytes": 861,
+      "sha256": "f559abc00fbd4e01f8276d9df8ed2c7db3ea001a0068119c0d82b4243991b746"
+    },
+    {
+      "path": "applications/bci/history/visualization-content/mi_improvement_report_20261001_v4/shared/ReportTaskLink.jsx",
+      "source": "bci/mi_improvement_report_20261001_v4/src/content/shared/ReportTaskLink.jsx",
+      "bytes": 833,
+      "sha256": "7fc3cabbab44aee60a98b22038842704f7b097d9cb417f38be58133ea4305f88"
+    },
+    {
+      "path": "applications/bci/history/visualization-content/mi_improvement_report_20261001_v4/shared/SortableDashboardLayout.jsx",
+      "source": "bci/mi_improvement_report_20261001_v4/src/content/shared/SortableDashboardLayout.jsx",
+      "bytes": 7788,
+      "sha256": "e072e1e11812bfc3cac5ebd040f2c0cebbe22f04a9034ce84e3d49e7271f3a99"
+    },
+    {
+      "path": "deliverables/bci/screenshots/bci_v4_report_overview.png",
+      "source": "playwright/bci_v4_report_overview.png",
+      "bytes": 130461,
+      "sha256": "a861648efc70e896a3d6fcce74c4693e5b84274995737a5584b3c95eb779bd44"
+    }
+  ]
+}
