@@ -8,6 +8,10 @@
 - `submission-source` 固定提交保留，不常驻第二份提交源码。main 吸收其最终 PPU 镜像依赖修复。
 - 详细结论与限制见 [结项总结](final-summary.md)；本地保留项见 [归档说明](archive-20261029.md)。
 
+## 本地路径更新（2026-10-30）
+
+仓库实体已整理回 `D:\GitHub\seu-vlm-ppu-optimization`，原 `D:\GitHub\VLM-Research\projects\seu-vlm-ppu-optimization` 改为兼容 junction。环境、数据和外部模型/工具入口保留，迁移前后文件内容已核对；本轮不更新实验结论。详见 [路径整理记录](local-path-relocation-20261030.md)。
+
 ## 历史状态快照（2026-08-28）
 
 以下保留原始开发记录；其中“当前”“待确认”和“下一步”均指当时阶段，后续 PPU 结论优先使用上面的最终入口。

@@ -46,3 +46,5 @@ git diff --check
 ```
 
 模型、数据、私人设备证据、运行环境和 `local-only/` 不上传。研究项目仍使用的 `.venv`、`data/derived` 与模型 junction 在本地保留；来源与复现限制见 [本地接手说明](LOCAL_HANDOFF.md)。
+
+本地仓库实体为 `D:\GitHub\seu-vlm-ppu-optimization`；`D:\GitHub\VLM-Research\projects\seu-vlm-ppu-optimization` 保留为指向该实体的兼容 junction，两条路径访问同一份文件。详见 [2026-10-30 路径整理记录](docs/local-path-relocation-20261030.md)。

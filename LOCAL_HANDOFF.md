@@ -1,6 +1,6 @@
 # 比赛项目本地接手
 
-结项归档：2026-10-29（Asia/Singapore）。统一实体为 `D:\GitHub\VLM-Research\projects\seu-vlm-ppu-optimization`，`D:\GitHub\seu-vlm-ppu-optimization` 是指向该实体的兼容 junction，属于同一仓库。
+结项归档：2026-10-29（Asia/Singapore）；本地路径于 2026-10-30 整理。仓库实体为 `D:\GitHub\seu-vlm-ppu-optimization`。旧路径 `D:\GitHub\VLM-Research\projects\seu-vlm-ppu-optimization` 是指向该实体的兼容 junction，访问的是同一仓库，不占用第二份文件空间。迁移范围与核验见 [路径整理记录](docs/local-path-relocation-20261030.md)。
 
 先读 `README.md` → `docs/final-summary.md` → `deliverables/README.md` → `docs/archive-20261029.md`。最终 PPU 提交说明在 `README_SUBMISSION.md`；所有历史结果与失败方案在 `results/` 和 `docs/work-summary/`。
 

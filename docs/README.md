@@ -14,6 +14,7 @@
 | 历史 EEG/Agent 规划 | [2026-09-21 规划](applications/bci-mobile-agent-plan-20260921.md)；属于历史方案 |
 | 手机与脑电代码 | [手机](../applications/mobile-vla/ARCHIVE.md)、[脑电](../applications/bci/ARCHIVE.md) |
 | 整理与保留边界 | [archive-20261029.md](archive-20261029.md) |
+| 本地实体路径与旧路径兼容 | [2026-10-30 路径整理记录](local-path-relocation-20261030.md) |
 
 各 `experiments/` 文档保留实验发生时的状态。全量公开集单轮用于精度与完整性；CN20 重复实验用于对应性能比较，不能混用。后续复现使用主办方明确支持的 PPU 环境，不自动启动历史队列。
 
